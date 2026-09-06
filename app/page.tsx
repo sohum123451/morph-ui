@@ -873,15 +873,11 @@ function MorphUIContent() {
   const handleSelectChat = async (chatOrId: string | { id: string; title: string; query?: string }, explicitTitle?: string) => {
     const id = typeof chatOrId === 'string' ? chatOrId : chatOrId.id;
     const title = explicitTitle || (typeof chatOrId === 'object' ? (chatOrId.title || chatOrId.query) : '');
+    const resolvedTitle = title || chatHistory.find((c) => c.id === id)?.title || chatHistory.find((c) => c.id === id)?.query || '';
     
-    // a. Set search input state to exact history title string
-    if (title) {
-      setPrompt(title);
-    } else {
-      const found = chatHistory.find((c) => c.id === id);
-      if (found) {
-        setPrompt(found.title || found.query || '');
-      }
+    // a. Set main search input value state to exact title string immediately
+    if (resolvedTitle) {
+      setPrompt(resolvedTitle);
     }
 
     setIsSidebarOpen(false);
@@ -896,26 +892,28 @@ function MorphUIContent() {
     setActiveChatId(id);
 
     try {
-      // b. Load the cached comparison payload or trigger backend comparison
+      // b. Immediately load cached payload from database history or trigger search API
       const res = await fetch(`/api/history?id=${id}`);
       if (res.ok) {
-        const data = await res.json();
-        const matrixData = data?.data ? data.data : data;
-        setComparisonData(matrixData);
-        if (matrixData.model_used) {
-          setActiveModel(matrixData.model_used);
-        }
-      } else {
-        const targetQuery = title || prompt;
-        if (targetQuery) {
-          await handleRunComparison(undefined, targetQuery);
+        const rawJson = await res.json();
+        const matrixData: GenerativeComparisonResponse = rawJson.data ? rawJson.data : rawJson;
+        if (matrixData && (matrixData.categories || matrixData.verified_metrics || matrixData.entities)) {
+          setComparisonData(matrixData);
+          if (matrixData.model_used) {
+            setActiveModel(matrixData.model_used);
+          }
+          return;
         }
       }
+
+      // Fallback: trigger search compare API with the resolved title
+      if (resolvedTitle) {
+        await handleRunComparison(undefined, resolvedTitle);
+      }
     } catch (err: any) {
-      console.warn('Direct history load failed, triggering compare query:', err);
-      const targetQuery = title || prompt;
-      if (targetQuery) {
-        await handleRunComparison(undefined, targetQuery);
+      console.warn('History load fallback to search:', err);
+      if (resolvedTitle) {
+        await handleRunComparison(undefined, resolvedTitle);
       } else {
         setError(err.message || 'Could not load saved comparison.');
       }
@@ -981,10 +979,11 @@ function MorphUIContent() {
         throw new Error(errJson.error || `Comparison failed with HTTP ${res.status}`);
       }
 
-      const data: GenerativeComparisonResponse = await res.json();
+      const resJson = await res.json();
+      const data: GenerativeComparisonResponse = resJson.data ? resJson.data : resJson;
       setComparisonData(data);
-      if (data.chat_id) {
-        setActiveChatId(data.chat_id);
+      if (data.chat_id || resJson.chat_id) {
+        setActiveChatId(data.chat_id || resJson.chat_id);
         fetchChatHistory();
       }
       if (data.model_used) {
