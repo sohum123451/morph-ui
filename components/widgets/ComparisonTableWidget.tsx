@@ -37,9 +37,6 @@ interface ComparisonTableWidgetProps {
   };
 }
 
-/**
- * Helper to extract numeric values for comparative progress bars
- */
 function parseNumericValue(val: string): number | null {
   if (!val || val === 'N/A' || val === '-') return null;
   const clean = val.replace(/,/g, '');
@@ -49,9 +46,6 @@ function parseNumericValue(val: string): number | null {
   return isNaN(num) ? null : num;
 }
 
-/**
- * Category-aware styling and icons
- */
 function getCategoryMeta(categoryName = '') {
   const cat = categoryName.toLowerCase();
   if (cat.includes('shoe') || cat.includes('footwear') || cat.includes('sneaker')) {
@@ -87,10 +81,10 @@ function getCategoryMeta(categoryName = '') {
       barB: 'bg-amber-500',
     };
   }
-  if (cat.includes('phone') || cat.includes('tech') || cat.includes('hardware') || cat.includes('smartphone')) {
+  if (cat.includes('phone') || cat.includes('tech') || cat.includes('hardware') || cat.includes('smartphone') || cat.includes('audio') || cat.includes('headphone')) {
     return {
       icon: Smartphone,
-      label: 'Tech Specifications',
+      label: 'Tech & Audio Specs',
       gradient: 'from-purple-500/20 via-violet-500/10 to-transparent',
       accentColor: 'text-purple-400',
       badgeBg: 'bg-purple-500/10 border-purple-500/20 text-purple-300',
@@ -148,7 +142,6 @@ export const ComparisonTableWidget = memo(function ComparisonTableWidget({
   const [viewMode, setViewMode] = useState<'table' | 'bars'>('table');
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Safe entity extraction
   const entityAName = typeof data?.entity_a === 'object' && data?.entity_a?.name
     ? data.entity_a.name
     : typeof data?.entity_a === 'string'
@@ -166,7 +159,6 @@ export const ComparisonTableWidget = memo(function ComparisonTableWidget({
   const title = data?.title || `${entityAName} vs ${entityBName}`;
   const images = Array.isArray(data?.images) ? data.images : [];
 
-  // Dynamic Categories Map
   const categoriesMap: Record<string, VerifiedMetric[]> = useMemo(() => {
     if (data?.categories && Object.keys(data.categories).length > 0) {
       return data.categories;
@@ -200,7 +192,6 @@ export const ComparisonTableWidget = memo(function ComparisonTableWidget({
     return {};
   }, [data?.categories, data?.verified_metrics, data?.comparison_points, data?.rows, data?.headers, category]);
 
-  // Flatten for quick metric counts and search filtering
   const allMetricsCount = useMemo(() => {
     return Object.values(categoriesMap).reduce((acc, curr) => acc + curr.length, 0);
   }, [categoriesMap]);
@@ -228,8 +219,7 @@ export const ComparisonTableWidget = memo(function ComparisonTableWidget({
   const CategoryIcon = categoryMeta.icon;
 
   return (
-    <div className="w-[580px] min-h-[520px] bg-slate-900/95 border border-slate-800/90 rounded-2xl p-5 shadow-2xl flex flex-col text-slate-100 backdrop-blur-xl relative overflow-hidden transition-all duration-200">
-      {/* Dynamic Category Gradient Accent */}
+    <div className="w-[580px] min-h-min h-auto bg-slate-900/95 border border-slate-800/90 rounded-2xl p-5 shadow-2xl flex flex-col text-slate-100 backdrop-blur-xl relative overflow-hidden transition-all duration-200">
       <div
         className={`absolute top-0 left-0 right-0 h-24 bg-gradient-to-b ${categoryMeta.gradient} pointer-events-none opacity-60`}
       />
@@ -252,14 +242,14 @@ export const ComparisonTableWidget = memo(function ComparisonTableWidget({
                 {allMetricsCount} {allMetricsCount === 1 ? 'Data Point' : 'Data Points'}
               </span>
             </div>
-            <h3 className="font-bold text-base tracking-tight text-white mt-0.5 line-clamp-1">
+            <h3 className="font-bold text-base tracking-tight text-white mt-0.5 whitespace-normal break-words">
               {title}
             </h3>
           </div>
         </div>
 
         {/* View Mode Toggle */}
-        <div className="flex items-center gap-1 bg-slate-950/70 p-1 rounded-lg border border-slate-800">
+        <div className="flex items-center gap-1 bg-slate-950/70 p-1 rounded-lg border border-slate-800 shrink-0">
           <button
             type="button"
             onClick={() => setViewMode('table')}
@@ -287,7 +277,7 @@ export const ComparisonTableWidget = memo(function ComparisonTableWidget({
         </div>
       </div>
 
-      {/* Visual Image Strip (if images provided) */}
+      {/* Visual Image Strip */}
       {images.length > 0 && (
         <div className="relative z-10 mb-3 p-2 rounded-xl bg-slate-950/60 border border-slate-800/80 flex items-center justify-around gap-2">
           {images.map((img, i) => (
@@ -327,18 +317,18 @@ export const ComparisonTableWidget = memo(function ComparisonTableWidget({
       {/* Entity Columns Subheader */}
       <div className="relative z-10 grid grid-cols-12 gap-2 px-3 py-2 rounded-lg bg-slate-950/80 border border-slate-800/90 text-xs font-semibold uppercase tracking-wider mb-2">
         <div className="col-span-4 text-slate-400">Metric / Attribute</div>
-        <div className="col-span-4 text-sky-400 flex items-center gap-1 truncate">
-          <span className="w-2 h-2 rounded-full bg-sky-400" />
-          <span className="truncate">{entityAName}</span>
+        <div className="col-span-4 text-sky-400 flex items-center gap-1 whitespace-normal break-words">
+          <span className="w-2 h-2 rounded-full bg-sky-400 shrink-0" />
+          <span>{entityAName}</span>
         </div>
-        <div className="col-span-4 text-indigo-400 flex items-center gap-1 truncate">
-          <span className="w-2 h-2 rounded-full bg-indigo-400" />
-          <span className="truncate">{entityBName}</span>
+        <div className="col-span-4 text-indigo-400 flex items-center gap-1 whitespace-normal break-words">
+          <span className="w-2 h-2 rounded-full bg-indigo-400 shrink-0" />
+          <span>{entityBName}</span>
         </div>
       </div>
 
-      {/* Main Dynamic Table Loop (100% Dynamic by Category) */}
-      <div className="relative z-10 flex-1 overflow-auto max-h-[290px] rounded-xl border border-slate-800/80 bg-slate-950/50 p-1 space-y-2">
+      {/* Main Dynamic Table Loop with Full Word Wrapping */}
+      <div className="relative z-10 flex-1 space-y-2 rounded-xl border border-slate-800/80 bg-slate-950/50 p-1">
         {Object.keys(filteredCategories).length === 0 ? (
           <div className="p-8 text-center text-slate-500 text-xs flex flex-col items-center justify-center gap-2">
             <HelpCircle className="w-6 h-6 text-slate-600" />
@@ -347,9 +337,9 @@ export const ComparisonTableWidget = memo(function ComparisonTableWidget({
         ) : (
           Object.entries(filteredCategories).map(([categoryName, metrics]) => (
             <div key={categoryName} className="rounded-lg bg-slate-900/60 border border-slate-800/60 overflow-hidden">
-              <div className="px-3 py-1.5 bg-slate-950/70 border-b border-slate-800/60 text-[11px] font-bold text-slate-300 flex items-center justify-between">
+              <div className="px-3 py-1.5 bg-slate-950/70 border-b border-slate-800/60 text-[11px] font-bold text-slate-300 flex items-center justify-between whitespace-normal break-words">
                 <span>{categoryName}</span>
-                <span className="text-[10px] font-mono text-slate-500">({metrics.length})</span>
+                <span className="text-[10px] font-mono text-slate-500 ml-2 shrink-0">({metrics.length})</span>
               </div>
 
               <div className="divide-y divide-slate-800/40">
@@ -357,16 +347,16 @@ export const ComparisonTableWidget = memo(function ComparisonTableWidget({
                   ? metrics.map((m, idx) => (
                       <div
                         key={idx}
-                        className="grid grid-cols-12 gap-2 p-2.5 text-xs hover:bg-slate-800/40 transition-colors items-center"
+                        className="grid grid-cols-12 gap-2 p-2.5 text-xs hover:bg-slate-800/40 transition-colors items-start"
                       >
-                        <div className="col-span-4 font-medium text-slate-200 pr-1 flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-slate-600 shrink-0" />
-                          <span className="line-clamp-2">{m.metric}</span>
+                        <div className="col-span-4 font-medium text-slate-200 pr-1 flex items-start gap-1.5 whitespace-normal break-words leading-relaxed">
+                          <span className="w-1.5 h-1.5 rounded-full bg-slate-600 shrink-0 mt-1.5" />
+                          <span>{m.metric}</span>
                         </div>
-                        <div className="col-span-4 pr-1 text-slate-300 font-medium leading-relaxed line-clamp-3">
+                        <div className="col-span-4 pr-1 text-slate-300 font-medium leading-relaxed whitespace-normal break-words">
                           {m.entity_a}
                         </div>
-                        <div className="col-span-4 text-slate-300 font-medium leading-relaxed line-clamp-3">
+                        <div className="col-span-4 text-slate-300 font-medium leading-relaxed whitespace-normal break-words">
                           {m.entity_b}
                         </div>
                       </div>
@@ -389,10 +379,10 @@ export const ComparisonTableWidget = memo(function ComparisonTableWidget({
                           key={idx}
                           className="p-3 text-xs hover:bg-slate-800/40 transition-colors flex flex-col gap-1.5"
                         >
-                          <div className="flex items-center justify-between">
-                            <span className="font-semibold text-slate-200">{m.metric}</span>
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-semibold text-slate-200 whitespace-normal break-words">{m.metric}</span>
                             {hasNumeric && (
-                              <span className="text-[10px] text-slate-400 font-mono">
+                              <span className="text-[10px] text-slate-400 font-mono shrink-0">
                                 {pctA}% vs {pctB}%
                               </span>
                             )}
@@ -410,22 +400,22 @@ export const ComparisonTableWidget = memo(function ComparisonTableWidget({
                                   className={`${categoryMeta.barB} transition-all duration-500`}
                                 />
                               </div>
-                              <div className="flex items-center justify-between text-[11px]">
-                                <span className="text-sky-300 font-medium truncate max-w-[48%]">
+                              <div className="flex items-start justify-between text-[11px] gap-2 pt-0.5">
+                                <span className="text-sky-300 font-medium whitespace-normal break-words leading-relaxed flex-1">
                                   {m.entity_a}
                                 </span>
-                                <span className="text-indigo-300 font-medium truncate max-w-[48%] text-right">
+                                <span className="text-indigo-300 font-medium whitespace-normal break-words leading-relaxed flex-1 text-right">
                                   {m.entity_b}
                                 </span>
                               </div>
                             </div>
                           ) : (
                             <div className="grid grid-cols-2 gap-2 pt-1">
-                              <div className="p-2 rounded bg-slate-900/80 border border-slate-800 text-[11px] text-slate-300">
+                              <div className="p-2 rounded bg-slate-900/80 border border-slate-800 text-[11px] text-slate-300 whitespace-normal break-words leading-relaxed">
                                 <span className="block text-[10px] text-sky-400 font-medium mb-0.5">{entityAName}:</span>
                                 {m.entity_a}
                               </div>
-                              <div className="p-2 rounded bg-slate-900/80 border border-slate-800 text-[11px] text-slate-300">
+                              <div className="p-2 rounded bg-slate-900/80 border border-slate-800 text-[11px] text-slate-300 whitespace-normal break-words leading-relaxed">
                                 <span className="block text-[10px] text-indigo-400 font-medium mb-0.5">{entityBName}:</span>
                                 {m.entity_b}
                               </div>
@@ -451,7 +441,7 @@ export const ComparisonTableWidget = memo(function ComparisonTableWidget({
               <span>Verdict & Synthesis</span>
               <CheckCircle2 className="w-3 h-3 text-sky-400" />
             </h4>
-            <p className="text-xs text-slate-300 leading-relaxed line-clamp-3">
+            <p className="text-xs text-slate-300 leading-relaxed whitespace-normal break-words">
               {verdictSummary}
             </p>
           </div>

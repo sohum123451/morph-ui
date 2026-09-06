@@ -48,6 +48,8 @@ import {
   LayoutGrid,
   Coins,
   ArrowRight,
+  Zap,
+  TrendingUp,
 } from 'lucide-react';
 import {
   AgentApiResponse,
@@ -55,6 +57,7 @@ import {
   CommunitySentiment,
   ImageInput,
   EntityVerdict,
+  GenerativeComparisonResponse,
 } from '@/types/morphui';
 
 function parseNumericValue(val: string): number | null {
@@ -67,13 +70,13 @@ function parseNumericValue(val: string): number | null {
 }
 
 // ============================================================================
-// SPATIAL CANVAS NODES (Dynamic Live Data)
+// SPATIAL CANVAS NODES (Auto-Sizing, No Truncation, Full Word-Wrap)
 // ============================================================================
 
 const SpecMatrixNode = memo(function SpecMatrixNode({ data }: any) {
   const { entityA, entityB, category, metrics = [] } = data;
   return (
-    <div className="w-[420px] bg-slate-900/95 border border-slate-700/80 rounded-2xl p-5 shadow-2xl text-slate-100 backdrop-blur-xl">
+    <div className="w-[380px] min-h-min h-auto bg-slate-900/95 border border-slate-700/80 rounded-2xl p-5 shadow-2xl text-slate-100 backdrop-blur-xl">
       <Handle type="target" position={Position.Left} className="!bg-sky-500 !w-3 !h-3 !border-2 !border-slate-900" />
       <Handle type="source" position={Position.Right} className="!bg-sky-500 !w-3 !h-3 !border-2 !border-slate-900" />
       <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
@@ -83,26 +86,26 @@ const SpecMatrixNode = memo(function SpecMatrixNode({ data }: any) {
           </div>
           <div>
             <h4 className="font-bold text-xs sm:text-sm text-white">Verified Spec Matrix</h4>
-            <span className="text-[10px] text-slate-400 font-mono">{category}</span>
+            <span className="text-[10px] text-slate-400 font-mono whitespace-normal break-words">{category}</span>
           </div>
         </div>
-        <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-sky-300 font-mono border border-slate-700">
+        <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-sky-300 font-mono border border-slate-700 shrink-0">
           Node 1
         </span>
       </div>
 
       <div className="grid grid-cols-12 gap-2 text-[10px] uppercase font-mono text-slate-400 pb-1.5 border-b border-slate-800/60">
         <div className="col-span-5">Metric</div>
-        <div className="col-span-3 text-sky-400 truncate">{entityA}</div>
-        <div className="col-span-4 text-indigo-400 truncate">{entityB}</div>
+        <div className="col-span-3 text-sky-400 whitespace-normal break-words">{entityA}</div>
+        <div className="col-span-4 text-indigo-400 whitespace-normal break-words">{entityB}</div>
       </div>
 
-      <div className="divide-y divide-slate-800/60 text-xs max-h-[220px] overflow-y-auto pr-1">
-        {metrics.slice(0, 6).map((m: any, idx: number) => (
-          <div key={idx} className="grid grid-cols-12 gap-2 py-2 items-center">
-            <span className="col-span-5 text-slate-300 font-medium text-[11px] truncate">{m.metric}</span>
-            <span className="col-span-3 text-slate-200 text-[11px] truncate">{m.entity_a}</span>
-            <span className="col-span-4 text-slate-200 text-[11px] truncate">{m.entity_b}</span>
+      <div className="divide-y divide-slate-800/60 text-xs">
+        {metrics.slice(0, 8).map((m: any, idx: number) => (
+          <div key={idx} className="grid grid-cols-12 gap-2 py-2.5 items-start">
+            <span className="col-span-5 text-slate-300 font-medium text-[11px] whitespace-normal break-words leading-relaxed">{m.metric}</span>
+            <span className="col-span-3 text-slate-200 text-[11px] whitespace-normal break-words leading-relaxed">{m.entity_a}</span>
+            <span className="col-span-4 text-slate-200 text-[11px] whitespace-normal break-words leading-relaxed">{m.entity_b}</span>
           </div>
         ))}
       </div>
@@ -113,7 +116,7 @@ const SpecMatrixNode = memo(function SpecMatrixNode({ data }: any) {
 const SentimentBreakdownNode = memo(function SentimentBreakdownNode({ data }: any) {
   const { entityA, entityB, sentiments = [] } = data;
   return (
-    <div className="w-[440px] bg-slate-900/95 border border-slate-700/80 rounded-2xl p-5 shadow-2xl text-slate-100 backdrop-blur-xl">
+    <div className="w-[400px] min-h-min h-auto bg-slate-900/95 border border-slate-700/80 rounded-2xl p-5 shadow-2xl text-slate-100 backdrop-blur-xl">
       <Handle type="target" position={Position.Left} className="!bg-indigo-500 !w-3 !h-3 !border-2 !border-slate-900" />
       <Handle type="source" position={Position.Right} className="!bg-indigo-500 !w-3 !h-3 !border-2 !border-slate-900" />
       <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
@@ -126,18 +129,18 @@ const SentimentBreakdownNode = memo(function SentimentBreakdownNode({ data }: an
             <span className="text-[10px] text-slate-400">De-Biased User Sentiment</span>
           </div>
         </div>
-        <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-indigo-300 font-mono border border-slate-700">
+        <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-indigo-300 font-mono border border-slate-700 shrink-0">
           Node 2
         </span>
       </div>
 
-      <div className="space-y-2.5 max-h-[220px] overflow-y-auto pr-1">
-        {sentiments.slice(0, 3).map((s: any, idx: number) => (
-          <div key={idx} className="p-2.5 bg-slate-950/70 rounded-xl border border-slate-800/80 space-y-1.5 text-xs">
-            <div className="flex items-center justify-between">
-              <span className="font-semibold text-slate-200 text-[11px]">{s.topic}</span>
+      <div className="space-y-3">
+        {sentiments.slice(0, 4).map((s: any, idx: number) => (
+          <div key={idx} className="p-3 bg-slate-950/70 rounded-xl border border-slate-800/80 space-y-2 text-xs">
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-semibold text-slate-200 text-[11px] whitespace-normal break-words">{s.topic}</span>
               <span
-                className={`text-[9px] uppercase font-mono px-1.5 py-0.2 rounded border ${
+                className={`text-[9px] uppercase font-mono px-1.5 py-0.5 rounded border shrink-0 ${
                   s.sentiment === 'Positive'
                     ? 'bg-emerald-950/60 border-emerald-800/80 text-emerald-300'
                     : s.sentiment === 'Critical'
@@ -149,13 +152,13 @@ const SentimentBreakdownNode = memo(function SentimentBreakdownNode({ data }: an
               </span>
             </div>
             <div className="grid grid-cols-2 gap-2 text-[10px] text-slate-400">
-              <div className="bg-slate-900/60 p-1.5 rounded">
-                <span className="text-sky-400 font-semibold block">{entityA}:</span>
-                <span className="line-clamp-2">{s.entity_a_consensus}</span>
+              <div className="bg-slate-900/60 p-2 rounded whitespace-normal break-words leading-relaxed">
+                <span className="text-sky-400 font-semibold block mb-0.5">{entityA}:</span>
+                <span>{s.entity_a_consensus}</span>
               </div>
-              <div className="bg-slate-900/60 p-1.5 rounded">
-                <span className="text-indigo-400 font-semibold block">{entityB}:</span>
-                <span className="line-clamp-2">{s.entity_b_consensus}</span>
+              <div className="bg-slate-900/60 p-2 rounded whitespace-normal break-words leading-relaxed">
+                <span className="text-indigo-400 font-semibold block mb-0.5">{entityB}:</span>
+                <span>{s.entity_b_consensus}</span>
               </div>
             </div>
           </div>
@@ -167,11 +170,11 @@ const SentimentBreakdownNode = memo(function SentimentBreakdownNode({ data }: an
 
 const LedgerNode = memo(function LedgerNode({ data }: any) {
   const { entityA, entityB, metrics = [] } = data;
-  const primaryMetric1 = metrics[0] || { metric: 'Primary Specification', entity_a: 'Standard', entity_b: 'Standard' };
-  const primaryMetric2 = metrics[1] || { metric: 'Benchmark Yield', entity_a: 'High Tier', entity_b: 'High Tier' };
+  const primaryMetric1 = metrics[0] || { metric: 'Primary Specification', entity_a: 'Standard Spec', entity_b: 'Standard Spec' };
+  const primaryMetric2 = metrics[1] || { metric: 'Benchmark Yield', entity_a: 'High Yield', entity_b: 'High Yield' };
 
   return (
-    <div className="w-[380px] bg-slate-900/95 border border-slate-700/80 rounded-2xl p-5 shadow-2xl text-slate-100 backdrop-blur-xl">
+    <div className="w-[380px] min-h-min h-auto bg-slate-900/95 border border-slate-700/80 rounded-2xl p-5 shadow-2xl text-slate-100 backdrop-blur-xl">
       <Handle type="target" position={Position.Left} className="!bg-emerald-500 !w-3 !h-3 !border-2 !border-slate-900" />
       <Handle type="source" position={Position.Right} className="!bg-emerald-500 !w-3 !h-3 !border-2 !border-slate-900" />
       <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
@@ -184,33 +187,33 @@ const LedgerNode = memo(function LedgerNode({ data }: any) {
             <span className="text-[10px] text-slate-400">Core Comparative Metrics</span>
           </div>
         </div>
-        <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-emerald-300 font-mono border border-slate-700">
+        <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-emerald-300 font-mono border border-slate-700 shrink-0">
           Node 3
         </span>
       </div>
 
       <div className="space-y-3 text-xs">
         <div className="p-3 bg-slate-950/70 rounded-xl border border-slate-800/80 space-y-1">
-          <span className="text-[10px] text-slate-400 font-mono uppercase">{primaryMetric1.metric}</span>
-          <div className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-800/60">
-            <span className="text-sky-300 font-medium">{entityA}:</span>
-            <span className="text-slate-200 font-mono">{primaryMetric1.entity_a}</span>
+          <span className="text-[10px] text-slate-400 font-mono uppercase whitespace-normal break-words">{primaryMetric1.metric}</span>
+          <div className="flex items-start justify-between text-[11px] pt-1 border-t border-slate-800/60 gap-2">
+            <span className="text-sky-300 font-medium shrink-0">{entityA}:</span>
+            <span className="text-slate-200 font-mono text-right whitespace-normal break-words leading-relaxed">{primaryMetric1.entity_a}</span>
           </div>
-          <div className="flex items-center justify-between text-[11px]">
-            <span className="text-indigo-300 font-medium">{entityB}:</span>
-            <span className="text-slate-200 font-mono">{primaryMetric1.entity_b}</span>
+          <div className="flex items-start justify-between text-[11px] gap-2">
+            <span className="text-indigo-300 font-medium shrink-0">{entityB}:</span>
+            <span className="text-slate-200 font-mono text-right whitespace-normal break-words leading-relaxed">{primaryMetric1.entity_b}</span>
           </div>
         </div>
 
         <div className="p-3 bg-slate-950/70 rounded-xl border border-slate-800/80 space-y-1">
-          <span className="text-[10px] text-slate-400 font-mono uppercase">{primaryMetric2.metric}</span>
-          <div className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-800/60">
-            <span className="text-sky-300 font-medium">{entityA}:</span>
-            <span className="text-slate-200 font-mono">{primaryMetric2.entity_a}</span>
+          <span className="text-[10px] text-slate-400 font-mono uppercase whitespace-normal break-words">{primaryMetric2.metric}</span>
+          <div className="flex items-start justify-between text-[11px] pt-1 border-t border-slate-800/60 gap-2">
+            <span className="text-sky-300 font-medium shrink-0">{entityA}:</span>
+            <span className="text-slate-200 font-mono text-right whitespace-normal break-words leading-relaxed">{primaryMetric2.entity_a}</span>
           </div>
-          <div className="flex items-center justify-between text-[11px]">
-            <span className="text-indigo-300 font-medium">{entityB}:</span>
-            <span className="text-slate-200 font-mono">{primaryMetric2.entity_b}</span>
+          <div className="flex items-start justify-between text-[11px] gap-2">
+            <span className="text-indigo-300 font-medium shrink-0">{entityB}:</span>
+            <span className="text-slate-200 font-mono text-right whitespace-normal break-words leading-relaxed">{primaryMetric2.entity_b}</span>
           </div>
         </div>
       </div>
@@ -221,7 +224,7 @@ const LedgerNode = memo(function LedgerNode({ data }: any) {
 const VerdictNode = memo(function VerdictNode({ data }: any) {
   const { entityA, entityB, verdictSummary, prosA = [], prosB = [] } = data;
   return (
-    <div className="w-[420px] bg-slate-900/95 border border-slate-700/80 rounded-2xl p-5 shadow-2xl text-slate-100 backdrop-blur-xl">
+    <div className="w-[420px] min-h-min h-auto bg-slate-900/95 border border-slate-700/80 rounded-2xl p-5 shadow-2xl text-slate-100 backdrop-blur-xl">
       <Handle type="target" position={Position.Left} className="!bg-amber-500 !w-3 !h-3 !border-2 !border-slate-900" />
       <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
         <div className="flex items-center gap-2">
@@ -233,23 +236,23 @@ const VerdictNode = memo(function VerdictNode({ data }: any) {
             <span className="text-[10px] text-slate-400">Final Recommendation</span>
           </div>
         </div>
-        <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-amber-300 font-mono border border-slate-700">
+        <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-amber-300 font-mono border border-slate-700 shrink-0">
           Node 4
         </span>
       </div>
 
-      <p className="text-[11px] text-slate-300 leading-relaxed bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/80 mb-3">
+      <p className="text-[11px] text-slate-300 leading-relaxed bg-slate-950/60 p-3 rounded-xl border border-slate-800/80 mb-3 whitespace-normal break-words">
         {verdictSummary}
       </p>
 
       <div className="grid grid-cols-2 gap-2 text-[10px]">
-        <div className="p-2 bg-slate-950/70 rounded-lg border border-slate-800">
+        <div className="p-2.5 bg-slate-950/70 rounded-lg border border-slate-800 whitespace-normal break-words leading-relaxed">
           <span className="text-sky-400 font-semibold block mb-1">Pick {entityA}:</span>
-          <span className="text-slate-300 line-clamp-2">{prosA[0] || 'Established core specifications'}</span>
+          <span className="text-slate-300">{prosA[0] || 'Established core specifications'}</span>
         </div>
-        <div className="p-2 bg-slate-950/70 rounded-lg border border-slate-800">
+        <div className="p-2.5 bg-slate-950/70 rounded-lg border border-slate-800 whitespace-normal break-words leading-relaxed">
           <span className="text-indigo-400 font-semibold block mb-1">Pick {entityB}:</span>
-          <span className="text-slate-300 line-clamp-2">{prosB[0] || 'Targeted performance benchmarks'}</span>
+          <span className="text-slate-300">{prosB[0] || 'Targeted performance benchmarks'}</span>
         </div>
       </div>
     </div>
@@ -306,7 +309,7 @@ function SpatialCanvasWorkspace({
       {
         id: 'node-sentiment',
         type: 'sentiment_breakdown',
-        position: { x: 530, y: 140 },
+        position: { x: 500, y: 140 },
         data: {
           entityA,
           entityB,
@@ -316,7 +319,7 @@ function SpatialCanvasWorkspace({
       {
         id: 'node-ledger',
         type: 'ledger_node',
-        position: { x: 1030, y: 140 },
+        position: { x: 970, y: 140 },
         data: {
           entityA,
           entityB,
@@ -326,7 +329,7 @@ function SpatialCanvasWorkspace({
       {
         id: 'node-verdict',
         type: 'verdict_node',
-        position: { x: 1470, y: 140 },
+        position: { x: 1420, y: 140 },
         data: {
           entityA,
           entityB,
@@ -367,7 +370,6 @@ function SpatialCanvasWorkspace({
   const [nodes, setNodes, onNodesChange] = useNodesState(generatedNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(generatedEdges);
 
-  // Synchronize nodes when props update
   useEffect(() => {
     setNodes(generatedNodes);
     setEdges(generatedEdges);
@@ -382,7 +384,6 @@ function SpatialCanvasWorkspace({
 
   return (
     <div className="relative w-full h-[calc(100vh-140px)] min-h-[600px] bg-[#030712] rounded-2xl border border-slate-800/90 overflow-hidden shadow-2xl">
-      {/* Floating Canvas Action Bar */}
       <div className="absolute top-4 left-4 z-10 flex items-center gap-2 bg-slate-900/90 backdrop-blur-md p-1.5 rounded-xl border border-slate-700/80 shadow-lg text-xs">
         <div className="flex items-center gap-1.5 px-2.5 py-1 text-sky-400 font-semibold border-r border-slate-800">
           <Network className="w-3.5 h-3.5" />
@@ -429,93 +430,17 @@ function SpatialCanvasWorkspace({
 }
 
 // ============================================================================
-// MAIN COMPARISON APP WRAPPER WITH DUAL VIEW SWITCHER
+// MAIN COMPARISON APP COMPONENT
 // ============================================================================
 
 export default function ComparisonApp() {
-  // Top-Level Persistent View Mode: 'spec' | 'canvas'
   const [viewMode, setViewMode] = useState<'spec' | 'canvas'>('spec');
 
-  const [prompt, setPrompt] = useState('SRM Chennai vs VIT Vellore');
+  // Initial State: 100% Clean & Empty (No SRM vs VIT pre-filled data)
+  const [prompt, setPrompt] = useState('');
+  const [comparisonData, setComparisonData] = useState<GenerativeComparisonResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Safe Entity Verdict State (Resolves crash if LLM autocorrects typo in name)
-  const [entityAData, setEntityAData] = useState<EntityVerdict>({
-    name: 'SRM Chennai',
-    pros: [
-      'Flexible branch selection via SRMJEEE and higher personal campus autonomy',
-      'Strong industry tie-ups with 850+ visiting recruiters',
-      'Continuous evaluation model with relaxed weekend outing regulations',
-    ],
-  });
-
-  const [entityBData, setEntityBData] = useState<EntityVerdict>({
-    name: 'VIT Vellore',
-    pros: [
-      'Higher NIRF engineering ranking (#11 national premier tier)',
-      'High concentration of marquee software Super Dream placement offers',
-      'Fully Flexible Credit System (FFCS) curriculum structure',
-    ],
-  });
-
-  const [category, setCategory] = useState('Universities & Higher Education');
-
-  // 100% Dynamic Categories Mapping: Object.entries(categories).map(...)
-  const [categories, setCategories] = useState<Record<string, VerifiedMetric[]>>({
-    'Academic Ranking & Admissions': [
-      { metric: 'NIRF Engineering Standing (2025-26)', entity_a: 'Rank 13-18 Category (Top National Private)', entity_b: 'Rank 11 (Premier Engineering Tier)', source_type: 'official' },
-      { metric: 'Entrance Exam & Merit Cutoff', entity_a: 'SRMJEEE (Phase 1/2/3 online merit counseling)', entity_b: 'VITEEE (Category 1 to Category 5 rank brackets)', source_type: 'official' },
-    ],
-    'Tuition Fees & Placement Yield': [
-      { metric: 'Annual B.Tech Tuition Fee', entity_a: 'INR 2.50 - 4.50 Lakhs/yr', entity_b: 'INR 1.98 - 4.95 Lakhs/yr', source_type: 'official' },
-      { metric: 'Average CSE Placement CTC', entity_a: 'INR 10.50 - 14.20 LPA', entity_b: 'INR 11.50 - 15.80 LPA', source_type: 'official' },
-      { metric: 'Highest Domestic Placement Offer', entity_a: 'INR 1.02 Crore / yr', entity_b: 'INR 1.02 Crore / yr', source_type: 'official' },
-    ],
-    'Campus Life & Infrastructure': [
-      { metric: 'Campus Acreage & Land Size', entity_a: '250+ Acres (Kattankulathur main campus)', entity_b: '372 Acres (Vellore main campus)', source_type: 'official' },
-      { metric: 'Recruiter Density & Visiting Companies', entity_a: '850+ Companies visited', entity_b: '900+ Companies visited', source_type: 'official' },
-    ],
-  });
-
-  const [communitySentiment, setCommunitySentiment] = useState<CommunitySentiment[]>([
-    {
-      topic: 'Campus Freedom & Curfew Policies',
-      entity_a_consensus: 'High personal flexibility and relaxed weekend outing permissions for day scholars & hostellers.',
-      entity_b_consensus: 'Strict bio-metric attendance and standardized 7:00 PM hostel in-times noted across r/vit.',
-      sentiment: 'Mixed',
-    },
-    {
-      topic: 'Hostel WiFi & Living Conditions',
-      entity_a_consensus: 'Modern apartment-style AC hostels with attached washrooms; consistent campus WiFi in academic blocks.',
-      entity_b_consensus: 'Tiered 1-bed to 6-bed options; high-speed gigabit LAN in blocks with fast maintenance turnaround.',
-      sentiment: 'Positive',
-    },
-    {
-      topic: 'Peer Developer & Hackathon Culture',
-      entity_a_consensus: 'Vibrant student clubs (SRMKZILLA, Team Rudra) with great international hackathon representation.',
-      entity_b_consensus: 'High competitive coding density with active ACM chapters and massive national participation in Gravitas.',
-      sentiment: 'Positive',
-    },
-    {
-      topic: 'Administration & Exam Rigor',
-      entity_a_consensus: 'Balanced continuous evaluation with accessible faculty grading.',
-      entity_b_consensus: 'Rigorous FFCS schedule with high relative grading competition.',
-      sentiment: 'Mixed',
-    },
-  ]);
-
-  const [suggestedMetrics, setSuggestedMetrics] = useState<string[]>([
-    'Hostel WiFi & Gigabit LAN Speed',
-    'Mess Food & Multi-Cuisine Catering',
-    'Sports Complex & Gym Facilities',
-    'Startup Incubation & Seed Grants',
-    'Semester Abroad Program (SAP)',
-  ]);
-
-  const [verdictSummary, setVerdictSummary] = useState(
-    'Both SRM Chennai and VIT Vellore are tier-1 private engineering institutions in India. VIT Vellore holds a slight edge in NIRF ranking, structured campus discipline, and marquee software placement offers. SRM Chennai offers higher campus freedom, flexible branch selections via SRMJEEE, and excellent medical/biotech research integration.'
-  );
 
   // Spec Sheet Tab: "verified" vs "community"
   const [activeTab, setActiveTab] = useState<'verified' | 'community'>('verified');
@@ -556,12 +481,27 @@ export default function ComparisonApp() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Safe Display Entities
-  const displayEntityA = isSwapped ? entityBData.name : entityAData.name;
-  const displayEntityB = isSwapped ? entityAData.name : entityBData.name;
+  const displayEntityA = isSwapped
+    ? comparisonData?.entity_b?.name || 'Entity B'
+    : comparisonData?.entity_a?.name || 'Entity A';
 
-  const displayProsA = isSwapped ? entityBData.pros : entityAData.pros;
-  const displayProsB = isSwapped ? entityAData.pros : entityBData.pros;
+  const displayEntityB = isSwapped
+    ? comparisonData?.entity_a?.name || 'Entity A'
+    : comparisonData?.entity_b?.name || 'Entity B';
+
+  const displayProsA = isSwapped
+    ? comparisonData?.entity_b?.pros || []
+    : comparisonData?.entity_a?.pros || [];
+
+  const displayProsB = isSwapped
+    ? comparisonData?.entity_a?.pros || []
+    : comparisonData?.entity_b?.pros || [];
+
+  const category = comparisonData?.category || 'Comparative Analysis';
+  const verdictSummary = comparisonData?.verdict_summary || '';
+  const categories = comparisonData?.categories || {};
+  const communitySentiment = comparisonData?.community_sentiment || [];
+  const suggestedMetrics = comparisonData?.suggested_metrics || [];
 
   // Flattened verified metrics for spatial canvas & counts
   const flatVerifiedMetrics = useMemo(() => {
@@ -594,7 +534,7 @@ export default function ComparisonApp() {
     }));
   }, [communitySentiment, isSwapped]);
 
-﻿  // 100% Dynamic Filtered Categories (Supports any domain: Shoes, Software, Universities, etc.)
+﻿  // 100% Dynamic Filtered Categories (No Truncation)
   const filteredCategories = useMemo(() => {
     if (!tableSearch.trim()) return normalizedCategories;
     const term = tableSearch.toLowerCase();
@@ -666,7 +606,7 @@ export default function ComparisonApp() {
 
   const handleAddCustomMetric = async (metricToAdd?: string) => {
     const targetMetric = (metricToAdd || customMetricInput).trim();
-    if (!targetMetric) return;
+    if (!targetMetric || !comparisonData) return;
 
     setAddingMetric(true);
     setError(null);
@@ -695,15 +635,18 @@ export default function ComparisonApp() {
         source_type: newRow.source_type || 'official',
       };
 
-      setCategories((prev) => {
-        const targetCategoryName = Object.keys(prev)[0] || 'Custom Specifications';
+      setComparisonData((prev) => {
+        if (!prev) return prev;
+        const currentCats = { ...prev.categories };
+        const targetCatName = Object.keys(currentCats)[0] || 'Custom Specifications';
+        currentCats[targetCatName] = [...(currentCats[targetCatName] || []), customMetricObj];
         return {
           ...prev,
-          [targetCategoryName]: [...(prev[targetCategoryName] || []), customMetricObj],
+          categories: currentCats,
+          suggested_metrics: prev.suggested_metrics.filter((sm) => sm.toLowerCase() !== targetMetric.toLowerCase()),
         };
       });
 
-      setSuggestedMetrics((prev) => prev.filter((sm) => sm.toLowerCase() !== targetMetric.toLowerCase()));
       setCustomMetricInput('');
       setRecentlyAddedMetric(newRow.metric);
       setActiveTab('verified');
@@ -796,43 +739,41 @@ export default function ComparisonApp() {
       }
 
       // Safe Entity Resolution
-      if (data.entity_a) {
-        setEntityAData(
-          typeof data.entity_a === 'object'
-            ? data.entity_a
-            : { name: String(data.entity_a), pros: [] }
-        );
-      }
-      if (data.entity_b) {
-        setEntityBData(
-          typeof data.entity_b === 'object'
-            ? data.entity_b
-            : { name: String(data.entity_b), pros: [] }
-        );
-      }
+      const resolvedEntityA: EntityVerdict = typeof data.entity_a === 'object' && data.entity_a
+        ? data.entity_a
+        : { name: String(data.entity_a || 'Entity A'), pros: [] };
 
-      if (data.category) setCategory(data.category);
+      const resolvedEntityB: EntityVerdict = typeof data.entity_b === 'object' && data.entity_b
+        ? data.entity_b
+        : { name: String(data.entity_b || 'Entity B'), pros: [] };
 
-      // Dynamic Categories Resolution
+      let resolvedCategories: Record<string, VerifiedMetric[]> = {};
       if (data.categories && Object.keys(data.categories).length > 0) {
-        setCategories(data.categories);
+        resolvedCategories = data.categories;
       } else if (Array.isArray(data.verified_metrics) && data.verified_metrics.length > 0) {
-        setCategories({
+        resolvedCategories = {
           [data.category || 'Core Specifications']: data.verified_metrics,
-        });
+        };
       }
 
-      if (Array.isArray(data.community_sentiment) && data.community_sentiment.length > 0) {
-        setCommunitySentiment(data.community_sentiment);
+      const flatM = Object.values(resolvedCategories).flat();
+      if (resolvedEntityA.pros.length === 0) {
+        resolvedEntityA.pros = flatM.slice(0, 3).map((m) => `${m.metric}: ${m.entity_a}`);
+      }
+      if (resolvedEntityB.pros.length === 0) {
+        resolvedEntityB.pros = flatM.slice(0, 3).map((m) => `${m.metric}: ${m.entity_b}`);
       }
 
-      if (Array.isArray(data.suggested_metrics) && data.suggested_metrics.length > 0) {
-        setSuggestedMetrics(data.suggested_metrics);
-      }
-
-      if (data.verdict_summary) {
-        setVerdictSummary(data.verdict_summary);
-      }
+      setComparisonData({
+        category: data.category || 'Comparative Analysis',
+        entity_a: resolvedEntityA,
+        entity_b: resolvedEntityB,
+        categories: resolvedCategories,
+        verified_metrics: flatM,
+        community_sentiment: Array.isArray(data.community_sentiment) ? data.community_sentiment : [],
+        suggested_metrics: Array.isArray(data.suggested_metrics) ? data.suggested_metrics : [],
+        verdict_summary: data.verdict_summary || `${resolvedEntityA.name} and ${resolvedEntityB.name} provide distinct tradeoffs.`,
+      });
 
       if (data.model_used) setActiveModel(data.model_used);
       setIsSwapped(false);
@@ -876,7 +817,196 @@ export default function ComparisonApp() {
     }
   };
 
-﻿  return (
+﻿  // 1. EMPTY / HERO LANDING STATE (When !comparisonData && !loading)
+  if (!comparisonData && !loading) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 selection:bg-slate-800 selection:text-white flex flex-col justify-between">
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleImageUpload}
+          accept="image/*"
+          multiple
+          className="hidden"
+        />
+
+        {/* Hero Top Navbar */}
+        <header className="border-b border-slate-800/80 bg-slate-900/60 backdrop-blur-xl">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-sky-400 shadow-sm">
+                <Scale className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="font-bold text-lg tracking-tight text-white">MorphUI</span>
+                <span className="text-[10px] ml-2 uppercase font-mono px-1.5 py-0.5 rounded bg-slate-800 text-sky-300 border border-slate-700">
+                  v2.0
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 text-xs text-slate-400">
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              <span className="hidden sm:inline">De-Biased Fact Engine & Spatial Matrix</span>
+            </div>
+          </div>
+        </header>
+
+        {/* Main Clean Hero Landing Section */}
+        <main className="max-w-4xl mx-auto px-4 sm:px-6 py-16 sm:py-24 text-center space-y-8 flex-1 flex flex-col justify-center items-center">
+          {/* Badge */}
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-xs text-sky-400 shadow-sm">
+            <Sparkles className="w-3.5 h-3.5" />
+            <span className="font-semibold">AI-Powered Entity Resolution & Reddit De-Biasing</span>
+          </div>
+
+          {/* Heading */}
+          <div className="space-y-3">
+            <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-white leading-tight">
+              MorphUI: Real-Time Generative Comparisons
+            </h1>
+            <p className="text-sm sm:text-base text-slate-400 max-w-2xl mx-auto leading-relaxed">
+              Compare any two entities across any domain. Get instant side-by-side spec sheets, de-biased consensus, and spatial graph models.
+            </p>
+          </div>
+
+          {/* Uploaded Images Preview if any */}
+          {uploadedImages.length > 0 && (
+            <div className="p-3 bg-slate-900 border border-slate-800 rounded-2xl flex items-center gap-3 w-full max-w-2xl text-left">
+              <span className="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
+                <Eye className="w-4 h-4 text-sky-400" /> Visual Inputs ({uploadedImages.length}/2):
+              </span>
+              <div className="flex items-center gap-2">
+                {uploadedImages.map((img, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-xs"
+                  >
+                    <img src={img.previewUrl} alt={img.name} className="w-6 h-6 object-cover rounded" />
+                    <span className="text-slate-300 font-medium truncate max-w-[140px]">{img.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => setUploadedImages((prev) => prev.filter((_, i) => i !== idx))}
+                      className="text-slate-500 hover:text-rose-400"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Large Hero Search Input */}
+          <div className="w-full max-w-2xl">
+            <form onSubmit={handleRunComparison} className="relative flex items-center shadow-2xl">
+              <Search className="w-5 h-5 text-slate-500 absolute left-4 pointer-events-none" />
+              <input
+                type="text"
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                placeholder="Compare any two entities (e.g., Apple vs Mango, Sony WH-1000XM5 vs Bose QC Ultra)..."
+                className="w-full bg-slate-900/90 border-2 border-slate-800 focus:border-sky-500 rounded-2xl pl-12 pr-28 py-4 text-sm sm:text-base text-slate-100 placeholder-slate-500 outline-none transition-all shadow-inner"
+              />
+
+              <div className="absolute right-2.5 flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={toggleVoiceInput}
+                  title="Voice Search"
+                  className={`p-2 rounded-xl transition-colors ${
+                    isListening
+                      ? 'bg-rose-500 text-white animate-pulse'
+                      : 'text-slate-400 hover:text-sky-400 hover:bg-slate-800'
+                  }`}
+                >
+                  {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  title="Upload image to compare"
+                  className="p-2 rounded-xl text-slate-400 hover:text-sky-400 hover:bg-slate-800 transition-colors"
+                >
+                  <ImagePlus className="w-5 h-5" />
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={!prompt.trim() && uploadedImages.length === 0}
+                  className="px-4 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-white font-semibold text-xs sm:text-sm active:scale-95 transition-all flex items-center gap-1.5 shadow-md disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <span>Compare</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* Inspiration Query Chips */}
+          <div className="space-y-2 pt-2">
+            <span className="text-xs text-slate-500 font-medium block">Try a sample search:</span>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              {[
+                { label: '🍎 Apple vs 🥭 Mango', query: 'Apple vs Mango: Nutrition & Shelf Life' },
+                { label: '🎧 Sony WH-1000XM5 vs Bose QC Ultra', query: 'Sony WH-1000XM5 vs Bose QC Ultra' },
+                { label: '👟 Nike Pegasus 41 vs Adidas Ultraboost', query: 'Nike Pegasus 41 vs Adidas Ultraboost Light' },
+                { label: '🏛️ IIT Bombay vs IIT Delhi', query: 'IIT Bombay vs IIT Delhi for Computer Science' },
+                { label: '⚡ React vs Vue', query: 'React vs Vue: Performance & DX' },
+              ].map((item, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => {
+                    setPrompt(item.query);
+                    handleRunComparison(undefined, item.query);
+                  }}
+                  className="px-3 py-1.5 rounded-full bg-slate-900/80 hover:bg-slate-800 hover:text-slate-100 text-slate-400 border border-slate-800 text-xs transition-colors"
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </main>
+
+        <footer className="border-t border-slate-800/80 bg-slate-900/40 py-6 text-center text-xs text-slate-500">
+          <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+            <span>MorphUI • Real-Time Generative Comparisons</span>
+            <span>Zero-slop human-engineered runtime (2026)</span>
+          </div>
+        </footer>
+      </div>
+    );
+  }
+
+﻿  // 2. LOADING STATE (When loading is true and no data yet)
+  if (loading && !comparisonData) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center p-6 space-y-6">
+        <div className="w-16 h-16 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-sky-400 shadow-2xl relative">
+          <Loader2 className="w-8 h-8 animate-spin" />
+          <div className="absolute inset-0 rounded-2xl border-2 border-sky-500/40 animate-ping opacity-25" />
+        </div>
+
+        <div className="text-center space-y-2 max-w-md">
+          <h2 className="text-xl font-bold text-white tracking-tight">Generating Precision Comparison</h2>
+          <p className="text-xs text-slate-400 leading-relaxed">
+            Executing parallel web retrieval, stripping forum bias, and synthesizing dynamic domain metrics...
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2 text-[11px] font-mono text-sky-400 bg-slate-900/80 px-3 py-1.5 rounded-full border border-slate-800">
+          <Sparkles className="w-3.5 h-3.5" />
+          <span>Active Query: &quot;{prompt || 'Visual Comparison'}&quot;</span>
+        </div>
+      </div>
+    );
+  }
+
+  // 3. ACTIVE COMPARISON VIEW (When comparisonData exists)
+  return (
     <div className="min-h-screen bg-slate-950 text-slate-100 selection:bg-slate-800 selection:text-white pb-16">
       <input
         type="file"
@@ -887,12 +1017,12 @@ export default function ComparisonApp() {
         className="hidden"
       />
 
-      {/* Top Main Navigation Bar with Expanding Central Search & Far-Right View Mode */}
+      {/* Active Navigation Bar */}
       <header className="border-b border-slate-800/80 bg-slate-900/90 backdrop-blur-xl sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
-          {/* Logo & Branding */}
+          {/* Logo & Category */}
           <div className="flex items-center gap-3 shrink-0">
-            <div className="w-9 h-9 rounded-xl bg-slate-800 border border-slate-700/80 flex items-center justify-center text-sky-400 shadow-sm">
+            <div className="w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-sky-400 shadow-sm">
               <Scale className="w-5 h-5" />
             </div>
             <div>
@@ -906,7 +1036,7 @@ export default function ComparisonApp() {
             </div>
           </div>
 
-          {/* Central Expanding Flex Container with Search, Mic, Image & Primary Submit Icon */}
+          {/* Central Expanding Search Input */}
           <div className="flex-1 flex-grow max-w-2xl mx-2">
             <form onSubmit={handleRunComparison} className="relative w-full flex items-center">
               <Search className="w-4 h-4 text-slate-500 absolute left-3.5 pointer-events-none" />
@@ -914,20 +1044,19 @@ export default function ComparisonApp() {
                 type="text"
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                placeholder="Compare any two entities (Shoes, Phones, Colleges, Software)..."
+                placeholder="Compare any two entities (e.g., Apple vs Mango, Shoes, Phones)..."
                 disabled={loading}
                 className="w-full bg-slate-950 border border-slate-800 focus:border-sky-500 rounded-xl pl-9 pr-24 py-2 text-xs sm:text-sm text-slate-100 placeholder-slate-500 outline-none transition-all shadow-inner"
               />
 
-              {/* Action Controls Grouped Inside the Input */}
               <div className="absolute right-1.5 flex items-center gap-1">
                 <button
                   type="button"
                   onClick={toggleVoiceInput}
-                  title={isListening ? 'Listening... click to stop' : 'Click to speak query (Voice Search)'}
+                  title="Voice Search"
                   className={`p-1.5 rounded-lg transition-colors ${
                     isListening
-                      ? 'bg-rose-500 text-white animate-pulse shadow-md shadow-rose-500/30'
+                      ? 'bg-rose-500 text-white animate-pulse'
                       : 'text-slate-400 hover:text-sky-400 hover:bg-slate-800'
                   }`}
                 >
@@ -937,14 +1066,13 @@ export default function ComparisonApp() {
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  title="Upload images to visually compare"
+                  title="Upload image"
                   disabled={loading || uploadedImages.length >= 2}
                   className="p-1.5 rounded-lg text-slate-400 hover:text-sky-400 hover:bg-slate-800 transition-colors disabled:opacity-40"
                 >
                   <ImagePlus className="w-4 h-4" />
                 </button>
 
-                {/* Primary Submit Compare Icon Button Inside Input */}
                 <button
                   type="submit"
                   disabled={loading || (!prompt.trim() && uploadedImages.length === 0)}
@@ -993,7 +1121,6 @@ export default function ComparisonApp() {
               </button>
             </div>
 
-            {/* Shortcut Text - Hidden on Small Screens */}
             <div className="hidden lg:flex items-center gap-1.5 text-[11px] text-slate-500 font-mono">
               <kbd className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 text-[10px]">
                 V
@@ -1003,7 +1130,6 @@ export default function ComparisonApp() {
           </div>
         </div>
 
-        {/* Listening Banner */}
         {isListening && (
           <div className="bg-rose-500/10 border-t border-rose-500/20 py-1 px-4 text-center text-xs text-rose-300 flex items-center justify-center gap-2">
             <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
@@ -1078,9 +1204,9 @@ export default function ComparisonApp() {
                   <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded bg-slate-800 text-sky-400 border border-slate-700">
                     Option A
                   </span>
-                  <span className="text-xs text-slate-400">{category}</span>
+                  <span className="text-xs text-slate-400 whitespace-normal break-words">{category}</span>
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white whitespace-normal break-words">
                   {displayEntityA}
                 </h1>
                 <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-800/90 border border-slate-700 text-xs font-medium text-slate-200">
@@ -1099,12 +1225,12 @@ export default function ComparisonApp() {
               {/* Entity B */}
               <div className="flex-1 space-y-2 md:text-right">
                 <div className="flex items-center gap-2 md:justify-end">
-                  <span className="text-xs text-slate-400">{category}</span>
+                  <span className="text-xs text-slate-400 whitespace-normal break-words">{category}</span>
                   <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded bg-slate-800 text-indigo-400 border border-slate-700">
                     Option B
                   </span>
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white whitespace-normal break-words">
                   {displayEntityB}
                 </h1>
                 <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-800/90 border border-slate-700 text-xs font-medium text-slate-200">
@@ -1138,11 +1264,11 @@ export default function ComparisonApp() {
               </div>
             </div>
 
-            <p className="text-sm text-slate-300 leading-relaxed bg-slate-950/60 p-4 rounded-xl border border-slate-800/80">
+            <p className="text-sm text-slate-300 leading-relaxed bg-slate-950/60 p-4 rounded-xl border border-slate-800/80 whitespace-normal break-words">
               {verdictSummary}
             </p>
 
-            {/* 100% Safe Entity Verdict Cards (Mapped directly to entity_a.name / entity_b.name & pros) */}
+            {/* 100% Safe Entity Verdict Cards (No line-clamp / No truncation) */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-slate-950/80 border border-slate-800/90 rounded-xl p-4 space-y-3">
                 <div className="flex items-center gap-2 text-sky-400 font-semibold text-xs uppercase tracking-wider">
@@ -1151,7 +1277,7 @@ export default function ComparisonApp() {
                 </div>
                 <ul className="space-y-2 text-xs text-slate-300">
                   {(displayProsA.length > 0 ? displayProsA : ['Verified domain baseline features']).map((item, idx) => (
-                    <li key={idx} className="flex items-start gap-2">
+                    <li key={idx} className="flex items-start gap-2 whitespace-normal break-words leading-relaxed">
                       <span className="w-1.5 h-1.5 rounded-full bg-sky-400 shrink-0 mt-1.5" />
                       <span>{item}</span>
                     </li>
@@ -1166,7 +1292,7 @@ export default function ComparisonApp() {
                 </div>
                 <ul className="space-y-2 text-xs text-slate-300">
                   {(displayProsB.length > 0 ? displayProsB : ['Targeted competitive benchmark features']).map((item, idx) => (
-                    <li key={idx} className="flex items-start gap-2">
+                    <li key={idx} className="flex items-start gap-2 whitespace-normal break-words leading-relaxed">
                       <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 shrink-0 mt-1.5" />
                       <span>{item}</span>
                     </li>
@@ -1286,7 +1412,7 @@ export default function ComparisonApp() {
             </div>
           </section>
 
-          {/* TAB 1: 100% Dynamic Verified Facts & Official Specs Table */}
+          {/* TAB 1: 100% Dynamic Verified Facts & Official Specs Table (Full Text Wrapping) */}
           {activeTab === 'verified' && (
             <section className="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden print-clean">
               <div className="sticky top-16 z-20 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-6 py-3.5 grid grid-cols-12 gap-4 items-center text-xs font-bold uppercase tracking-wider text-slate-400 shadow-sm">
@@ -1294,17 +1420,17 @@ export default function ComparisonApp() {
                   <FileSpreadsheet className="w-4 h-4 text-slate-500" />
                   <span>Dynamic Metric / Attribute</span>
                 </div>
-                <div className="col-span-4 text-sky-400 flex items-center gap-1.5 truncate">
+                <div className="col-span-4 text-sky-400 flex items-center gap-1.5 whitespace-normal break-words">
                   <span className="w-2 h-2 rounded-full bg-sky-400 shrink-0" />
-                  <span className="truncate">{displayEntityA}</span>
+                  <span>{displayEntityA}</span>
                 </div>
-                <div className="col-span-4 text-indigo-400 flex items-center gap-1.5 truncate">
+                <div className="col-span-4 text-indigo-400 flex items-center gap-1.5 whitespace-normal break-words">
                   <span className="w-2 h-2 rounded-full bg-indigo-400 shrink-0" />
-                  <span className="truncate">{displayEntityB}</span>
+                  <span>{displayEntityB}</span>
                 </div>
               </div>
 
-              {/* Dynamic Categories Loop: Object.entries(categories).map(...) */}
+              {/* Dynamic Categories Loop (No Ellipsis on Headers or Cells) */}
               <div className="divide-y divide-slate-800">
                 {Object.keys(filteredCategories).length === 0 ? (
                   <div className="p-12 text-center text-slate-500 text-sm">
@@ -1319,18 +1445,18 @@ export default function ComparisonApp() {
                         <button
                           type="button"
                           onClick={() => toggleSection(categoryName)}
-                          className="w-full bg-slate-950/70 hover:bg-slate-950/90 px-6 py-3 flex items-center justify-between text-left transition-colors border-t first:border-t-0 border-slate-800"
+                          className="w-full bg-slate-950/70 hover:bg-slate-950/90 px-6 py-3.5 flex items-center justify-between text-left transition-colors border-t first:border-t-0 border-slate-800"
                         >
-                          <div className="flex items-center gap-2.5">
-                            <SlidersHorizontal className="w-4 h-4 text-sky-400" />
-                            <span className="font-bold text-xs sm:text-sm text-slate-200">
+                          <div className="flex items-center gap-2.5 whitespace-normal break-words">
+                            <SlidersHorizontal className="w-4 h-4 text-sky-400 shrink-0" />
+                            <span className="font-bold text-xs sm:text-sm text-slate-200 whitespace-normal break-words">
                               {categoryName}
                             </span>
-                            <span className="text-[11px] text-slate-500 font-mono">
+                            <span className="text-[11px] text-slate-500 font-mono shrink-0">
                               ({metrics.length})
                             </span>
                           </div>
-                          <div className="text-slate-500 hover:text-slate-300">
+                          <div className="text-slate-500 hover:text-slate-300 shrink-0 ml-2">
                             {isOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                           </div>
                         </button>
@@ -1364,8 +1490,8 @@ export default function ComparisonApp() {
                                       : 'hover:bg-slate-800/40'
                                   }`}
                                 >
-                                  <div className="col-span-4 pr-2">
-                                    <div className="font-semibold text-slate-200 leading-snug">
+                                  <div className="col-span-4 pr-2 align-top whitespace-normal break-words">
+                                    <div className="font-semibold text-slate-200 leading-relaxed whitespace-normal break-words">
                                       {m.metric}
                                     </div>
                                     <div className="flex items-center gap-1.5 mt-1">
@@ -1380,8 +1506,8 @@ export default function ComparisonApp() {
                                     </div>
                                   </div>
 
-                                  <div className="col-span-4 text-slate-300 leading-relaxed pr-2 space-y-1.5">
-                                    <div>{m.entity_a}</div>
+                                  <div className="col-span-4 text-slate-300 leading-relaxed pr-2 space-y-1.5 align-top whitespace-normal break-words">
+                                    <div className="whitespace-normal break-words">{m.entity_a}</div>
                                     {hasNumeric && (
                                       <div className="pt-1">
                                         <div className="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
@@ -1394,8 +1520,8 @@ export default function ComparisonApp() {
                                     )}
                                   </div>
 
-                                  <div className="col-span-4 text-slate-300 leading-relaxed space-y-1.5">
-                                    <div>{m.entity_b}</div>
+                                  <div className="col-span-4 text-slate-300 leading-relaxed space-y-1.5 align-top whitespace-normal break-words">
+                                    <div className="whitespace-normal break-words">{m.entity_b}</div>
                                     {hasNumeric && (
                                       <div className="pt-1">
                                         <div className="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
@@ -1425,8 +1551,8 @@ export default function ComparisonApp() {
             <section className="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden print-clean">
               <div className="p-4 bg-slate-950/80 border-b border-slate-800 flex items-center justify-between text-xs text-slate-400">
                 <div className="flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-sky-400" />
-                  <span>
+                  <ShieldCheck className="w-4 h-4 text-sky-400 shrink-0" />
+                  <span className="whitespace-normal break-words">
                     De-Biased Consensus: Hyperbolic & isolated personal rants stripped; consensus normalized.
                   </span>
                 </div>
@@ -1437,13 +1563,13 @@ export default function ComparisonApp() {
                   <MessageSquare className="w-4 h-4 text-slate-500" />
                   <span>Community Theme / Topic</span>
                 </div>
-                <div className="col-span-4 text-sky-400 flex items-center gap-1.5 truncate">
+                <div className="col-span-4 text-sky-400 flex items-center gap-1.5 whitespace-normal break-words">
                   <span className="w-2 h-2 rounded-full bg-sky-400 shrink-0" />
-                  <span className="truncate">{displayEntityA} Consensus</span>
+                  <span>{displayEntityA} Consensus</span>
                 </div>
-                <div className="col-span-4 text-indigo-400 flex items-center gap-1.5 truncate">
+                <div className="col-span-4 text-indigo-400 flex items-center gap-1.5 whitespace-normal break-words">
                   <span className="w-2 h-2 rounded-full bg-indigo-400 shrink-0" />
-                  <span className="truncate">{displayEntityB} Consensus</span>
+                  <span>{displayEntityB} Consensus</span>
                 </div>
               </div>
 
@@ -1458,8 +1584,8 @@ export default function ComparisonApp() {
                       key={idx}
                       className="grid grid-cols-12 gap-4 px-6 py-4 items-start text-xs sm:text-sm hover:bg-slate-800/40 transition-colors"
                     >
-                      <div className="col-span-4 pr-2 space-y-1.5">
-                        <div className="font-semibold text-slate-200 leading-snug">{s.topic}</div>
+                      <div className="col-span-4 pr-2 space-y-1.5 align-top whitespace-normal break-words">
+                        <div className="font-semibold text-slate-200 leading-snug whitespace-normal break-words">{s.topic}</div>
                         <div>
                           <span
                             className={`inline-flex items-center gap-1 text-[10px] uppercase font-mono px-2 py-0.5 rounded border ${
@@ -1476,11 +1602,11 @@ export default function ComparisonApp() {
                         </div>
                       </div>
 
-                      <div className="col-span-4 text-slate-300 leading-relaxed pr-2 bg-slate-950/50 p-2.5 rounded-xl border border-slate-800/60">
+                      <div className="col-span-4 text-slate-300 leading-relaxed pr-2 bg-slate-950/50 p-3 rounded-xl border border-slate-800/60 align-top whitespace-normal break-words">
                         {s.entity_a_consensus}
                       </div>
 
-                      <div className="col-span-4 text-slate-300 leading-relaxed bg-slate-950/50 p-2.5 rounded-xl border border-slate-800/60">
+                      <div className="col-span-4 text-slate-300 leading-relaxed bg-slate-950/50 p-3 rounded-xl border border-slate-800/60 align-top whitespace-normal break-words">
                         {s.entity_b_consensus}
                       </div>
                     </div>
