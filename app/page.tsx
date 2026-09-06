@@ -57,54 +57,62 @@ import {
   EntityVerdict,
 } from '@/types/morphui';
 
-type MorphTheme = 'dark' | 'light' | 'pink';
+type MorphTheme = 'dark' | 'light' | 'botanical' | 'pink';
 
-// Theme helper classes dictionary
-const THEME_STYLES = {
+const THEME_STYLES: Record<MorphTheme, {
+  bg: string;
+  card: string;
+  cardInner: string;
+  nav: string;
+  input: string;
+  btnPrimary: string;
+  accentText: string;
+  border: string;
+  badge: string;
+}> = {
   dark: {
     bg: 'bg-slate-950 text-slate-100 selection:bg-slate-800 selection:text-white',
-    card: 'bg-slate-900 border-slate-800 text-slate-100',
-    cardInner: 'bg-slate-950/70 border-slate-800/80',
+    card: 'bg-slate-900 border-slate-800 text-slate-100 shadow-xl',
+    cardInner: 'bg-slate-950/80 border-slate-800/80',
     nav: 'bg-slate-900/90 border-slate-800/80 text-white',
     input: 'bg-slate-950 border-slate-800 text-slate-100 focus:border-sky-500 placeholder-slate-500',
     btnPrimary: 'bg-sky-500 hover:bg-sky-400 text-white shadow-sky-500/20',
     accentText: 'text-sky-400',
     border: 'border-slate-800',
-    nodeBorder: 'border-slate-700/80 hover:border-sky-500/50 hover:shadow-sky-500/10',
-    edgeStroke1: '#38bdf8',
-    edgeStroke2: '#818cf8',
-    edgeStroke3: '#34d399',
-    bgGrid: '#1e293b',
+    badge: 'bg-slate-800 text-sky-400 border-slate-700',
   },
   light: {
-    bg: 'bg-slate-50 text-slate-900 selection:bg-slate-200 selection:text-slate-900',
-    card: 'bg-white border-slate-200 text-slate-900 shadow-lg shadow-slate-200/50',
-    cardInner: 'bg-slate-100/80 border-slate-200',
-    nav: 'bg-white/95 border-slate-200/90 text-slate-900',
+    bg: 'bg-white text-slate-900 selection:bg-sky-100 selection:text-slate-900',
+    card: 'bg-white border-slate-200 text-slate-900 shadow-xl shadow-slate-200/50',
+    cardInner: 'bg-slate-50 border-slate-200',
+    nav: 'bg-white/95 border-slate-200/90 text-slate-900 shadow-sm',
     input: 'bg-white border-slate-300 text-slate-900 focus:border-sky-500 placeholder-slate-400',
     btnPrimary: 'bg-sky-600 hover:bg-sky-500 text-white shadow-sky-600/20',
     accentText: 'text-sky-600',
     border: 'border-slate-200',
-    nodeBorder: 'border-slate-300 hover:border-sky-400 hover:shadow-sky-400/20',
-    edgeStroke1: '#0284c7',
-    edgeStroke2: '#6366f1',
-    edgeStroke3: '#059669',
-    bgGrid: '#cbd5e1',
+    badge: 'bg-slate-100 text-slate-700 border-slate-300',
+  },
+  botanical: {
+    bg: 'bg-emerald-950 text-emerald-100 selection:bg-emerald-800 selection:text-white',
+    card: 'bg-[#062c1e] border-emerald-800/80 text-emerald-100 shadow-xl shadow-emerald-950/50',
+    cardInner: 'bg-[#041d14]/90 border-emerald-900/60',
+    nav: 'bg-[#062c1e]/95 border-emerald-800/80 text-emerald-100 shadow-sm',
+    input: 'bg-[#041d14] border-emerald-800/60 text-emerald-100 focus:border-emerald-400 placeholder-emerald-400/40',
+    btnPrimary: 'bg-emerald-500 hover:bg-emerald-400 text-white shadow-emerald-500/30',
+    accentText: 'text-emerald-400',
+    border: 'border-emerald-800/80',
+    badge: 'bg-emerald-900/80 text-emerald-300 border-emerald-700',
   },
   pink: {
     bg: 'bg-[#0f0714] text-pink-50 selection:bg-pink-500 selection:text-white',
-    card: 'bg-[#1a0c24] border-pink-950/80 text-pink-50 shadow-lg shadow-pink-950/40',
+    card: 'bg-[#1a0c24] border-pink-950/80 text-pink-50 shadow-xl shadow-pink-950/40',
     cardInner: 'bg-[#0d0512]/90 border-pink-900/40',
     nav: 'bg-[#170a20]/95 border-pink-900/60 text-pink-50',
     input: 'bg-[#0d0512] border-pink-900/60 text-pink-50 focus:border-pink-500 placeholder-pink-400/40',
     btnPrimary: 'bg-pink-500 hover:bg-pink-400 text-white shadow-pink-500/30',
     accentText: 'text-pink-400',
     border: 'border-pink-900/60',
-    nodeBorder: 'border-pink-900/80 hover:border-pink-500 hover:shadow-pink-500/20',
-    edgeStroke1: '#ec4899',
-    edgeStroke2: '#f43f5e',
-    edgeStroke3: '#d946ef',
-    bgGrid: '#3b0764',
+    badge: 'bg-pink-950 text-pink-300 border-pink-800',
   },
 };
 
@@ -137,9 +145,13 @@ function isMissingVerdictBullet(text: any): boolean {
   return /^(n\/?a|not specified.*|none|null|-|unknown)$/i.test(clean);
 }
 
-function renderValueWithFallback(val: any, fallbackText = 'Not specified') {
+function renderValueWithFallback(val: any, fallbackText = 'Add specification...') {
   if (isMissingValue(val)) {
-    return <span className="text-slate-500 italic text-xs sm:text-sm">{fallbackText}</span>;
+    return (
+      <span className="inline-flex items-center gap-1 text-slate-400 dark:text-slate-500 italic text-xs bg-slate-800/30 px-2 py-0.5 rounded border border-slate-700/40 hover:border-sky-500/50 transition-colors cursor-text">
+        <span>+ {fallbackText}</span>
+      </span>
+    );
   }
   return val;
 }
@@ -1799,8 +1811,8 @@ export default function ComparisonApp() {
 
           {/* Desktop-only View Switcher & Keyboard Shortcut */}
           <div className="hidden md:flex items-center gap-3 shrink-0">
-            {/* 3-Tier Theme Switcher */}
-            <div className="flex items-center p-1 rounded-xl bg-slate-950/80 border border-slate-800 shadow-inner">
+                        {/* Functional Theme Switcher */}
+            <div className="flex items-center p-1 rounded-xl bg-slate-900/90 dark:bg-slate-950/90 border border-slate-700/80 shadow-inner shrink-0">
               <button
                 type="button"
                 onClick={() => setTheme('dark')}
@@ -1812,7 +1824,7 @@ export default function ComparisonApp() {
                 }`}
               >
                 <span>🌙</span>
-                <span className="hidden xl:inline text-[11px]">Dark</span>
+                <span className="hidden lg:inline text-[11px]">Dark</span>
               </button>
               <button
                 type="button"
@@ -1820,17 +1832,30 @@ export default function ComparisonApp() {
                 title="Clean White Mode"
                 className={`px-2 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${
                   theme === 'light'
-                    ? 'bg-slate-800 text-amber-300 shadow-sm border border-slate-700'
+                    ? 'bg-white text-slate-900 shadow-sm border border-slate-200'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
                 <span>☀️</span>
-                <span className="hidden xl:inline text-[11px]">Light</span>
+                <span className="hidden lg:inline text-[11px]">Light</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setTheme('botanical')}
+                title="Botanical Emerald Mode"
+                className={`px-2 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${
+                  theme === 'botanical'
+                    ? 'bg-emerald-700 text-white shadow-sm border border-emerald-600'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <span>🌿</span>
+                <span className="hidden lg:inline text-[11px]">Botanical</span>
               </button>
               <button
                 type="button"
                 onClick={() => setTheme('pink')}
-                title="C2C Pink Mode"
+                title="C2C Pink Theme"
                 className={`px-2 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${
                   theme === 'pink'
                     ? 'bg-pink-600 text-white shadow-sm border border-pink-500'
@@ -1838,7 +1863,7 @@ export default function ComparisonApp() {
                 }`}
               >
                 <span>🌸</span>
-                <span className="hidden xl:inline text-[11px]">Pink</span>
+                <span className="hidden lg:inline text-[11px]">Pink</span>
               </button>
             </div>
             <div className="flex items-center p-1 rounded-xl bg-slate-950/80 border border-slate-800 shadow-inner">
