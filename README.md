@@ -87,7 +87,6 @@ SWR Caching Layer (Upstash / Memory Map + Jitter)
    ```env
    GEMINI_API_KEY=your_gemini_api_key_here
    GROQ_API_KEY=your_groq_api_key_here
-   SERPAPI_API_KEY=your_serpapi_key_here
    TURSO_DATABASE_URL=your_turso_db_url_here
    TURSO_AUTH_TOKEN=your_turso_auth_token_here
    STEALTH_SECRET=your_secret_passphrase_here
