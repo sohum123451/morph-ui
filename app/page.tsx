@@ -1,57 +1,63 @@
 'use client';
 
-import '@xyflow/react/dist/style.css';
-import React, { useState, useMemo, useRef, useEffect, useCallback, memo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback, memo } from 'react';
 import {
-  ReactFlow,
-  ReactFlowProvider,
+  Search,
+  Scale,
+  Sparkles,
+  ArrowRight,
+  ShieldCheck,
+  MessageSquare,
+  Network,
+  Maximize2,
+  FileSpreadsheet,
+  Award,
+  Layers,
+  ArrowLeftRight,
+  ThumbsUp,
+  AlertTriangle,
+  History as HistoryIcon,
+  Plus,
+  Trash2,
+  X,
+  FileText,
+  Loader2,
+  Mic,
+  MicOff,
+  ImagePlus,
+  SlidersHorizontal,
+  ChevronDown,
+  ChevronUp,
+  CheckCircle2,
+  ChevronsUpDown,
+  Printer,
+  Share2,
+  Eye,
+} from 'lucide-react';
+import { ReactFlow,
   Background,
   Controls,
-  MiniMap,
-  useReactFlow,
+  Handle,
+  Position,
   useNodesState,
   useEdgesState,
+  useReactFlow,
+  ReactFlowProvider,
   Node,
   Edge,
   BackgroundVariant,
-  Handle,
-  Position,
 } from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
+
+const Flow = ReactFlow as any;
+const FlowProvider = ReactFlowProvider as any;
+const FlowBackground = Background as any;
+const FlowControls = Controls as any;
+const FlowHandle = Handle as any;
+
+
 import {
-  Sparkles,
-  Search,
-  ArrowLeftRight,
-  Printer,
-  CheckCircle2,
-  ChevronDown,
-  ChevronUp,
-  ChevronsUpDown,
-  Building2,
-  Scale,
-  Award,
-  SlidersHorizontal,
-  ImagePlus,
-  X,
-  Eye,
-  Loader2,
-  Share2,
-  ShieldCheck,
-  FileSpreadsheet,
-  Mic,
-  MicOff,
-  MessageSquare,
-  Plus,
-  ThumbsUp,
-  AlertTriangle,
-  FileText,
-  Network,
-  LayoutGrid,
-  ArrowRight,
-  History as HistoryIcon,
-  Trash2,
-} from 'lucide-react';
-import {
-  VerifiedMetric,
+    VerifiedMetric,
   CommunitySentiment,
   GenerativeComparisonResponse,
   EntityVerdict,
@@ -65,54 +71,109 @@ const THEME_STYLES: Record<MorphTheme, {
   cardInner: string;
   nav: string;
   input: string;
-  btnPrimary: string;
-  accentText: string;
-  border: string;
+  tableHeader: string;
+  tableRow: string;
+  tableSection: string;
   badge: string;
+  badgeSecondary: string;
+  subtext: string;
+  title: string;
+  btnSecondary: string;
+  pillActive: string;
+  pillInactive: string;
+  accentText: string;
+  footer: string;
+  sidebar: string;
+  canvasBg: string;
+  canvasDotColor: string;
 }> = {
   dark: {
-    bg: 'bg-slate-950 text-slate-100 selection:bg-slate-800 selection:text-white',
-    card: 'bg-slate-900 border-slate-800 text-slate-100 shadow-xl',
-    cardInner: 'bg-slate-950/80 border-slate-800/80',
-    nav: 'bg-slate-900/90 border-slate-800/80 text-white',
-    input: 'bg-slate-950 border-slate-800 text-slate-100 focus:border-sky-500 placeholder-slate-500',
-    btnPrimary: 'bg-sky-500 hover:bg-sky-400 text-white shadow-sky-500/20',
+    bg: 'bg-[#0B0F17] text-slate-100 selection:bg-slate-800 selection:text-white',
+    card: 'bg-[#111827]/90 border border-slate-800/90 text-slate-100 shadow-xl shadow-black/20 backdrop-blur-md',
+    cardInner: 'bg-[#0B0F17]/80 border border-slate-800/80 text-slate-300',
+    nav: 'bg-[#0B0F17]/90 border-b border-slate-800/80 text-white backdrop-blur-xl shadow-sm',
+    input: 'bg-[#0B0F17] border border-slate-800 text-slate-100 focus:border-sky-500 placeholder-slate-500',
+    tableHeader: 'bg-slate-900/95 text-slate-300 border-b border-slate-800',
+    tableRow: 'hover:bg-slate-800/40 border-b border-slate-800/60',
+    tableSection: 'bg-slate-950/70 hover:bg-slate-950/90 border-t border-slate-800',
+    badge: 'bg-slate-800 text-sky-400 border border-slate-700',
+    badgeSecondary: 'bg-slate-800 text-slate-400 border border-slate-700',
+    subtext: 'text-slate-400',
+    title: 'text-white',
+    btnSecondary: 'bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white',
+    pillActive: 'bg-slate-800 text-sky-400 shadow-sm border border-slate-700 font-semibold',
+    pillInactive: 'text-slate-400 hover:text-slate-200',
     accentText: 'text-sky-400',
-    border: 'border-slate-800',
-    badge: 'bg-slate-800 text-sky-400 border-slate-700',
+    footer: 'border-t border-slate-800/80 bg-slate-900/40 text-slate-500',
+    sidebar: 'bg-slate-900 border-r border-slate-800 text-slate-100',
+    canvasBg: '#030712',
+    canvasDotColor: '#1e293b',
   },
   light: {
-    bg: 'bg-white text-slate-900 selection:bg-sky-100 selection:text-slate-900',
-    card: 'bg-white border-slate-200 text-slate-900 shadow-xl shadow-slate-200/50',
-    cardInner: 'bg-slate-50 border-slate-200',
-    nav: 'bg-white/95 border-slate-200/90 text-slate-900 shadow-sm',
-    input: 'bg-white border-slate-300 text-slate-900 focus:border-sky-500 placeholder-slate-400',
-    btnPrimary: 'bg-sky-600 hover:bg-sky-500 text-white shadow-sky-600/20',
+    bg: 'bg-[#F8FAFC] text-slate-900 selection:bg-sky-100 selection:text-slate-900',
+    card: 'bg-white border border-slate-200/90 text-slate-900 shadow-xl shadow-slate-200/50 backdrop-blur-md',
+    cardInner: 'bg-slate-50 border border-slate-200 text-slate-800',
+    nav: 'bg-white/95 border-b border-slate-200/90 text-slate-900 backdrop-blur-xl shadow-sm',
+    input: 'bg-slate-50 border border-slate-300 text-slate-900 focus:border-sky-500 placeholder-slate-400 focus:bg-white',
+    tableHeader: 'bg-slate-100/90 text-slate-700 border-b border-slate-200',
+    tableRow: 'hover:bg-slate-50/90 border-b border-slate-200/80',
+    tableSection: 'bg-slate-100/80 hover:bg-slate-200/60 border-t border-slate-200',
+    badge: 'bg-sky-50 text-sky-700 border border-sky-200',
+    badgeSecondary: 'bg-slate-100 text-slate-600 border border-slate-200',
+    subtext: 'text-slate-600',
+    title: 'text-slate-900',
+    btnSecondary: 'bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 hover:text-slate-900 shadow-xs',
+    pillActive: 'bg-white text-slate-900 shadow-sm border border-slate-300 font-bold',
+    pillInactive: 'text-slate-500 hover:text-slate-800',
     accentText: 'text-sky-600',
-    border: 'border-slate-200',
-    badge: 'bg-slate-100 text-slate-700 border-slate-300',
+    footer: 'border-t border-slate-200 bg-white/80 text-slate-500',
+    sidebar: 'bg-white border-r border-slate-200 text-slate-900',
+    canvasBg: '#f1f5f9',
+    canvasDotColor: '#cbd5e1',
   },
   botanical: {
-    bg: 'bg-emerald-950 text-emerald-100 selection:bg-emerald-800 selection:text-white',
-    card: 'bg-[#062c1e] border-emerald-800/80 text-emerald-100 shadow-xl shadow-emerald-950/50',
-    cardInner: 'bg-[#041d14]/90 border-emerald-900/60',
-    nav: 'bg-[#062c1e]/95 border-emerald-800/80 text-emerald-100 shadow-sm',
-    input: 'bg-[#041d14] border-emerald-800/60 text-emerald-100 focus:border-emerald-400 placeholder-emerald-400/40',
-    btnPrimary: 'bg-emerald-500 hover:bg-emerald-400 text-white shadow-emerald-500/30',
+    bg: 'bg-[#061e16] text-emerald-100 selection:bg-emerald-800 selection:text-white',
+    card: 'bg-[#0a2f23]/95 border border-emerald-800/70 text-emerald-100 shadow-xl shadow-emerald-950/60 backdrop-blur-md',
+    cardInner: 'bg-[#062219]/90 border border-emerald-900/60 text-emerald-200',
+    nav: 'bg-[#061e16]/95 border-b border-emerald-800/80 text-emerald-100 backdrop-blur-xl shadow-sm',
+    input: 'bg-[#062219] border border-emerald-800/60 text-emerald-100 focus:border-emerald-400 placeholder-emerald-400/40',
+    tableHeader: 'bg-[#08281e] text-emerald-200 border-b border-emerald-800/60',
+    tableRow: 'hover:bg-[#0c382a]/50 border-b border-emerald-900/50',
+    tableSection: 'bg-[#07251c] hover:bg-[#0a3327] border-t border-emerald-800/60',
+    badge: 'bg-emerald-900/70 text-emerald-300 border border-emerald-700',
+    badgeSecondary: 'bg-emerald-950 text-emerald-400 border border-emerald-800',
+    subtext: 'text-emerald-300/80',
+    title: 'text-emerald-50',
+    btnSecondary: 'bg-[#0a2f23] hover:bg-[#0e3d2e] border border-emerald-800/70 text-emerald-200 hover:text-white',
+    pillActive: 'bg-emerald-700 text-white shadow-sm border border-emerald-600 font-semibold',
+    pillInactive: 'text-emerald-300/70 hover:text-emerald-100',
     accentText: 'text-emerald-400',
-    border: 'border-emerald-800/80',
-    badge: 'bg-emerald-900/80 text-emerald-300 border-emerald-700',
+    footer: 'border-t border-emerald-900/80 bg-[#061e16]/80 text-emerald-400/60',
+    sidebar: 'bg-[#0a2f23] border-r border-emerald-800 text-emerald-100',
+    canvasBg: '#03150e',
+    canvasDotColor: '#064e3b',
   },
   pink: {
     bg: 'bg-[#0f0714] text-pink-50 selection:bg-pink-500 selection:text-white',
-    card: 'bg-[#1a0c24] border-pink-950/80 text-pink-50 shadow-xl shadow-pink-950/40',
-    cardInner: 'bg-[#0d0512]/90 border-pink-900/40',
-    nav: 'bg-[#170a20]/95 border-pink-900/60 text-pink-50',
-    input: 'bg-[#0d0512] border-pink-900/60 text-pink-50 focus:border-pink-500 placeholder-pink-400/40',
-    btnPrimary: 'bg-pink-500 hover:bg-pink-400 text-white shadow-pink-500/30',
+    card: 'bg-[#1a0c24]/95 border border-pink-900/50 text-pink-50 shadow-xl shadow-pink-950/50 backdrop-blur-md',
+    cardInner: 'bg-[#12071a]/90 border border-pink-950/60 text-pink-200',
+    nav: 'bg-[#0f0714]/95 border-b border-pink-900/60 text-pink-50 backdrop-blur-xl shadow-sm',
+    input: 'bg-[#12071a] border border-pink-900/60 text-pink-50 focus:border-pink-500 placeholder-pink-400/40',
+    tableHeader: 'bg-[#200f2d] text-pink-200 border-b border-pink-900/50',
+    tableRow: 'hover:bg-[#281338]/50 border-b border-pink-950/50',
+    tableSection: 'bg-[#1c0d27] hover:bg-[#251134] border-t border-pink-900/50',
+    badge: 'bg-pink-950/80 text-pink-300 border border-pink-800',
+    badgeSecondary: 'bg-pink-950 text-pink-400 border border-pink-900',
+    subtext: 'text-pink-300/80',
+    title: 'text-pink-50',
+    btnSecondary: 'bg-[#1a0c24] hover:bg-[#251134] border border-pink-900/60 text-pink-200 hover:text-white',
+    pillActive: 'bg-pink-600 text-white shadow-sm border border-pink-500 font-semibold',
+    pillInactive: 'text-pink-300/70 hover:text-pink-100',
     accentText: 'text-pink-400',
-    border: 'border-pink-900/60',
-    badge: 'bg-pink-950 text-pink-300 border-pink-800',
+    footer: 'border-t border-pink-950 bg-[#0f0714]/80 text-pink-400/60',
+    sidebar: 'bg-[#1a0c24] border-r border-pink-900 text-pink-50',
+    canvasBg: '#0a030e',
+    canvasDotColor: '#3b0764',
   },
 };
 
@@ -138,17 +199,10 @@ function isMissingValue(val: any): boolean {
   return /^(n\/?a|not specified.*|none|null|-|unknown)$/i.test(str);
 }
 
-function isMissingVerdictBullet(text: any): boolean {
-  if (!text || typeof text !== 'string') return true;
-  const clean = text.trim();
-  if (!clean) return true;
-  return /^(n\/?a|not specified.*|none|null|-|unknown)$/i.test(clean);
-}
-
 function renderValueWithFallback(val: any, fallbackText = 'Add specification...') {
   if (isMissingValue(val)) {
     return (
-      <span className="inline-flex items-center gap-1 text-slate-400 dark:text-slate-500 italic text-xs bg-slate-800/30 px-2 py-0.5 rounded border border-slate-700/40 hover:border-sky-500/50 transition-colors cursor-text">
+      <span className="inline-flex items-center gap-1 text-slate-400 italic text-xs bg-slate-800/30 px-2 py-0.5 rounded border border-slate-700/40 hover:border-sky-500/50 transition-colors cursor-text">
         <span>+ {fallbackText}</span>
       </span>
     );
@@ -174,13 +228,13 @@ const SpecMatrixNode = memo(function SpecMatrixNode({ data }: any) {
   const entityList: string[] = entities.length > 0 ? entities.map((e: any) => typeof e === 'object' ? e.name : e) : [data.entityA || 'Option A', data.entityB || 'Option B'];
 
   return (
-    <div className="w-[340px] sm:w-[440px] min-h-min h-auto bg-slate-900/95 dark:bg-slate-900/95 border border-slate-700/80 hover:border-sky-500/70 hover:shadow-sky-500/20 rounded-2xl p-4 sm:p-5 shadow-2xl text-slate-100 backdrop-blur-xl transition-all duration-300 hover:scale-[1.02] group">
+    <div className="w-[340px] sm:w-[440px] min-h-min h-auto bg-slate-900/95 border border-slate-700/80 hover:border-sky-500/70 hover:shadow-sky-500/20 rounded-2xl p-4 sm:p-5 shadow-2xl text-slate-100 backdrop-blur-xl transition-all duration-300 hover:scale-[1.02] group">
       <div className="flex items-center gap-2 mb-1">
         <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
         <span className="text-[10px] uppercase font-mono tracking-wider text-slate-400">Live Matrix Stream</span>
       </div>
-      <Handle type="target" position={Position.Left} className="!bg-sky-500 !w-3 !h-3 !border-2 !border-slate-900" />
-      <Handle type="source" position={Position.Right} className="!bg-sky-500 !w-3 !h-3 !border-2 !border-slate-900" />
+      <FlowHandle type="target" position={Position.Left} className="!bg-sky-500 !w-3 !h-3 !border-2 !border-slate-900" />
+      <FlowHandle type="source" position={Position.Right} className="!bg-sky-500 !w-3 !h-3 !border-2 !border-slate-900" />
       <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
         <div className="flex items-center gap-2">
           <div className="p-1.5 rounded-lg bg-sky-500/10 text-sky-400 border border-sky-500/20">
@@ -229,13 +283,13 @@ const SentimentBreakdownNode = memo(function SentimentBreakdownNode({ data }: an
   const entityList: string[] = entities.length > 0 ? entities.map((e: any) => typeof e === 'object' ? e.name : e) : [data.entityA || 'Option A', data.entityB || 'Option B'];
 
   return (
-    <div className="w-[340px] sm:w-[460px] min-h-min h-auto bg-slate-900/95 dark:bg-slate-900/95 border border-slate-700/80 hover:border-indigo-500/70 hover:shadow-indigo-500/20 rounded-2xl p-4 sm:p-5 shadow-2xl text-slate-100 backdrop-blur-xl transition-all duration-300 hover:scale-[1.02] group">
+    <div className="w-[340px] sm:w-[460px] min-h-min h-auto bg-slate-900/95 border border-slate-700/80 hover:border-indigo-500/70 hover:shadow-indigo-500/20 rounded-2xl p-4 sm:p-5 shadow-2xl text-slate-100 backdrop-blur-xl transition-all duration-300 hover:scale-[1.02] group">
       <div className="flex items-center gap-2 mb-1">
         <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse shrink-0" />
         <span className="text-[10px] uppercase font-mono tracking-wider text-slate-400">De-Biasing Pipeline</span>
       </div>
-      <Handle type="target" position={Position.Left} className="!bg-indigo-500 !w-3 !h-3 !border-2 !border-slate-900" />
-      <Handle type="source" position={Position.Right} className="!bg-indigo-500 !w-3 !h-3 !border-2 !border-slate-900" />
+      <FlowHandle type="target" position={Position.Left} className="!bg-indigo-500 !w-3 !h-3 !border-2 !border-slate-900" />
+      <FlowHandle type="source" position={Position.Right} className="!bg-indigo-500 !w-3 !h-3 !border-2 !border-slate-900" />
       <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
         <div className="flex items-center gap-2">
           <div className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
@@ -259,22 +313,21 @@ const SentimentBreakdownNode = memo(function SentimentBreakdownNode({ data }: an
               <span
                 className={`text-[9px] uppercase font-mono px-1.5 py-0.5 rounded ${
                   s.sentiment === 'Positive'
-                    ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-800'
+                    ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-800/80'
                     : s.sentiment === 'Critical'
-                    ? 'bg-rose-950/80 text-rose-300 border border-rose-800'
-                    : 'bg-amber-950/80 text-amber-300 border border-amber-800'
+                    ? 'bg-rose-950/80 text-rose-300 border border-rose-800/80'
+                    : 'bg-amber-950/80 text-amber-300 border border-amber-800/80'
                 }`}
               >
-                {s.sentiment || 'Mixed'}
+                {s.sentiment || 'Consensus'}
               </span>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-300 pt-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-300">
               {entityList.map((name, i) => {
                 const con = s.consensuses?.[i] !== undefined ? s.consensuses[i] : (i === 0 ? s.entity_a_consensus : s.entity_b_consensus);
-                const badge = ENTITY_BADGES[i % ENTITY_BADGES.length];
                 return (
-                  <div key={i} className="bg-slate-900/90 p-2 rounded-lg border border-slate-800 whitespace-normal break-words leading-relaxed">
-                    <span className={`text-[10px] ${badge.text} font-semibold block mb-0.5`}>{name}:</span>
+                  <div key={i} className="p-2 rounded bg-slate-900/60 border border-slate-800/60 whitespace-normal break-words">
+                    <span className="text-[10px] font-mono text-indigo-400 block mb-0.5">{name}:</span>
                     {renderValueWithFallback(con)}
                   </div>
                 );
@@ -291,59 +344,42 @@ const LedgerNode = memo(function LedgerNode({ data }: any) {
   const { entities = [], metrics = [] } = data;
   const entityList: string[] = entities.length > 0 ? entities.map((e: any) => typeof e === 'object' ? e.name : e) : [data.entityA || 'Option A', data.entityB || 'Option B'];
 
-  const scores = useMemo(() => {
-    return entityList.map((_, entIdx) => {
-      let wins = 0;
-      metrics.forEach((m: VerifiedMetric) => {
-        const values = m.values || [m.entity_a, m.entity_b];
-        const numVal = parseNumericValue(values[entIdx] || '');
-        if (numVal !== null) {
-          const isMax = values.every((otherVal, otherIdx) => {
-            if (otherIdx === entIdx) return true;
-            const otherNum = parseNumericValue(otherVal || '');
-            return otherNum === null || numVal >= otherNum;
-          });
-          if (isMax) wins++;
-        }
-      });
-      return wins;
-    });
-  }, [entityList, metrics]);
-
   return (
-    <div className="w-[320px] sm:w-[400px] min-h-min h-auto bg-slate-900/95 border border-slate-700/80 rounded-2xl p-4 sm:p-5 shadow-2xl text-slate-100 backdrop-blur-xl">
-      <Handle type="target" position={Position.Left} className="!bg-emerald-500 !w-3 !h-3 !border-2 !border-slate-900" />
-      <Handle type="source" position={Position.Right} className="!bg-emerald-500 !w-3 !h-3 !border-2 !border-slate-900" />
+    <div className="w-[300px] sm:w-[380px] min-h-min h-auto bg-slate-900/95 border border-slate-700/80 hover:border-purple-500/70 hover:shadow-purple-500/20 rounded-2xl p-4 sm:p-5 shadow-2xl text-slate-100 backdrop-blur-xl transition-all duration-300 hover:scale-[1.02] group">
+      <div className="flex items-center gap-2 mb-1">
+        <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse shrink-0" />
+        <span className="text-[10px] uppercase font-mono tracking-wider text-slate-400">Ledger State</span>
+      </div>
+      <FlowHandle type="target" position={Position.Left} className="!bg-purple-500 !w-3 !h-3 !border-2 !border-slate-900" />
+      <FlowHandle type="source" position={Position.Right} className="!bg-purple-500 !w-3 !h-3 !border-2 !border-slate-900" />
       <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
         <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-            <Scale className="w-4 h-4" />
+          <div className="p-1.5 rounded-lg bg-purple-500/10 text-purple-400 border border-purple-500/20">
+            <Layers className="w-4 h-4" />
           </div>
           <div>
-            <h4 className="font-bold text-xs sm:text-sm text-white">Comparative Score Ledger</h4>
-            <span className="text-[10px] text-slate-400 font-mono">Verified Metric Differentials</span>
+            <h4 className="font-bold text-xs sm:text-sm text-white">Delta Ledger</h4>
+            <span className="text-[10px] text-slate-400 font-mono">Normalized attributes</span>
           </div>
         </div>
-        <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-emerald-300 font-mono border border-slate-700 shrink-0">
+        <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-purple-300 font-mono border border-slate-700 shrink-0">
           Node 3
         </span>
       </div>
 
-      <div className={`grid grid-cols-${Math.min(entityList.length, 3)} gap-2.5 mb-4`}>
-        {entityList.map((name, i) => {
-          const badge = ENTITY_BADGES[i % ENTITY_BADGES.length];
-          return (
-            <div key={i} className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 text-center space-y-1">
-              <span className={`text-[10px] ${badge.text} font-mono uppercase truncate block`}>{name}</span>
-              <div className="text-xl font-black text-white">{scores[i]}</div>
-              <span className="text-[9px] text-slate-400">Leading Points</span>
+      <div className="space-y-2">
+        <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800/80 text-center">
+          <span className="text-2xl font-black text-purple-400 font-mono block">{metrics.length}</span>
+          <span className="text-[10px] text-slate-400 uppercase tracking-wider font-mono">Total Verified Fields</span>
+        </div>
+        <div className="space-y-1 text-xs text-slate-300">
+          {entityList.map((name, i) => (
+            <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-slate-950/40 border border-slate-800/40">
+              <span className="font-medium text-purple-300 truncate">{name}</span>
+              <span className="text-[10px] text-emerald-400 font-mono">Verified Baseline</span>
             </div>
-          );
-        })}
-      </div>
-
-      <div className="text-xs text-slate-400 leading-relaxed bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/80">
-        <span className="font-semibold text-slate-300">Analysis:</span> Multi-entity metrics benchmarked across comparative categories.
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -351,41 +387,53 @@ const LedgerNode = memo(function LedgerNode({ data }: any) {
 
 const VerdictNode = memo(function VerdictNode({ data }: any) {
   const { entities = [], verdictSummary } = data;
-  const entityList: EntityVerdict[] = entities.length > 0 ? entities : [
-    { name: data.entityA || 'Option A', pros: data.prosA || [] },
-    { name: data.entityB || 'Option B', pros: data.prosB || [] },
-  ];
+  const entityList: string[] = entities.length > 0 ? entities.map((e: any) => typeof e === 'object' ? e.name : e) : [data.entityA || 'Option A', data.entityB || 'Option B'];
 
   return (
-    <div className="w-[340px] sm:w-[460px] min-h-min h-auto bg-slate-900/95 border border-slate-700/80 rounded-2xl p-4 sm:p-5 shadow-2xl text-slate-100 backdrop-blur-xl">
-      <Handle type="target" position={Position.Left} className="!bg-amber-500 !w-3 !h-3 !border-2 !border-slate-900" />
+    <div className="w-[340px] sm:w-[480px] min-h-min h-auto bg-slate-900/95 border border-slate-700/80 hover:border-emerald-500/70 hover:shadow-emerald-500/20 rounded-2xl p-4 sm:p-5 shadow-2xl text-slate-100 backdrop-blur-xl transition-all duration-300 hover:scale-[1.02] group">
+      <div className="flex items-center gap-2 mb-1">
+        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+        <span className="text-[10px] uppercase font-mono tracking-wider text-slate-400">Synthesis Engine</span>
+      </div>
+      <FlowHandle type="target" position={Position.Left} className="!bg-emerald-500 !w-3 !h-3 !border-2 !border-slate-900" />
       <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
         <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20">
+          <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
             <Award className="w-4 h-4" />
           </div>
           <div>
-            <h4 className="font-bold text-xs sm:text-sm text-white">Executive Synthesis</h4>
-            <span className="text-[10px] text-slate-400 font-mono">Final Decision Matrix</span>
+            <h4 className="font-bold text-xs sm:text-sm text-white">Executive Verdict</h4>
+            <span className="text-[10px] text-slate-400 font-mono">AI Dual-Engine Synthesis</span>
           </div>
         </div>
-        <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-amber-300 font-mono border border-slate-700 shrink-0">
+        <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-emerald-300 font-mono border border-slate-700 shrink-0">
           Node 4
         </span>
       </div>
 
-      <p className="text-xs text-slate-300 leading-relaxed bg-slate-950/60 p-3 rounded-xl border border-slate-800/80 mb-3 whitespace-normal break-words">
+      <p className="text-xs text-slate-200 leading-relaxed bg-slate-950/70 p-3.5 rounded-xl border border-slate-800/80 mb-3.5 whitespace-normal break-words">
         {verdictSummary}
       </p>
 
-      <div className={`grid grid-cols-1 sm:grid-cols-${Math.min(entityList.length, 3)} gap-2 text-xs`}>
-        {entityList.map((ent, i) => {
-          const badge = ENTITY_BADGES[i % ENTITY_BADGES.length];
-          const pros = (Array.isArray(ent.pros) ? ent.pros : []).filter((p: string) => !isMissingVerdictBullet(p));
+      <div className="space-y-2">
+        {entities.map((ent: any, idx: number) => {
+          const name = typeof ent === 'object' ? ent.name : entityList[idx] || `Entity ${idx + 1}`;
+          const pros = Array.isArray(ent?.pros) && ent.pros.length > 0 ? ent.pros : [`Optimal domain use cases for ${name}`];
+          const badge = ENTITY_BADGES[idx % ENTITY_BADGES.length];
+
           return (
-            <div key={i} className="p-2.5 bg-slate-950/70 rounded-lg border border-slate-800 whitespace-normal break-words leading-relaxed">
-              <span className={`${badge.text} font-semibold block mb-1`}>Pick {ent.name}:</span>
-              <span className="text-slate-300">{pros[0] || `Core domain baseline advantages for ${ent.name}`}</span>
+            <div key={idx} className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800/80 space-y-1">
+              <span className={`text-[10px] font-bold uppercase font-mono ${badge.text} block`}>
+                Choose {name} if:
+              </span>
+              <ul className="space-y-1 text-[11px] text-slate-300">
+                {pros.map((p: string, pIdx: number) => (
+                  <li key={pIdx} className="flex items-start gap-1.5 whitespace-normal break-words leading-relaxed">
+                    <span className={`w-1.5 h-1.5 rounded-full ${badge.dot} shrink-0 mt-1`} />
+                    <span>{p}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
           );
         })}
@@ -407,14 +455,10 @@ const nodeTypes = {
 
 interface SpatialCanvasViewProps {
   entities: EntityVerdict[];
-  entityA?: string;
-  entityB?: string;
   category: string;
   verifiedMetrics: VerifiedMetric[];
   communitySentiment: CommunitySentiment[];
   verdictSummary: string;
-  prosA?: string[];
-  prosB?: string[];
   theme?: MorphTheme;
 }
 
@@ -513,382 +557,145 @@ function SpatialCanvasWorkspace({
   }, [fitView]);
 
   return (
-    <div className="relative w-full h-[60vh] sm:h-[70vh] md:h-[calc(100vh-140px)] min-h-[480px] bg-[#030712] rounded-2xl border border-slate-800/90 overflow-hidden shadow-2xl">
-      <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-10 flex flex-wrap items-center gap-2 bg-slate-900/90 backdrop-blur-md p-1.5 rounded-xl border border-slate-700/80 shadow-lg text-xs">
-        <div className="flex items-center gap-1.5 px-2 py-1 text-sky-400 font-semibold border-r border-slate-800">
+    <div
+      style={{ backgroundColor: currentTheme.canvasBg }}
+      className="relative w-full h-[60vh] sm:h-[70vh] md:h-[calc(100vh-140px)] min-h-[480px] rounded-2xl border border-slate-800/90 overflow-hidden shadow-2xl transition-colors duration-300"
+    >
+      <div className={`absolute top-3 left-3 sm:top-4 sm:left-4 z-10 flex flex-wrap items-center gap-2 ${currentTheme.card} p-1.5 rounded-xl shadow-lg text-xs`}>
+        <div className={`flex items-center gap-1.5 px-2 py-1 ${currentTheme.accentText} font-semibold border-r border-slate-700/50`}>
           <Network className="w-3.5 h-3.5" />
           <span>Spatial Graph</span>
         </div>
-
         <button
           type="button"
           onClick={handleAutoLayout}
-          className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white transition-colors flex items-center gap-1.5"
-          title="Auto-Layout / Frame Canvas"
+          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg ${currentTheme.btnSecondary} transition-all font-medium active:scale-95`}
+          title="Reset Zoom & Auto-Center Graph"
         >
-          <LayoutGrid className="w-3.5 h-3.5 text-sky-400" />
-          <span>Fit Graph</span>
+          <Maximize2 className="w-3.5 h-3.5" />
+          <span>Auto Center</span>
         </button>
-
-        <span className="text-[11px] font-mono text-slate-400 px-2 hidden sm:inline">
-          4 Spatial Nodes
-        </span>
       </div>
 
-      <ReactFlow proOptions={{ hideAttribution: true }}
+      <Flow
         nodes={nodes}
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         nodeTypes={nodeTypes}
         fitView
+        proOptions={{ hideAttribution: true }}
         minZoom={0.2}
-        maxZoom={1.6}
-        defaultViewport={{ x: 0, y: 0, zoom: 0.75 }}
-        className="w-full h-full"
+        maxZoom={1.8}
       >
-        <Background variant={BackgroundVariant.Dots} gap={24} size={1.5} color="#1e293b" />
-        <Controls position="bottom-right" className="!bg-slate-900 !border-slate-800 !text-slate-300" />
-        <MiniMap
-          nodeColor="#334155"
-          maskColor="rgba(3, 7, 18, 0.7)"
-          className="!bg-slate-950 !border-slate-800 rounded-xl overflow-hidden shadow-xl !hidden sm:!block"
-        />
-      </ReactFlow>
+        <FlowBackground variant={BackgroundVariant.Dots} gap={20} size={1} color={currentTheme.canvasDotColor} />
+        <FlowControls className="!bg-slate-900 !border-slate-800 !text-slate-100 !rounded-xl !overflow-hidden !shadow-lg" />
+      </Flow>
     </div>
   );
 }
 
 // ============================================================================
-// MAIN COMPARISON APP COMPONENT
+// COMPARISON SKELETON
 // ============================================================================
 
-// ============================================================================
-// GENERATIVE SKELETON UI (Mimics Spec Sheet & Spatial Canvas with Dynamic Tech Pulse)
-// ============================================================================
+function ComparisonSkeleton({ prompt, viewMode, theme = 'dark' }: { prompt: string; viewMode: 'spec' | 'canvas'; theme?: MorphTheme }) {
+  const t = THEME_STYLES[theme] || THEME_STYLES.dark;
 
-function ComparisonSkeleton({ prompt, viewMode }: { prompt: string; viewMode: 'spec' | 'canvas' }) {
-  const loadingSteps = [
-    'Synthesizing live web data...',
-    'Running multi-source extraction...',
-    'De-biasing community sentiment...',
-    'Normalizing dynamic metric matrices...',
-    'Generating dual-view spatial graphs...',
-  ];
-
-  const [stepIndex, setStepIndex] = useState(0);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setStepIndex((prev) => (prev + 1) % loadingSteps.length);
-    }, 1200);
-    return () => clearInterval(interval);
-  }, [loadingSteps.length]);
-
-  return (
-    <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8 space-y-6">
-      {/* Tech-Focused Pulsing Loading Header */}
-      <div className="relative p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-sky-950/50 via-indigo-950/50 to-slate-900/80 border border-sky-500/40 shadow-2xl backdrop-blur-xl overflow-hidden animate-pulse">
-        <div className="absolute inset-0 bg-gradient-to-r from-sky-500/10 via-indigo-500/10 to-transparent animate-pulse" />
-        <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-sky-500/20 border border-sky-500/40 flex items-center justify-center text-sky-400 shrink-0">
-              <Loader2 className="w-5 h-5 animate-spin text-sky-400" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2 justify-center sm:justify-start">
-                <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                <span className="text-[10px] sm:text-xs font-mono font-bold uppercase tracking-wider text-sky-300">
-                  Live Extraction Pipeline Active
-                </span>
-              </div>
-              <h2 className="text-sm sm:text-base font-bold text-white tracking-tight flex items-center gap-2 justify-center sm:justify-start">
-                <span>{loadingSteps[stepIndex]}</span>
-              </h2>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 text-xs font-mono text-slate-300 bg-slate-950/80 px-3 py-1.5 rounded-xl border border-slate-800/80 max-w-sm truncate shadow-inner">
-            <Sparkles className="w-3.5 h-3.5 text-sky-400 shrink-0" />
-            <span className="truncate">{prompt ? `"${prompt}"` : 'Generative Multi-Source Comparison'}</span>
+  if (viewMode === 'canvas') {
+    return (
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+        <div className={`w-full h-[65vh] min-h-[500px] ${t.card} rounded-2xl flex flex-col items-center justify-center space-y-4 p-8 text-center`}>
+          <Loader2 className="w-10 h-10 text-sky-400 animate-spin" />
+          <div className="space-y-2">
+            <h3 className={`text-base font-bold ${t.title}`}>Building Spatial Graph Model...</h3>
+            <p className={`text-xs ${t.subtext} font-mono`}>Extracting entities & connecting structural consensus nodes</p>
           </div>
         </div>
       </div>
+    );
+  }
 
-      {viewMode === 'canvas' ? (
-        /* Spatial Canvas Skeleton */
-        <div className="relative w-full h-[60vh] sm:h-[70vh] md:h-[calc(100vh-180px)] min-h-[480px] bg-[#030712] rounded-2xl border border-slate-800/90 p-6 flex flex-col md:flex-row items-center justify-around gap-6 overflow-hidden animate-pulse">
-          <div className="w-full sm:w-72 h-80 bg-slate-900/80 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-xl">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-              <div className="h-4 bg-slate-800 rounded w-1/2" />
-              <div className="h-3 bg-slate-800/60 rounded w-12" />
-            </div>
-            <div className="h-3 bg-slate-800/60 rounded w-3/4" />
-            <div className="space-y-3 pt-4">
-              <div className="h-3.5 bg-slate-800/60 rounded" />
-              <div className="h-3.5 bg-slate-800/50 rounded" />
-              <div className="h-3.5 bg-slate-800/40 rounded" />
-              <div className="h-3.5 bg-slate-800/30 rounded" />
-            </div>
+  return (
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-6 animate-pulse">
+      <div className={`p-6 sm:p-8 rounded-2xl ${t.card} space-y-6`}>
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pb-6 border-b border-slate-700/40">
+          <div className="space-y-2.5 w-full sm:w-1/3">
+            <div className="h-4 w-24 bg-sky-500/20 rounded-md" />
+            <div className="h-8 w-48 bg-slate-700/40 rounded-xl" />
           </div>
-          <div className="w-full sm:w-72 h-80 bg-slate-900/80 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-xl">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-              <div className="h-4 bg-slate-800 rounded w-1/2" />
-              <div className="h-3 bg-slate-800/60 rounded w-12" />
-            </div>
-            <div className="h-3 bg-slate-800/60 rounded w-3/4" />
-            <div className="space-y-3 pt-4">
-              <div className="h-3.5 bg-slate-800/60 rounded" />
-              <div className="h-3.5 bg-slate-800/50 rounded" />
-              <div className="h-3.5 bg-slate-800/40 rounded" />
-              <div className="h-3.5 bg-slate-800/30 rounded" />
-            </div>
+          <div className="w-12 h-12 rounded-full bg-slate-800/60 flex items-center justify-center shrink-0">
+            <Loader2 className="w-5 h-5 text-sky-400 animate-spin" />
           </div>
-          <div className="w-full sm:w-72 h-80 bg-slate-900/80 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-xl">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-              <div className="h-4 bg-slate-800 rounded w-1/2" />
-              <div className="h-3 bg-slate-800/60 rounded w-12" />
-            </div>
-            <div className="h-3 bg-slate-800/60 rounded w-3/4" />
-            <div className="space-y-3 pt-4">
-              <div className="h-3.5 bg-slate-800/60 rounded" />
-              <div className="h-3.5 bg-slate-800/50 rounded" />
-              <div className="h-3.5 bg-slate-800/40 rounded" />
-              <div className="h-3.5 bg-slate-800/30 rounded" />
-            </div>
+          <div className="space-y-2.5 w-full sm:w-1/3 sm:text-right flex flex-col sm:items-end">
+            <div className="h-4 w-24 bg-indigo-500/20 rounded-md" />
+            <div className="h-8 w-48 bg-slate-700/40 rounded-xl" />
           </div>
         </div>
-      ) : (
-        /* Spec Sheet Skeleton */
-        <div className="space-y-6 animate-pulse">
-          {/* Skeleton Entity Hero Card */}
-          <div className="w-full bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-6 lg:p-8 space-y-6 shadow-xl">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 pb-6 border-b border-slate-800">
-              <div className="flex-1 space-y-3">
-                <div className="h-5 w-24 bg-slate-800 rounded-md" />
-                <div className="h-8 w-48 sm:w-64 bg-slate-800 rounded-lg" />
-                <div className="h-6 w-32 bg-slate-800/60 rounded-full" />
-              </div>
-              <div className="w-12 h-12 rounded-full bg-slate-800/80 mx-auto md:mx-0 flex items-center justify-center">
-                <span className="font-mono text-xs text-slate-600 font-bold">VS</span>
-              </div>
-              <div className="flex-1 space-y-3 md:text-right flex flex-col md:items-end">
-                <div className="h-5 w-24 bg-slate-800 rounded-md" />
-                <div className="h-8 w-48 sm:w-64 bg-slate-800 rounded-lg" />
-                <div className="h-6 w-32 bg-slate-800/60 rounded-full" />
-              </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="h-4 w-40 bg-slate-800/60 rounded" />
-              <div className="h-4 w-32 bg-slate-800/60 rounded" />
-            </div>
-          </div>
 
-          {/* Skeleton Executive Verdict Card */}
-          <div className="w-full bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-6 space-y-4 shadow-xl">
-            <div className="h-6 w-48 bg-slate-800 rounded" />
-            <div className="space-y-2 bg-slate-950/60 p-4 rounded-xl border border-slate-800/80">
-              <div className="h-4 w-full bg-slate-800/60 rounded" />
-              <div className="h-4 w-5/6 bg-slate-800/60 rounded" />
-              <div className="h-4 w-4/6 bg-slate-800/60 rounded" />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="h-24 bg-slate-950/80 border border-slate-800 rounded-xl p-4 space-y-2">
-                <div className="h-4 w-32 bg-slate-800 rounded" />
-                <div className="h-3 w-48 bg-slate-800/60 rounded" />
-              </div>
-              <div className="h-24 bg-slate-950/80 border border-slate-800 rounded-xl p-4 space-y-2">
-                <div className="h-4 w-32 bg-slate-800 rounded" />
-                <div className="h-3 w-48 bg-slate-800/60 rounded" />
-              </div>
-            </div>
-          </div>
-
-          {/* Skeleton Table Section */}
-          <div className="w-full bg-slate-900/90 border border-slate-800 rounded-2xl shadow-xl overflow-hidden">
-            <div className="w-full overflow-x-auto whitespace-nowrap md:whitespace-normal">
-              <div className="min-w-[650px] md:min-w-full">
-                <div className="bg-slate-900 border-b border-slate-800 px-4 sm:px-6 py-4 grid grid-cols-12 gap-4">
-                  <div className="col-span-4 min-w-[150px]"><div className="h-4 w-28 bg-slate-800 rounded" /></div>
-                  <div className="col-span-4 min-w-[150px]"><div className="h-4 w-36 bg-slate-800 rounded" /></div>
-                  <div className="col-span-4 min-w-[150px]"><div className="h-4 w-36 bg-slate-800 rounded" /></div>
-                </div>
-
-                <div className="px-4 sm:px-6 py-3 bg-slate-950/60 border-b border-slate-800 flex items-center justify-between">
-                  <div className="h-4 w-40 bg-slate-800 rounded" />
-                  <div className="h-4 w-6 bg-slate-800 rounded" />
-                </div>
-
-                <div className="divide-y divide-slate-800/60">
-                  {[1, 2, 3, 4, 5].map((i) => (
-                    <div key={i} className="grid grid-cols-12 gap-4 px-4 sm:px-6 py-4 items-center">
-                      <div className="col-span-4 min-w-[150px] space-y-1.5">
-                        <div className="h-4 bg-slate-800 rounded" style={{ width: `${60 + (i * 7) % 35}%` }} />
-                        <div className="h-3 w-16 bg-slate-800/50 rounded" />
-                      </div>
-                      <div className="col-span-4 min-w-[150px] space-y-1.5">
-                        <div className="h-4 bg-slate-800/80 rounded" style={{ width: `${70 + (i * 11) % 25}%` }} />
-                        <div className="h-1.5 w-full bg-slate-800/40 rounded-full" />
-                      </div>
-                      <div className="col-span-4 min-w-[150px] space-y-1.5">
-                        <div className="h-4 bg-slate-800/80 rounded" style={{ width: `${65 + (i * 13) % 30}%` }} />
-                        <div className="h-1.5 w-full bg-slate-800/40 rounded-full" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
+        <div className="space-y-3">
+          <div className="h-5 w-44 bg-slate-700/40 rounded-md" />
+          <div className="h-20 w-full bg-slate-800/30 rounded-xl" />
         </div>
-      )}
+      </div>
+
+      <div className={`p-6 rounded-2xl ${t.card} space-y-4`}>
+        <div className="h-6 w-56 bg-slate-700/40 rounded-md" />
+        <div className="space-y-3">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-12 w-full bg-slate-800/30 rounded-xl" />
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
 
+// ============================================================================
+// MAIN PAGE COMPONENT WITH FULL THEME & DUAL-ENGINE CAPABILITIES
+// ============================================================================
 
-export default function ComparisonApp() {
-  const [viewMode, setViewMode] = useState<'spec' | 'canvas'>('spec');
+export default function MorphUIPage() {
+  return <MorphUIContent />;
+}
 
-  // Initial State: 100% Clean & Empty
+function MorphUIContent() {
   const [prompt, setPrompt] = useState('');
-  const [comparisonData, setComparisonData] = useState<GenerativeComparisonResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [comparisonData, setComparisonData] = useState<GenerativeComparisonResponse | null>(null);
 
-  // Spec Sheet Tab: "verified" vs "community"
+  // View mode: 'spec' (Table view) vs 'canvas' (Spatial React Flow Graph)
+  const [viewMode, setViewMode] = useState<'spec' | 'canvas'>('spec');
+
+  // Interactive Table Utilities
   const [activeTab, setActiveTab] = useState<'verified' | 'community'>('verified');
-
-  // Custom Metric Inline Input
+  const [isSwapped, setIsSwapped] = useState(false);
+  const [highlightDiff, setHighlightDiff] = useState(false);
+  const [tableSearch, setTableSearch] = useState('');
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
   const [customMetricInput, setCustomMetricInput] = useState('');
   const [addingMetric, setAddingMetric] = useState(false);
   const [recentlyAddedMetric, setRecentlyAddedMetric] = useState<string | null>(null);
 
-  // Multi-Modal Image Input
+  // Multimedia state
   const [uploadedImages, setUploadedImages] = useState<UploadedVisual[]>([]);
+  const [isListening, setIsListening] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Web Speech Recognition
-  const [isListening, setIsListening] = useState(false);
-  const recognitionRef = useRef<any>(null);
-
-  // Table Controls
-  const [isSwapped, setIsSwapped] = useState(false);
-  const [highlightDiff, setHighlightDiff] = useState(false);
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
-  const [tableSearch, setTableSearch] = useState('');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  // History state
   const [chatHistory, setChatHistory] = useState<Array<{ id: string; title: string; created_at: string }>>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
-  const fetchChatHistory = useCallback(async () => {
-    try {
-      setLoadingHistory(true);
-      const res = await fetch('/api/chats');
-      if (res.ok) {
-        const data = await res.json();
-        setChatHistory(data.chats || []);
-      }
-    } catch (err) {
-      console.warn('Failed to load chat history:', err);
-    } finally {
-      setLoadingHistory(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchChatHistory();
-  }, [fetchChatHistory]);
-
-  const handleSelectChat = async (chatId: string) => {
-    try {
-      setLoading(true);
-      setError(null);
-      setActiveChatId(chatId);
-      setIsSidebarOpen(false);
-      const res = await fetch('/api/chats/' + chatId);
-      if (!res.ok) throw new Error('Failed to load chat');
-      const data = await res.json();
-
-      const assistantMsg = data.messages?.find((m: any) => m.sender === 'assistant' && m.payload);
-      const userMsg = data.messages?.find((m: any) => m.sender === 'user' && m.payload);
-
-      if (userMsg?.payload?.prompt) {
-        setPrompt(userMsg.payload.prompt);
-      } else if (data.chat?.title) {
-        setPrompt(data.chat.title);
-      }
-
-      if (assistantMsg?.payload) {
-        const comp = assistantMsg.payload;
-        let resolvedEntities: EntityVerdict[] = [];
-        if (Array.isArray(comp.entities) && comp.entities.length > 0) {
-          resolvedEntities = comp.entities.map((e: any, idx: number) => {
-            const name = typeof e === 'object' && e?.name ? String(e.name) : typeof e === 'string' ? e : 'Option ' + String.fromCharCode(65 + idx);
-            const pros = typeof e === 'object' && Array.isArray(e?.pros)
-              ? e.pros.map(String).filter((p: string) => !isMissingVerdictBullet(p))
-              : [];
-            return {
-              name,
-              pros: pros.length > 0 ? pros : ['Key distinguishing features and strengths of ' + name],
-            };
-          });
-        } else if (comp.entity_a && comp.entity_b) {
-          resolvedEntities = [comp.entity_a, comp.entity_b];
-        }
-
-        let resolvedCategories = comp.categories || {};
-        if (Object.keys(resolvedCategories).length === 0 && Array.isArray(comp.verified_metrics)) {
-          resolvedCategories = { [comp.category || 'Core Specifications']: comp.verified_metrics };
-        }
-
-        setComparisonData({
-          category: comp.category || 'Comparative Analysis',
-          entities: resolvedEntities,
-          entity_a: resolvedEntities[0],
-          entity_b: resolvedEntities[1],
-          categories: resolvedCategories,
-          verified_metrics: Object.values(resolvedCategories).flat() as VerifiedMetric[],
-          community_sentiment: Array.isArray(comp.community_sentiment) ? comp.community_sentiment : [],
-          suggested_metrics: Array.isArray(comp.suggested_metrics) ? comp.suggested_metrics : [],
-          verdict_summary: comp.veridict_summary || '',
-          comparison_points: comp.comparison_points || [],
-        });
-      }
-    } catch (err: any) {
-      console.error('Error loading chat:', err);
-      setError(err?.message || 'Could not load historical comparison');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDeleteChat = async (e: React.MouseEvent, chatId: string) => {
-    e.stopPropagation();
-    try {
-      await fetch('/api/chats?id=' + chatId, { method: 'DELETE' });
-      setChatHistory((prev) => prev.filter((c) => c.id !== chatId));
-      if (activeChatId === chatId) {
-        setActiveChatId(null);
-      }
-    } catch (err) {
-      console.warn('Failed to delete chat:', err);
-    }
-  };
-
-  const handleNewComparison = () => {
-    setComparisonData(null);
-    setPrompt('');
-    setActiveChatId(null);
-    setError(null);
-    setUploadedImages([]);
-    setIsSidebarOpen(false);
-  };
+  // Functional Theme State
   const [theme, setTheme] = useState<MorphTheme>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('morph-theme');
-      if (saved === 'light' || saved === 'botanical' || saved === 'dark' || saved === 'pink') return saved;
+      if (saved === 'dark' || saved === 'light' || saved === 'botanical' || saved === 'pink') {
+        return saved;
+      }
     }
     return 'dark';
   });
@@ -898,6 +705,8 @@ export default function ComparisonApp() {
       localStorage.setItem('morph-theme', theme);
     }
   }, [theme]);
+
+  const t = THEME_STYLES[theme] || THEME_STYLES.dark;
   const [activeModel, setActiveModel] = useState('Gemini 2.5 Flash + Web Retrieval');
 
   // Keyboard shortcut listener ('v' to toggle Spec Sheet / Canvas)
@@ -1001,15 +810,17 @@ export default function ComparisonApp() {
     const result: Record<string, VerifiedMetric[]> = {};
 
     for (const [catName, metrics] of Object.entries(normalizedCategories)) {
-      const matching = metrics.filter(
+      if (catName.toLowerCase().includes(term)) {
+        result[catName] = metrics;
+        continue;
+      }
+      const matched = metrics.filter(
         (m) =>
           m.metric.toLowerCase().includes(term) ||
-          (m.values && m.values.some((v) => v.toLowerCase().includes(term))) ||
-          (m.entity_a && m.entity_a.toLowerCase().includes(term)) ||
-          (m.entity_b && m.entity_b.toLowerCase().includes(term))
+          m.values?.some((v) => v.toLowerCase().includes(term))
       );
-      if (matching.length > 0) {
-        result[catName] = matching;
+      if (matched.length > 0) {
+        result[catName] = matched;
       }
     }
     return result;
@@ -1021,284 +832,300 @@ export default function ComparisonApp() {
     return normalizedCommunitySentiment.filter(
       (s) =>
         s.topic.toLowerCase().includes(term) ||
-        (s.consensuses && s.consensuses.some((c) => c.toLowerCase().includes(term))) ||
-        (s.entity_a_consensus && s.entity_a_consensus.toLowerCase().includes(term)) ||
-        (s.entity_b_consensus && s.entity_b_consensus.toLowerCase().includes(term))
+        s.consensuses?.some((c) => c.toLowerCase().includes(term))
     );
   }, [normalizedCommunitySentiment, tableSearch]);
 
-  // Initialize Web Speech Recognition
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      if (SpeechRecognition) {
-        const recognition = new SpeechRecognition();
-        recognition.continuous = false;
-        recognition.interimResults = false;
-        recognition.lang = 'en-US';
-
-        recognition.onstart = () => setIsListening(true);
-        recognition.onend = () => setIsListening(false);
-        recognition.onerror = () => setIsListening(false);
-
-        recognition.onresult = (event: any) => {
-          const transcript = event.results[0][0].transcript;
-          if (transcript) {
-            setPrompt(transcript);
-            handleRunComparison(undefined, transcript);
-          }
-        };
-
-        recognitionRef.current = recognition;
+  // Fetch past chat history from Turso DB
+  const fetchChatHistory = async () => {
+    setLoadingHistory(true);
+    try {
+      const res = await fetch('/api/history');
+      if (res.ok) {
+        const data = await res.json();
+        setChatHistory(data.history || []);
       }
+    } catch (e) {
+      console.error('Failed to fetch chat history:', e);
+    } finally {
+      setLoadingHistory(false);
     }
+  };
+
+  useEffect(() => {
+    fetchChatHistory();
   }, []);
 
-  const toggleVoiceInput = () => {
-    if (!recognitionRef.current) {
-      alert('Speech recognition is not supported in this browser. Please try Chrome, Edge, or Safari.');
-      return;
-    }
-    if (isListening) {
-      recognitionRef.current.stop();
-    } else {
-      recognitionRef.current.start();
-    }
-  };
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    Array.from(files).forEach((file) => {
-      if (!file.type.startsWith('image/')) return;
-      const reader = new FileReader();
-      reader.onload = (uploadEvent) => {
-        const base64 = uploadEvent.target?.result as string;
-        setUploadedImages((prev) => {
-          if (prev.length >= 2) return prev;
-          return [
-            ...prev,
-            {
-              data: base64,
-              mimeType: file.type,
-              name: file.name,
-              previewUrl: URL.createObjectURL(file),
-            },
-          ];
-        });
-      };
-      reader.readAsDataURL(file);
-    });
-
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
-
-  const handleAddCustomMetric = async (metricName?: string) => {
-    const targetMetric = (metricName || customMetricInput).trim();
-    if (!targetMetric || !comparisonData) return;
-
-    setAddingMetric(true);
-    // Optimistic Insertion with inline fetching state
-    const targetCat = 'User Added Metrics';
-    const optimisticMetric: VerifiedMetric = {
-      metric: targetMetric,
-      entity_a: 'Fetching...',
-      entity_b: 'Fetching...',
-      values: displayEntities.map(() => 'Fetching...'),
-      source_type: 'official',
-    };
-
-    setComparisonData((prev) => {
-      if (!prev) return prev;
-      const updatedCategories = { ...prev.categories };
-      if (!updatedCategories[targetCat]) {
-        updatedCategories[targetCat] = [];
-      }
-      updatedCategories[targetCat] = [
-        ...updatedCategories[targetCat].filter((m) => m.metric !== targetMetric),
-        optimisticMetric,
-      ];
-      return {
-        ...prev,
-        categories: updatedCategories,
-        verified_metrics: [...prev.verified_metrics.filter((m) => m.metric !== targetMetric), optimisticMetric],
-        suggested_metrics: prev.suggested_metrics.filter((sm) => sm !== targetMetric),
-      };
-    });
-
-    setCustomMetricInput('');
-
+  const handleSelectChat = async (id: string) => {
+    setLoading(true);
+    setError(null);
     try {
-      const res = await fetch('/api/compare/custom-metric', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          entityA: displayEntities[0]?.name || 'Option A',
-          entityB: displayEntities[1]?.name || 'Option B',
-          metric: targetMetric,
-          category: comparisonData.category,
-        }),
-      });
-
-      const data = res.ok ? await res.json() : null;
-
-      const finalValA = data?.metric?.entity_a || 'Not available in current sources';
-      const finalValB = data?.metric?.entity_b || 'Not available in current sources';
-      const resolvedMetric: VerifiedMetric = {
-        metric: targetMetric,
-        entity_a: finalValA,
-        entity_b: finalValB,
-        values: [finalValA, finalValB],
-        source_type: 'official',
-      };
-
-      setComparisonData((prev) => {
-        if (!prev) return prev;
-        const updatedCategories = { ...prev.categories };
-        if (!updatedCategories[targetCat]) {
-          updatedCategories[targetCat] = [];
-        }
-        updatedCategories[targetCat] = [
-          ...updatedCategories[targetCat].filter((m) => m.metric !== targetMetric),
-          resolvedMetric,
-        ];
-        return {
-          ...prev,
-          categories: updatedCategories,
-          verified_metrics: [...prev.verified_metrics.filter((m) => m.metric !== targetMetric), resolvedMetric],
-        };
-      });
-
-      setRecentlyAddedMetric(targetMetric);
-      setTimeout(() => setRecentlyAddedMetric(null), 3000);
+      const res = await fetch(`/api/history?id=${id}`);
+      if (!res.ok) throw new Error('Failed to load past comparison');
+      const data = await res.json();
+      setComparisonData(data);
+      setActiveChatId(id);
+      setIsSidebarOpen(false);
     } catch (err: any) {
-      console.warn('Graceful fallback for custom metric:', err);
-      // Resilient non-blocking fallback
-      const fallbackMetric: VerifiedMetric = {
-        metric: targetMetric,
-        entity_a: 'Not available in current sources',
-        entity_b: 'Not available in current sources',
-        values: displayEntities.map(() => 'Not available in current sources'),
-        source_type: 'official',
-      };
-
-      setComparisonData((prev) => {
-        if (!prev) return prev;
-        const updatedCategories = { ...prev.categories };
-        if (!updatedCategories[targetCat]) {
-          updatedCategories[targetCat] = [];
-        }
-        updatedCategories[targetCat] = [
-          ...updatedCategories[targetCat].filter((m) => m.metric !== targetMetric),
-          fallbackMetric,
-        ];
-        return {
-          ...prev,
-          categories: updatedCategories,
-          verified_metrics: [...prev.verified_metrics.filter((m) => m.metric !== targetMetric), fallbackMetric],
-        };
-      });
+      setError(err.message || 'Could not load saved comparison.');
     } finally {
-      setAddingMetric(false);
+      setLoading(false);
     }
+  };
+
+  const handleDeleteChat = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    try {
+      await fetch(`/api/history?id=${id}`, { method: 'DELETE' });
+      setChatHistory((prev) => prev.filter((c) => c.id !== id));
+      if (activeChatId === id) {
+        setActiveChatId(null);
+      }
+    } catch (err) {
+      console.error('Delete error:', err);
+    }
+  };
+
+  const handleNewComparison = () => {
+    setComparisonData(null);
+    setActiveChatId(null);
+    setPrompt('');
+    setUploadedImages([]);
+    setError(null);
   };
 
   const handleRunComparison = async (e?: React.FormEvent, overridePrompt?: string) => {
     if (e) e.preventDefault();
-    const query = overridePrompt !== undefined ? overridePrompt : prompt;
-    if (!query.trim() && uploadedImages.length === 0) return;
+    const queryToRun = (overridePrompt ?? prompt).trim();
+    if (!queryToRun && uploadedImages.length === 0) return;
 
     setLoading(true);
     setError(null);
 
     try {
-      let res;
+      const payload: any = {
+        prompt: queryToRun,
+      };
+
       if (uploadedImages.length > 0) {
-        res = await fetch('/api/compare/image', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            images: uploadedImages.map((img) => ({
-              data: img.data,
-              mimeType: img.mimeType,
-            })),
-            userPrompt: query,
-          }),
-        });
-      } else {
-        res = await fetch('/api/compare', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: query }),
+        payload.images = uploadedImages.map((img) => ({
+          data: img.data,
+          mimeType: img.mimeType,
+        }));
+      }
+
+      const res = await fetch('/api/compare', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || `Comparison failed with HTTP ${res.status}`);
+      }
+
+      const data: GenerativeComparisonResponse = await res.json();
+      setComparisonData(data);
+      if (data.chat_id) {
+        setActiveChatId(data.chat_id);
+        fetchChatHistory();
+      }
+      if (data.model_used) {
+        setActiveModel(data.model_used);
+      }
+    } catch (err: any) {
+      console.error('Comparison error:', err);
+      setError(err.message || 'Failed to generate comparison. Please check input.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Image Upload Handler
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const fileList = Array.from(files).slice(0, 2 - uploadedImages.length);
+
+    fileList.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const base64String = (event.target?.result as string).split(',')[1];
+        setUploadedImages((prev) => [
+          ...prev,
+          {
+            data: base64String,
+            mimeType: file.type || 'image/jpeg',
+            name: file.name,
+            previewUrl: URL.createObjectURL(file),
+          },
+        ]);
+      };
+      reader.readAsDataURL(file);
+    });
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  // Voice Search Handler (Web Speech API)
+  const toggleVoiceInput = () => {
+    if (typeof window === 'undefined') return;
+
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      alert('Voice input is not supported in this browser.');
+      return;
+    }
+
+    if (isListening) {
+      setIsListening(false);
+      return;
+    }
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'en-US';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+
+      recognition.onstart = () => {
+        setIsListening(true);
+      };
+
+      recognition.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        setPrompt(transcript);
+        setIsListening(false);
+      };
+
+      recognition.onerror = () => {
+        setIsListening(false);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      recognition.start();
+    } catch (err) {
+      console.error('Speech recognition error:', err);
+      setIsListening(false);
+    }
+  };
+
+  // Handle Dynamic Custom Metric Addition
+  const handleAddCustomMetric = async (metricName?: string) => {
+    const targetMetric = (metricName || customMetricInput).trim();
+    if (!targetMetric || !comparisonData || displayEntities.length === 0) return;
+
+    setAddingMetric(true);
+    const categoryKey = 'Dynamic Specifications';
+
+    // 1. Graceful Optimistic Expansion
+    setComparisonData((prev) => {
+      if (!prev) return prev;
+      const currentCats = { ...(prev.categories || {}) };
+      const currentList = currentCats[categoryKey] ? [...currentCats[categoryKey]] : [];
+
+      if (!currentList.some((m) => m.metric.toLowerCase() === targetMetric.toLowerCase())) {
+        currentList.push({
+          metric: targetMetric,
+          values: displayEntities.map(() => 'Fetching...'),
+          entity_a: 'Fetching...',
+          entity_b: 'Fetching...',
+          source_type: 'official',
         });
       }
 
+      return {
+        ...prev,
+        categories: {
+          ...currentCats,
+          [categoryKey]: currentList,
+        },
+      };
+    });
+
+    setRecentlyAddedMetric(targetMetric);
+    setOpenSections((prev) => ({ ...prev, [categoryKey]: true }));
+    if (!metricName) setCustomMetricInput('');
+
+    try {
+      const res = await fetch('/api/custom-metric', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          metric: targetMetric,
+          entities: displayEntities.map((e) => e.name),
+        }),
+      });
+
       if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || `Server responded with ${res.status}`);
+        throw new Error('Could not retrieve fact for this metric.');
       }
 
       const data = await res.json();
+      const resolvedValues = data.values || [data.entity_a_value || 'Verified attribute', data.entity_b_value || 'Verified attribute'];
 
-      let resolvedEntities: EntityVerdict[] = [];
-      if (Array.isArray(data.entities) && data.entities.length > 0) {
-        resolvedEntities = data.entities.map((e: any, idx: number) => {
-          const name = typeof e === 'object' && e?.name ? String(e.name) : typeof e === 'string' ? e : `Option ${String.fromCharCode(65 + idx)}`;
-          const pros = typeof e === 'object' && Array.isArray(e?.pros)
-            ? e.pros.map(String).filter((p: string) => !isMissingVerdictBullet(p))
-            : [];
-          return {
-            name,
-            pros: pros.length > 0 ? pros : [`Established baseline capabilities for ${name}`],
-          };
+      setComparisonData((prev) => {
+        if (!prev) return prev;
+        const currentCats = { ...(prev.categories || {}) };
+        const currentList = currentCats[categoryKey] ? [...currentCats[categoryKey]] : [];
+        const updatedList = currentList.map((m) => {
+          if (m.metric.toLowerCase() === targetMetric.toLowerCase()) {
+            return {
+              ...m,
+              values: resolvedValues,
+              entity_a: resolvedValues[0] || 'Verified attribute',
+              entity_b: resolvedValues[1] || 'Verified attribute',
+            };
+          }
+          return m;
         });
-      } else {
-        const nameA = typeof data.entity_a === 'object' && data.entity_a?.name ? data.entity_a.name : 'Option A';
-        const nameB = typeof data.entity_b === 'object' && data.entity_b?.name ? data.entity_b.name : 'Option B';
-        const prosA = typeof data.entity_a === 'object' && Array.isArray(data.entity_a?.pros)
-          ? data.entity_a.pros.filter((p: any) => !isMissingVerdictBullet(p))
-          : [];
-        const prosB = typeof data.entity_b === 'object' && Array.isArray(data.entity_b?.pros)
-          ? data.entity_b.pros.filter((p: any) => !isMissingVerdictBullet(p))
-          : [];
-        resolvedEntities = [
-          { name: nameA, pros: prosA.length > 0 ? prosA : [`Established baseline for ${nameA}`] },
-          { name: nameB, pros: prosB.length > 0 ? prosB : [`Targeted advantages for ${nameB}`] },
-        ];
-      }
 
-      let resolvedCategories: Record<string, VerifiedMetric[]> = {};
-      if (data.categories && Object.keys(data.categories).length > 0) {
-        resolvedCategories = data.categories;
-      } else if (Array.isArray(data.verified_metrics) && data.verified_metrics.length > 0) {
-        resolvedCategories = {
-          [data.category || 'Core Specifications']: data.verified_metrics,
+        return {
+          ...prev,
+          categories: {
+            ...currentCats,
+            [categoryKey]: updatedList,
+          },
         };
-      }
-
-      const flatM = Object.values(resolvedCategories).flat();
-
-      setComparisonData({
-        category: data.category || 'Comparative Analysis',
-        entities: resolvedEntities,
-        entity_a: resolvedEntities[0],
-        entity_b: resolvedEntities[1],
-        categories: resolvedCategories,
-        verified_metrics: flatM,
-        community_sentiment: Array.isArray(data.community_sentiment) ? data.community_sentiment : [],
-        suggested_metrics: Array.isArray(data.suggested_metrics) ? data.suggested_metrics : [],
-        verdict_summary: data.verdict_summary || `Multi-entity comparison across ${resolvedEntities.map((e) => e.name).join(', ')}.`,
       });
-
-      if (data.model_used) setActiveModel(data.model_used);
-      setIsSwapped(false);
-      setOpenSections({});
     } catch (err: any) {
-      console.error('Comparison error:', err);
-      setError(err?.message || 'Failed to fetch comparison');
+      console.warn('Custom metric lookup failure:', err?.message || err);
+      // Resilient fallback without blocking UI
+      setComparisonData((prev) => {
+        if (!prev) return prev;
+        const currentCats = { ...(prev.categories || {}) };
+        const currentList = currentCats[categoryKey] ? [...currentCats[categoryKey]] : [];
+        const updatedList = currentList.map((m) => {
+          if (m.metric.toLowerCase() === targetMetric.toLowerCase()) {
+            return {
+              ...m,
+              values: displayEntities.map(() => 'Not available in current sources'),
+              entity_a: 'Not available in current sources',
+              entity_b: 'Not available in current sources',
+            };
+          }
+          return m;
+        });
+
+        return {
+          ...prev,
+          categories: {
+            ...currentCats,
+            [categoryKey]: updatedList,
+          },
+        };
+      });
     } finally {
-      setLoading(false);
+      setAddingMetric(false);
     }
   };
 
@@ -1336,7 +1163,7 @@ export default function ComparisonApp() {
   // 1. EMPTY / HERO LANDING STATE
   if (!comparisonData && !loading) {
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 selection:bg-slate-800 selection:text-white flex flex-col justify-between w-full">
+      <div className={`min-h-screen ${t.bg} flex flex-col justify-between w-full transition-colors duration-300`}>
         <input
           type="file"
           ref={fileInputRef}
@@ -1346,43 +1173,176 @@ export default function ComparisonApp() {
           className="hidden"
         />
 
+        {/* History Sidebar Drawer */}
+        <div
+          className={`fixed inset-0 z-50 transition-opacity duration-300 ${
+            isSidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+          }`}
+        >
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setIsSidebarOpen(false)}
+          />
+          <aside
+            className={`absolute top-0 left-0 bottom-0 w-80 max-w-[85vw] ${t.sidebar} p-4 flex flex-col justify-between transition-transform duration-300 ease-in-out shadow-2xl ${
+              isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+            }`}
+          >
+            <div className="flex flex-col h-full">
+              <div className="flex items-center justify-between pb-4 border-b border-slate-700/40">
+                <div className="flex items-center gap-2">
+                  <HistoryIcon className="w-4 h-4 text-sky-400" />
+                  <span className={`font-bold text-sm ${t.title}`}>Comparison History</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsSidebarOpen(false)}
+                  className={`p-1.5 rounded-lg ${t.btnSecondary}`}
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="py-3">
+                <button
+                  type="button"
+                  onClick={handleNewComparison}
+                  className="w-full py-2 px-3 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold flex items-center justify-center gap-2 shadow-sm transition-all"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>New Comparison</span>
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 text-xs">
+                {loadingHistory ? (
+                  <div className="flex items-center justify-center py-8 text-slate-500 gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin text-sky-400" />
+                    <span>Loading past chats...</span>
+                  </div>
+                ) : chatHistory.length === 0 ? (
+                  <div className="text-center py-8 text-slate-500">
+                    <p>No previous comparisons saved.</p>
+                    <p className="text-[11px] text-slate-400 mt-1">Comparisons are encrypted & saved automatically.</p>
+                  </div>
+                ) : (
+                  chatHistory.map((chat) => (
+                    <div
+                      key={chat.id}
+                      onClick={() => handleSelectChat(chat.id)}
+                      className={`group flex items-center justify-between p-2.5 rounded-xl border transition-all cursor-pointer ${
+                        activeChatId === chat.id
+                          ? 'bg-sky-500/10 border-sky-500/30 text-sky-400'
+                          : `${t.btnSecondary}`
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <Scale className="w-3.5 h-3.5 text-slate-400 shrink-0 group-hover:text-sky-400" />
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium truncate text-xs">{chat.title}</p>
+                          <p className="text-[10px] text-slate-500">
+                            {new Date(chat.created_at).toLocaleDateString(undefined, {
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => handleDeleteChat(e, chat.id)}
+                        title="Delete comparison"
+                        className="opacity-0 group-hover:opacity-100 p-1 rounded-md text-slate-400 hover:text-rose-400 transition-all shrink-0 ml-1"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div className="pt-3 border-t border-slate-700/40 text-[11px] text-slate-500 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> AES-256 Encrypted
+                </span>
+                <span className="text-[10px] font-mono text-slate-400">Turso DB</span>
+              </div>
+            </div>
+          </aside>
+        </div>
+
         {/* Hero Top Navbar */}
-        <header className="border-b border-slate-800/80 bg-slate-900/60 backdrop-blur-xl w-full">
+        <header className={`${t.nav} w-full transition-colors duration-300`}>
           <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-4 flex flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-sky-400 shadow-sm shrink-0">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-500 shadow-sm shrink-0">
                 <Scale className="w-5 h-5" />
               </div>
               <div>
-                <span className="font-bold text-base sm:text-lg tracking-tight text-white">MorphUI</span>
-                <span className="text-[10px] ml-2 uppercase font-mono px-1.5 py-0.5 rounded bg-slate-800 text-sky-300 border border-slate-700">
+                <span className={`font-bold text-base sm:text-lg tracking-tight ${t.title}`}>MorphUI</span>
+                <span className="text-[10px] ml-2 uppercase font-mono px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-500 border border-sky-500/20">
                   v2.0
                 </span>
               </div>
             </div>
 
             <div className="flex items-center gap-3">
+              {/* Theme Switcher in Hero */}
+              <div className={`flex items-center p-1 rounded-xl ${t.cardInner} shadow-inner shrink-0`}>
+                <button
+                  type="button"
+                  onClick={() => setTheme('dark')}
+                  title="Dark Mode"
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${
+                    theme === 'dark' ? t.pillActive : t.pillInactive
+                  }`}
+                >
+                  <span>🌙</span>
+                  <span className="hidden sm:inline text-[11px]">Dark</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTheme('light')}
+                  title="Clean White Light Mode"
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${
+                    theme === 'light' ? t.pillActive : t.pillInactive
+                  }`}
+                >
+                  <span>☀️</span>
+                  <span className="hidden sm:inline text-[11px]">Light</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTheme('botanical')}
+                  title="Botanical Forest Mode"
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${
+                    theme === 'botanical' ? t.pillActive : t.pillInactive
+                  }`}
+                >
+                  <span>🌸</span>
+                  <span className="hidden sm:inline text-[11px]">Botanical</span>
+                </button>
+              </div>
+
               <button
                 type="button"
                 onClick={() => {
                   setIsSidebarOpen(true);
                   fetchChatHistory();
                 }}
-                className="px-2.5 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-medium border border-slate-700/60 transition-all flex items-center gap-1.5 shadow-sm"
+                className={`px-2.5 py-1.5 rounded-xl ${t.btnSecondary} text-xs font-medium transition-all flex items-center gap-1.5 shadow-sm`}
                 title="View Past Comparisons"
               >
                 <HistoryIcon className="w-3.5 h-3.5 text-sky-400" />
                 <span>History</span>
                 {chatHistory.length > 0 && (
-                  <span className="px-1.5 py-0.2 bg-sky-500/20 text-sky-300 rounded-full text-[10px] font-mono">
+                  <span className="px-1.5 py-0.2 bg-sky-500/20 text-sky-400 rounded-full text-[10px] font-mono">
                     {chatHistory.length}
                   </span>
                 )}
               </button>
-              <div className="hidden sm:flex items-center gap-2 text-xs text-slate-400">
-                <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>De-Biased Fact Engine</span>
-              </div>
             </div>
           </div>
         </header>
@@ -1390,39 +1350,39 @@ export default function ComparisonApp() {
         {/* Main Clean Hero Landing Section */}
         <main className="w-full max-w-4xl mx-auto px-4 sm:px-6 py-12 sm:py-20 text-center space-y-6 sm:space-y-8 flex-1 flex flex-col justify-center items-center">
           {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-xs text-sky-400 shadow-sm">
-            <Sparkles className="w-3.5 h-3.5" />
+          <div className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full ${t.badge} text-xs shadow-sm`}>
+            <Sparkles className="w-3.5 h-3.5 text-sky-400" />
             <span className="font-semibold text-center">AI-Powered Entity Resolution & Reddit De-Biasing</span>
           </div>
 
           {/* Heading */}
           <div className="space-y-3 w-full">
-            <h1 className="text-2xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-white leading-tight">
+            <h1 className={`text-2xl sm:text-4xl md:text-5xl font-extrabold tracking-tight ${t.title} leading-tight`}>
               MorphUI: Real-Time Generative Comparisons
             </h1>
-            <p className="text-xs sm:text-sm md:text-base text-slate-400 max-w-2xl mx-auto leading-relaxed">
+            <p className={`text-xs sm:text-sm md:text-base ${t.subtext} max-w-2xl mx-auto leading-relaxed`}>
               Compare any two entities across any domain. Get instant side-by-side spec sheets, de-biased consensus, and spatial graph models.
             </p>
           </div>
 
           {/* Uploaded Images Preview if any */}
           {uploadedImages.length > 0 && (
-            <div className="p-3 bg-slate-900 border border-slate-800 rounded-2xl flex flex-wrap items-center gap-3 w-full max-w-2xl text-left">
-              <span className="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
+            <div className={`p-3 ${t.card} rounded-2xl flex flex-wrap items-center gap-3 w-full max-w-2xl text-left`}>
+              <span className={`text-xs font-semibold ${t.subtext} flex items-center gap-1.5`}>
                 <Eye className="w-4 h-4 text-sky-400" /> Visual Inputs ({uploadedImages.length}/2):
               </span>
               <div className="flex flex-wrap items-center gap-2">
                 {uploadedImages.map((img, idx) => (
                   <div
                     key={idx}
-                    className="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-xs"
+                    className={`flex items-center gap-2 ${t.cardInner} rounded-lg px-2 py-1 text-xs`}
                   >
                     <img src={img.previewUrl} alt={img.name} className="w-6 h-6 object-cover rounded" />
-                    <span className="text-slate-300 font-medium truncate max-w-[120px] sm:max-w-[160px]">{img.name}</span>
+                    <span className="font-medium truncate max-w-[120px] sm:max-w-[160px]">{img.name}</span>
                     <button
                       type="button"
                       onClick={() => setUploadedImages((prev) => prev.filter((_, i) => i !== idx))}
-                      className="text-slate-500 hover:text-rose-400"
+                      className="text-slate-400 hover:text-rose-400"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
@@ -1434,14 +1394,14 @@ export default function ComparisonApp() {
 
           {/* Large Hero Search Input */}
           <div className="w-full max-w-2xl">
-            <form onSubmit={handleRunComparison} className="relative flex items-center shadow-2xl w-full">
-              <Search className="w-4 h-4 sm:w-5 sm:h-5 text-slate-500 absolute left-3.5 sm:left-4 pointer-events-none" />
+            <form onSubmit={handleRunComparison} className="relative flex items-center shadow-xl w-full">
+              <Search className="w-4 h-4 sm:w-5 sm:h-5 text-slate-400 absolute left-3.5 sm:left-4 pointer-events-none" />
               <input
                 type="text"
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                placeholder="Compare any two entities (e.g., Apple vs Mango, Sony WH-1000XM5 vs Bose QC Ultra)..."
-                className="w-full bg-slate-900/90 border-2 border-slate-800 focus:border-sky-500 rounded-2xl pl-10 sm:pl-12 pr-24 sm:pr-28 py-3.5 sm:py-4 text-xs sm:text-base text-slate-100 placeholder-slate-500 outline-none transition-all shadow-inner"
+                placeholder="Compare any two entities (e.g., Nike Pegasus 41 vs Adidas Ultraboost, Apple vs Mango)..."
+                className={`w-full ${t.input} rounded-2xl pl-10 sm:pl-12 pr-24 sm:pr-28 py-3.5 sm:py-4 text-xs sm:text-base outline-none transition-all shadow-inner`}
               />
 
               <div className="absolute right-1.5 sm:right-2.5 flex items-center gap-1 sm:gap-1.5">
@@ -1452,7 +1412,7 @@ export default function ComparisonApp() {
                   className={`p-1.5 sm:p-2 rounded-xl transition-colors ${
                     isListening
                       ? 'bg-rose-500 text-white animate-pulse'
-                      : 'text-slate-400 hover:text-sky-400 hover:bg-slate-800'
+                      : 'text-slate-400 hover:text-sky-400 hover:bg-slate-700/20'
                   }`}
                 >
                   {isListening ? <MicOff className="w-4 h-4 sm:w-5 sm:h-5" /> : <Mic className="w-4 h-4 sm:w-5 sm:h-5" />}
@@ -1462,7 +1422,7 @@ export default function ComparisonApp() {
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   title="Upload image to compare"
-                  className="p-1.5 sm:p-2 rounded-xl text-slate-400 hover:text-sky-400 hover:bg-slate-800 transition-colors"
+                  className="p-1.5 sm:p-2 rounded-xl text-slate-400 hover:text-sky-400 hover:bg-slate-700/20 transition-colors"
                 >
                   <ImagePlus className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
@@ -1470,7 +1430,7 @@ export default function ComparisonApp() {
                 <button
                   type="submit"
                   disabled={!prompt.trim() && uploadedImages.length === 0}
-                  className="px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-white font-semibold text-xs sm:text-sm active:scale-95 transition-all flex items-center gap-1.5 shadow-md disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-semibold text-xs sm:text-sm active:scale-95 transition-all flex items-center gap-1.5 shadow-md disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <span className="hidden xs:inline">Compare</span>
                   <ArrowRight className="w-4 h-4" />
@@ -1481,12 +1441,12 @@ export default function ComparisonApp() {
 
           {/* Inspiration Query Chips */}
           <div className="space-y-2 pt-2 w-full">
-            <span className="text-xs text-slate-500 font-medium block">Try a sample search:</span>
+            <span className={`text-xs ${t.subtext} font-medium block`}>Try a sample search:</span>
             <div className="flex flex-wrap items-center justify-center gap-2">
               {[
+                { label: '👟 Nike Pegasus 41 vs Adidas Ultraboost', query: 'Nike Pegasus 41 vs Adidas Ultraboost Light' },
                 { label: '🍎 Apple vs 🥭 Mango', query: 'Apple vs Mango: Nutrition & Shelf Life' },
                 { label: '🎧 Sony WH-1000XM5 vs Bose QC Ultra', query: 'Sony WH-1000XM5 vs Bose QC Ultra' },
-                { label: '👟 Nike Pegasus 41 vs Adidas Ultraboost', query: 'Nike Pegasus 41 vs Adidas Ultraboost Light' },
                 { label: '🏛️ IIT Bombay vs IIT Delhi', query: 'IIT Bombay vs IIT Delhi for Computer Science' },
                 { label: '⚡ React vs Vue', query: 'React vs Vue: Performance & DX' },
               ].map((item, idx) => (
@@ -1497,7 +1457,7 @@ export default function ComparisonApp() {
                     setPrompt(item.query);
                     handleRunComparison(undefined, item.query);
                   }}
-                  className="px-3 py-1.5 rounded-full bg-slate-900/80 hover:bg-slate-800 hover:text-slate-100 text-slate-400 border border-slate-800 text-xs transition-colors"
+                  className={`px-3 py-1.5 rounded-full ${t.btnSecondary} text-xs transition-colors shadow-xs`}
                 >
                   {item.label}
                 </button>
@@ -1506,7 +1466,7 @@ export default function ComparisonApp() {
           </div>
         </main>
 
-        <footer className="border-t border-slate-800/80 bg-slate-900/40 py-6 text-center text-xs text-slate-500 w-full">
+        <footer className={`${t.footer} py-6 text-center text-xs w-full transition-colors duration-300`}>
           <div className="w-full max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
             <span>MorphUI • Real-Time Generative Comparisons</span>
             <span>Zero-slop human-engineered runtime (2026)</span>
@@ -1520,36 +1480,36 @@ export default function ComparisonApp() {
   const isLoading = loading;
   if (isLoading && !comparisonData) {
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 selection:bg-slate-800 selection:text-white pb-16 w-full">
-        <header className="border-b border-slate-800/80 bg-slate-900/90 backdrop-blur-xl sticky top-0 z-40 w-full">
+      <div className={`min-h-screen ${t.bg} pb-16 w-full transition-colors duration-300`}>
+        <header className={`${t.nav} sticky top-0 z-40 w-full`}>
           <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-col md:flex-row items-center justify-between gap-3 md:gap-4">
             <div className="flex items-center justify-between w-full md:w-auto gap-3 shrink-0">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-sky-400 shadow-sm shrink-0">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-500 shadow-sm shrink-0">
                   <Scale className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-sm sm:text-base tracking-tight text-white">MorphUI</span>
-                    <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-slate-800 text-sky-300 border border-slate-700">
+                    <span className={`font-bold text-sm sm:text-base tracking-tight ${t.title}`}>MorphUI</span>
+                    <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-500 border border-sky-500/20">
                       Dual-Engine
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-400 hidden sm:block">Spec Sheet & Spatial Graph Runtime</p>
+                  <p className={`text-[11px] ${t.subtext} hidden sm:block`}>Spec Sheet & Spatial Graph Runtime</p>
                 </div>
               </div>
             </div>
 
             <div className="w-full md:w-auto md:flex-1 max-w-2xl">
               <div className="relative w-full flex items-center">
-                <Search className="w-4 h-4 text-slate-500 absolute left-3 pointer-events-none" />
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none" />
                 <input
                   type="text"
                   value={prompt}
                   readOnly
                   disabled
                   placeholder="Synthesizing comparison..."
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-12 py-2 text-xs sm:text-sm text-slate-300 placeholder-slate-500 outline-none shadow-inner"
+                  className={`w-full ${t.input} rounded-xl pl-9 pr-12 py-2 text-xs sm:text-sm outline-none shadow-inner`}
                 />
                 <div className="absolute right-2 flex items-center">
                   <Loader2 className="w-4 h-4 animate-spin text-sky-400" />
@@ -1565,7 +1525,7 @@ export default function ComparisonApp() {
         </header>
 
         <main>
-          <ComparisonSkeleton prompt={prompt} viewMode={viewMode} />
+          <ComparisonSkeleton prompt={prompt} viewMode={viewMode} theme={theme} />
         </main>
       </div>
     );
@@ -1573,7 +1533,7 @@ export default function ComparisonApp() {
 
   // 3. ACTIVE COMPARISON VIEW
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 selection:bg-slate-800 selection:text-white pb-16 w-full">
+    <div className={`min-h-screen ${t.bg} pb-16 w-full transition-colors duration-300`}>
       <input
         type="file"
         ref={fileInputRef}
@@ -1583,33 +1543,31 @@ export default function ComparisonApp() {
         className="hidden"
       />
 
-            {/* History Sidebar Drawer (Accessible on all screens) */}
+      {/* History Sidebar Drawer */}
       <div
         className={`fixed inset-0 z-50 transition-opacity duration-300 ${
           isSidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
       >
-        {/* Backdrop */}
         <div
-          className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"
+          className="absolute inset-0 bg-black/60 backdrop-blur-sm"
           onClick={() => setIsSidebarOpen(false)}
         />
-        {/* Drawer Panel */}
         <aside
-          className={`absolute top-0 left-0 bottom-0 w-80 max-w-[85vw] bg-slate-900 border-r border-slate-800 shadow-2xl p-4 flex flex-col justify-between transition-transform duration-300 ease-in-out ${
+          className={`absolute top-0 left-0 bottom-0 w-80 max-w-[85vw] ${t.sidebar} p-4 flex flex-col justify-between transition-transform duration-300 ease-in-out shadow-2xl ${
             isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
         >
           <div className="flex flex-col h-full">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-700/40">
               <div className="flex items-center gap-2">
                 <HistoryIcon className="w-4 h-4 text-sky-400" />
-                <span className="font-bold text-sm text-white">Comparison History</span>
+                <span className={`font-bold text-sm ${t.title}`}>Comparison History</span>
               </div>
               <button
                 type="button"
                 onClick={() => setIsSidebarOpen(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                className={`p-1.5 rounded-lg ${t.btnSecondary}`}
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1619,7 +1577,7 @@ export default function ComparisonApp() {
               <button
                 type="button"
                 onClick={handleNewComparison}
-                className="w-full py-2 px-3 rounded-xl bg-sky-500 hover:bg-sky-400 text-white text-xs font-semibold flex items-center justify-center gap-2 shadow-sm transition-all"
+                className="w-full py-2 px-3 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold flex items-center justify-center gap-2 shadow-sm transition-all"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>New Comparison</span>
@@ -1635,7 +1593,7 @@ export default function ComparisonApp() {
               ) : chatHistory.length === 0 ? (
                 <div className="text-center py-8 text-slate-500">
                   <p>No previous comparisons saved.</p>
-                  <p className="text-[11px] text-slate-600 mt-1">Comparisons are encrypted & saved automatically.</p>
+                  <p className="text-[11px] text-slate-400 mt-1">Comparisons are encrypted & saved automatically.</p>
                 </div>
               ) : (
                 chatHistory.map((chat) => (
@@ -1644,8 +1602,8 @@ export default function ComparisonApp() {
                     onClick={() => handleSelectChat(chat.id)}
                     className={`group flex items-center justify-between p-2.5 rounded-xl border transition-all cursor-pointer ${
                       activeChatId === chat.id
-                        ? 'bg-sky-500/10 border-sky-500/30 text-sky-200'
-                        : 'bg-slate-950/40 border-slate-800/80 text-slate-300 hover:bg-slate-800 hover:text-white'
+                        ? 'bg-sky-500/10 border-sky-500/30 text-sky-400'
+                        : `${t.btnSecondary}`
                     }`}
                   >
                     <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -1666,7 +1624,7 @@ export default function ComparisonApp() {
                       type="button"
                       onClick={(e) => handleDeleteChat(e, chat.id)}
                       title="Delete comparison"
-                      className="opacity-0 group-hover:opacity-100 p-1 rounded-md text-slate-500 hover:text-rose-400 hover:bg-slate-800/80 transition-all shrink-0 ml-1"
+                      className="opacity-0 group-hover:opacity-100 p-1 rounded-md text-slate-400 hover:text-rose-400 transition-all shrink-0 ml-1"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -1675,20 +1633,19 @@ export default function ComparisonApp() {
               )}
             </div>
 
-            <div className="pt-3 border-t border-slate-800 text-[11px] text-slate-500 flex items-center justify-between">
+            <div className="pt-3 border-t border-slate-700/40 text-[11px] text-slate-500 flex items-center justify-between">
               <span className="flex items-center gap-1.5">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> AES-256 Encrypted
               </span>
-              <span className="text-[10px] font-mono text-slate-600">Turso DB</span>
+              <span className="text-[10px] font-mono text-slate-400">Turso DB</span>
             </div>
           </div>
         </aside>
       </div>
 
-      {/* Fully Responsive Active Navigation Bar (Stacks on mobile, inline on desktop) */}
-      <header className="border-b border-slate-800/80 bg-slate-900/90 backdrop-blur-xl sticky top-0 z-40 w-full">
+      {/* Active Navigation Bar */}
+      <header className={`${t.nav} sticky top-0 z-40 w-full transition-colors duration-300`}>
         <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-col md:flex-row items-center justify-between gap-3 md:gap-4">
-          {/* Top Bar Row 1 on Mobile: Logo, History Toggle, and View Switcher */}
           <div className="flex items-center justify-between w-full md:w-auto gap-3 shrink-0">
             <div className="flex items-center gap-2 sm:gap-3">
               <button
@@ -1697,43 +1654,41 @@ export default function ComparisonApp() {
                   setIsSidebarOpen(true);
                   fetchChatHistory();
                 }}
-                className="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/60 transition-all flex items-center gap-1.5 shadow-sm"
+                className={`p-2 rounded-xl ${t.btnSecondary} transition-all flex items-center gap-1.5 shadow-sm`}
                 title="Open History Sidebar"
               >
                 <HistoryIcon className="w-4 h-4 text-sky-400" />
                 <span className="hidden lg:inline text-xs font-medium">History</span>
                 {chatHistory.length > 0 && (
-                  <span className="px-1.5 py-0.2 bg-sky-500/20 text-sky-300 rounded-full text-[10px] font-mono">
+                  <span className="px-1.5 py-0.2 bg-sky-500/20 text-sky-400 rounded-full text-[10px] font-mono">
                     {chatHistory.length}
                   </span>
                 )}
               </button>
 
               <div className="flex items-center gap-2 cursor-pointer" onClick={handleNewComparison} title="New Comparison">
-                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-sky-400 shadow-sm shrink-0">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-500 shadow-sm shrink-0">
                   <Scale className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-sm sm:text-base tracking-tight text-white">MorphUI</span>
-                    <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-slate-800 text-sky-300 border border-slate-700">
+                    <span className={`font-bold text-sm sm:text-base tracking-tight ${t.title}`}>MorphUI</span>
+                    <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-500 border border-sky-500/20">
                       Dual-Engine
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-400 hidden sm:block">Spec Sheet & Spatial Graph Runtime</p>
+                  <p className={`text-[11px] ${t.subtext} hidden sm:block`}>Spec Sheet & Spatial Graph Runtime</p>
                 </div>
               </div>
             </div>
 
             {/* Mobile-visible View Switcher */}
-            <div className="flex md:hidden items-center p-1 rounded-xl bg-slate-950/80 border border-slate-800 shadow-inner">
+            <div className={`flex md:hidden items-center p-1 rounded-xl ${t.cardInner} shadow-inner`}>
               <button
                 type="button"
                 onClick={() => setViewMode('spec')}
                 className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${
-                  viewMode === 'spec'
-                    ? 'bg-slate-800 text-white shadow-sm border border-slate-700'
-                    : 'text-slate-400 hover:text-slate-200'
+                  viewMode === 'spec' ? t.pillActive : t.pillInactive
                 }`}
                 title="Spec Sheet View"
               >
@@ -1744,9 +1699,7 @@ export default function ComparisonApp() {
                 type="button"
                 onClick={() => setViewMode('canvas')}
                 className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${
-                  viewMode === 'canvas'
-                    ? 'bg-slate-800 text-white shadow-sm border border-slate-700'
-                    : 'text-slate-400 hover:text-slate-200'
+                  viewMode === 'canvas' ? t.pillActive : t.pillInactive
                 }`}
                 title="Spatial Canvas Graph View"
               >
@@ -1756,17 +1709,17 @@ export default function ComparisonApp() {
             </div>
           </div>
 
-          {/* Central Expanding Search Input (Full width on mobile) */}
+          {/* Central Search Input */}
           <div className="w-full md:w-auto md:flex-1 max-w-2xl">
             <form onSubmit={handleRunComparison} className="relative w-full flex items-center">
-              <Search className="w-4 h-4 text-slate-500 absolute left-3 pointer-events-none" />
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none" />
               <input
                 type="text"
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                placeholder="Compare any two entities (e.g., Apple vs Mango, Shoes, Phones)..."
+                placeholder="Compare any two entities (e.g., Nike Pegasus vs Ultraboost, Apple vs Mango)..."
                 disabled={loading}
-                className="w-full bg-slate-950 border border-slate-800 focus:border-sky-500 rounded-xl pl-9 pr-24 py-2 text-xs sm:text-sm text-slate-100 placeholder-slate-500 outline-none transition-all shadow-inner"
+                className={`w-full ${t.input} rounded-xl pl-9 pr-24 py-2 text-xs sm:text-sm outline-none transition-all shadow-inner`}
               />
 
               <div className="absolute right-1.5 flex items-center gap-1">
@@ -1777,7 +1730,7 @@ export default function ComparisonApp() {
                   className={`p-1.5 rounded-lg transition-colors ${
                     isListening
                       ? 'bg-rose-500 text-white animate-pulse'
-                      : 'text-slate-400 hover:text-sky-400 hover:bg-slate-800'
+                      : 'text-slate-400 hover:text-sky-400 hover:bg-slate-700/20'
                   }`}
                 >
                   {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
@@ -1788,7 +1741,7 @@ export default function ComparisonApp() {
                   onClick={() => fileInputRef.current?.click()}
                   title="Upload image"
                   disabled={loading || uploadedImages.length >= 2}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-sky-400 hover:bg-slate-800 transition-colors disabled:opacity-40"
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-sky-400 hover:bg-slate-700/20 transition-colors disabled:opacity-40"
                 >
                   <ImagePlus className="w-4 h-4" />
                 </button>
@@ -1797,7 +1750,7 @@ export default function ComparisonApp() {
                   type="submit"
                   disabled={loading || (!prompt.trim() && uploadedImages.length === 0)}
                   title="Run Comparison"
-                  className="p-1.5 rounded-lg bg-sky-500 hover:bg-sky-400 text-white active:scale-95 transition-all shadow-sm flex items-center justify-center shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="p-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white active:scale-95 transition-all shadow-sm flex items-center justify-center shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {loading ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -1809,18 +1762,16 @@ export default function ComparisonApp() {
             </form>
           </div>
 
-          {/* Desktop-only View Switcher & Keyboard Shortcut */}
+          {/* Desktop-only View Switcher & Theme Switcher */}
           <div className="hidden md:flex items-center gap-3 shrink-0">
-                                    {/* 3-Tier Functional Theme Switcher */}
-            <div className="flex items-center p-1 rounded-xl bg-slate-900/90 dark:bg-slate-950/90 border border-slate-700/80 shadow-inner shrink-0">
+            {/* Functional Theme Switcher */}
+            <div className={`flex items-center p-1 rounded-xl ${t.cardInner} shadow-inner shrink-0`}>
               <button
                 type="button"
                 onClick={() => setTheme('dark')}
                 title="Dark Mode"
                 className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${
-                  theme === 'dark'
-                    ? 'bg-slate-800 text-sky-400 shadow-sm border border-slate-700'
-                    : 'text-slate-400 hover:text-slate-200'
+                  theme === 'dark' ? t.pillActive : t.pillInactive
                 }`}
               >
                 <span>🌙</span>
@@ -1829,11 +1780,9 @@ export default function ComparisonApp() {
               <button
                 type="button"
                 onClick={() => setTheme('light')}
-                title="Clean White Mode"
+                title="Clean White Light Mode"
                 className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${
-                  theme === 'light'
-                    ? 'bg-white text-slate-900 shadow-sm border border-slate-200'
-                    : 'text-slate-400 hover:text-slate-200'
+                  theme === 'light' ? t.pillActive : t.pillInactive
                 }`}
               >
                 <span>☀️</span>
@@ -1842,25 +1791,22 @@ export default function ComparisonApp() {
               <button
                 type="button"
                 onClick={() => setTheme('botanical')}
-                title="Cherry Blossom Botanical Mode"
+                title="Botanical Forest Mode"
                 className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${
-                  theme === 'botanical'
-                    ? 'bg-emerald-700 text-white shadow-sm border border-emerald-600'
-                    : 'text-slate-400 hover:text-slate-200'
+                  theme === 'botanical' ? t.pillActive : t.pillInactive
                 }`}
               >
                 <span>🌸</span>
                 <span className="hidden sm:inline text-[11px]">Botanical</span>
               </button>
             </div>
-            <div className="flex items-center p-1 rounded-xl bg-slate-950/80 border border-slate-800 shadow-inner">
+
+            <div className={`flex items-center p-1 rounded-xl ${t.cardInner} shadow-inner`}>
               <button
                 type="button"
                 onClick={() => setViewMode('spec')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
-                  viewMode === 'spec'
-                    ? 'bg-slate-800 text-white shadow-sm border border-slate-700'
-                    : 'text-slate-400 hover:text-slate-200'
+                  viewMode === 'spec' ? t.pillActive : t.pillInactive
                 }`}
                 title="Spec Sheet View (Press 'V' to flip)"
               >
@@ -1872,9 +1818,7 @@ export default function ComparisonApp() {
                 type="button"
                 onClick={() => setViewMode('canvas')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
-                  viewMode === 'canvas'
-                    ? 'bg-slate-800 text-white shadow-sm border border-slate-700'
-                    : 'text-slate-400 hover:text-slate-200'
+                  viewMode === 'canvas' ? t.pillActive : t.pillInactive
                 }`}
                 title="Spatial Canvas Graph View (Press 'V' to flip)"
               >
@@ -1883,28 +1827,46 @@ export default function ComparisonApp() {
               </button>
             </div>
 
-            <div className="hidden lg:flex items-center gap-1.5 text-[11px] text-slate-500 font-mono">
-              <kbd className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 text-[10px]">
-                V
-              </kbd>
-              <span>toggle view</span>
+            <div className={`text-[10px] font-mono ${t.subtext} hidden lg:block`}>
+              <kbd className="px-1.5 py-0.5 rounded bg-slate-500/20 border border-slate-500/30">V</kbd> toggle view
             </div>
           </div>
         </div>
 
-        {isListening && (
-          <div className="bg-rose-500/10 border-t border-rose-500/20 py-1 px-4 text-center text-xs text-rose-300 flex items-center justify-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
-            <span className="font-semibold">Listening to your voice... Speak your comparison now!</span>
+        {/* Mobile Sub-Navbar for Theme Switcher */}
+        <div className="flex md:hidden items-center justify-between px-4 pb-2.5 pt-1 w-full border-t border-slate-700/20">
+          <div className={`flex items-center p-1 rounded-xl ${t.cardInner} shadow-inner`}>
+            <button
+              type="button"
+              onClick={() => setTheme('dark')}
+              className={`px-2 py-0.5 rounded-lg text-xs ${theme === 'dark' ? t.pillActive : t.pillInactive}`}
+            >
+              🌙 Dark
+            </button>
+            <button
+              type="button"
+              onClick={() => setTheme('light')}
+              className={`px-2 py-0.5 rounded-lg text-xs ${theme === 'light' ? t.pillActive : t.pillInactive}`}
+            >
+              ☀️ Light
+            </button>
+            <button
+              type="button"
+              onClick={() => setTheme('botanical')}
+              className={`px-2 py-0.5 rounded-lg text-xs ${theme === 'botanical' ? t.pillActive : t.pillInactive}`}
+            >
+              🌸 Botanical
+            </button>
           </div>
-        )}
+          <span className={`text-[10px] font-mono ${t.subtext}`}>{activeModel.split(' ')[0]}</span>
+        </div>
       </header>
 
-      {/* VIEWPORT BODY: DUAL-VIEW (Clean Container max-w-7xl mx-auto px-4) */}
+      {/* VIEWPORT BODY: DUAL-VIEW */}
       {viewMode === 'canvas' ? (
         // VIEW 2: SPATIAL CANVAS GRAPH VIEW
         <main className="w-full max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-4">
-          <ReactFlowProvider>
+          <FlowProvider>
             <SpatialCanvasWorkspace
               entities={displayEntities}
               category={category}
@@ -1913,29 +1875,29 @@ export default function ComparisonApp() {
               verdictSummary={verdictSummary}
               theme={theme}
             />
-          </ReactFlowProvider>
+          </FlowProvider>
         </main>
       ) : (
-        // VIEW 1: SPEC SHEET VIEW (w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8)
+        // VIEW 1: SPEC SHEET VIEW
         <main className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8 space-y-4 sm:space-y-6">
           {/* Uploaded Images Preview */}
           {uploadedImages.length > 0 && (
-            <div className="p-3 bg-slate-900 border border-slate-800 rounded-2xl flex flex-wrap items-center gap-3 w-full">
-              <span className="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
+            <div className={`p-3 ${t.card} rounded-2xl flex flex-wrap items-center gap-3 w-full`}>
+              <span className={`text-xs font-semibold ${t.subtext} flex items-center gap-1.5`}>
                 <Eye className="w-4 h-4 text-sky-400" /> Visual Inputs ({uploadedImages.length}/2):
               </span>
               <div className="flex flex-wrap items-center gap-2">
                 {uploadedImages.map((img, idx) => (
                   <div
                     key={idx}
-                    className="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-xs"
+                    className={`flex items-center gap-2 ${t.cardInner} rounded-lg px-2 py-1 text-xs`}
                   >
                     <img src={img.previewUrl} alt={img.name} className="w-6 h-6 object-cover rounded" />
-                    <span className="text-slate-300 font-medium truncate max-w-[120px] sm:max-w-[160px]">{img.name}</span>
+                    <span className="font-medium truncate max-w-[120px] sm:max-w-[160px]">{img.name}</span>
                     <button
                       type="button"
                       onClick={() => setUploadedImages((prev) => prev.filter((_, i) => i !== idx))}
-                      className="text-slate-500 hover:text-rose-400"
+                      className="text-slate-400 hover:text-rose-400"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
@@ -1955,22 +1917,22 @@ export default function ComparisonApp() {
             </div>
           )}
 
-          {/* Main Entity Comparison Hero Card (Dynamic Multi-Entity or 2-way VS layout) */}
-          <section className="w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 lg:p-8 shadow-xl relative overflow-hidden">
+          {/* Main Entity Comparison Hero Card */}
+          <section className={`w-full ${t.card} rounded-2xl p-4 sm:p-6 lg:p-8 shadow-xl relative overflow-hidden`}>
             {displayEntities.length <= 2 ? (
-              <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4 sm:gap-6 pb-4 sm:pb-6 border-b border-slate-800">
+              <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4 sm:gap-6 pb-4 sm:pb-6 border-b border-slate-700/40">
                 {/* Entity A */}
                 <div className="flex-1 space-y-1.5 sm:space-y-2 w-full">
                   <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded bg-slate-800 text-sky-400 border border-slate-700 shrink-0">
+                    <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 shrink-0">
                       Option A
                     </span>
-                    <span className="text-xs text-slate-400 whitespace-normal break-words">{category}</span>
+                    <span className={`text-xs ${t.subtext} whitespace-normal break-words`}>{category}</span>
                   </div>
-                  <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-white whitespace-normal break-words leading-tight">
+                  <h1 className={`text-xl sm:text-2xl md:text-3xl font-bold tracking-tight ${t.title} whitespace-normal break-words leading-tight`}>
                     {displayEntityA}
                   </h1>
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-800/90 border border-slate-700 text-xs font-medium text-slate-200">
+                  <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full ${t.cardInner} text-xs font-medium`}>
                     <Award className="w-3.5 h-3.5 text-sky-400" />
                     <span>Verified Baseline</span>
                   </div>
@@ -1978,33 +1940,33 @@ export default function ComparisonApp() {
 
                 {/* VS Badge */}
                 <div className="flex flex-row md:flex-col items-center justify-center shrink-0 my-1 md:my-0">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-slate-950 border border-slate-800 flex items-center justify-center shadow-md">
-                    <span className="font-bold font-mono text-xs sm:text-sm text-slate-400">VS</span>
+                  <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full ${t.cardInner} flex items-center justify-center shadow-md font-bold font-mono text-xs sm:text-sm ${t.subtext}`}>
+                    VS
                   </div>
                 </div>
 
                 {/* Entity B */}
                 <div className="flex-1 space-y-1.5 sm:space-y-2 md:text-right w-full">
                   <div className="flex items-center gap-2 md:justify-end">
-                    <span className="text-xs text-slate-400 whitespace-normal break-words">{category}</span>
-                    <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded bg-slate-800 text-indigo-400 border border-slate-700 shrink-0">
+                    <span className={`text-xs ${t.subtext} whitespace-normal break-words`}>{category}</span>
+                    <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shrink-0">
                       Option B
                     </span>
                   </div>
-                  <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-white whitespace-normal break-words leading-tight">
+                  <h1 className={`text-xl sm:text-2xl md:text-3xl font-bold tracking-tight ${t.title} whitespace-normal break-words leading-tight`}>
                     {displayEntityB}
                   </h1>
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-800/90 border border-slate-700 text-xs font-medium text-slate-200">
+                  <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full ${t.cardInner} text-xs font-medium`}>
                     <Award className="w-3.5 h-3.5 text-indigo-400" />
                     <span>Verified Baseline</span>
                   </div>
                 </div>
               </div>
             ) : (
-              <div className="relative z-10 space-y-4 pb-4 sm:pb-6 border-b border-slate-800">
+              <div className="relative z-10 space-y-4 pb-4 sm:pb-6 border-b border-slate-700/40">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{category}</span>
-                  <span className="text-xs font-mono px-2 py-0.5 rounded bg-slate-800 text-sky-300 border border-slate-700">
+                  <span className={`text-xs font-semibold ${t.subtext} uppercase tracking-wider`}>{category}</span>
+                  <span className={`text-xs font-mono px-2 py-0.5 rounded ${t.cardInner}`}>
                     {displayEntities.length}-Way Comparison
                   </span>
                 </div>
@@ -2012,15 +1974,15 @@ export default function ComparisonApp() {
                   {displayEntities.map((ent, idx) => {
                     const badge = ENTITY_BADGES[idx % ENTITY_BADGES.length];
                     return (
-                      <div key={idx} className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800/90 space-y-2">
+                      <div key={idx} className={`p-3.5 rounded-xl ${t.cardInner} space-y-2`}>
                         <div className="flex items-center justify-between">
                           <span className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded border ${badge.bg}`}>
                             {badge.label}
                           </span>
                           <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
                         </div>
-                        <h2 className="text-base sm:text-lg font-bold text-white leading-snug break-words">{ent.name}</h2>
-                        <div className="text-[11px] text-slate-400 flex items-center gap-1">
+                        <h2 className={`text-base sm:text-lg font-bold ${t.title} leading-snug break-words`}>{ent.name}</h2>
+                        <div className={`text-[11px] ${t.subtext} flex items-center gap-1`}>
                           <Award className={`w-3 h-3 ${badge.text}`} />
                           <span>Verified Baseline</span>
                         </div>
@@ -2032,30 +1994,30 @@ export default function ComparisonApp() {
             )}
 
             {/* Telemetry and Trust Badges */}
-            <div className="pt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between text-xs text-slate-500 gap-2">
+            <div className={`pt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between text-xs ${t.subtext} gap-2`}>
               <div className="flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
                 <span className="whitespace-normal break-words">Reddit De-Biasing & Multi-Source Extraction Engine</span>
               </div>
-              <div className="font-mono text-[11px] text-slate-400">
+              <div className="font-mono text-[11px]">
                 {activeModel}
               </div>
             </div>
           </section>
 
-          {/* Executive Verdict Card with Full Width on Mobile & grid-cols-1 md:grid-cols-2 */}
-          <section className="w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl space-y-4 sm:space-y-5">
-            <div className="flex items-center gap-2.5 pb-3 border-b border-slate-800">
-              <div className="p-1.5 rounded-lg bg-slate-800 text-sky-400 border border-slate-700 shrink-0">
+          {/* Executive Verdict Card */}
+          <section className={`w-full ${t.card} rounded-2xl p-4 sm:p-6 shadow-xl space-y-4 sm:space-y-5`}>
+            <div className="flex items-center gap-2.5 pb-3 border-b border-slate-700/40">
+              <div className="p-1.5 rounded-lg bg-sky-500/10 text-sky-400 border border-sky-500/20 shrink-0">
                 <Award className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="font-bold text-xs sm:text-sm text-white tracking-tight">Executive Verdict & Synthesis</h3>
-                <p className="text-[11px] sm:text-xs text-slate-400">Synthesized takeaway balancing verified data & Reddit consensus</p>
+                <h3 className={`font-bold text-xs sm:text-sm ${t.title} tracking-tight`}>Executive Verdict & Synthesis</h3>
+                <p className={`text-[11px] sm:text-xs ${t.subtext}`}>Synthesized takeaway balancing verified specs & community consensus</p>
               </div>
             </div>
 
-            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed bg-slate-950/60 p-3.5 sm:p-4 rounded-xl border border-slate-800/80 whitespace-normal break-words">
+            <p className={`text-xs sm:text-sm leading-relaxed ${t.cardInner} p-3.5 sm:p-4 rounded-xl whitespace-normal break-words`}>
               {verdictSummary}
             </p>
 
@@ -2063,16 +2025,16 @@ export default function ComparisonApp() {
             <div className={`grid grid-cols-1 ${displayEntities.length > 2 ? 'md:grid-cols-2 lg:grid-cols-3' : 'md:grid-cols-2'} gap-3 sm:gap-4 w-full`}>
               {displayEntities.map((ent, entIdx) => {
                 const badge = ENTITY_BADGES[entIdx % ENTITY_BADGES.length];
-                const pros = ent.pros && ent.pros.length > 0 ? ent.pros : ['Key distinguishing features and strengths of ' + ent.name];
+                const pros = ent.pros && ent.pros.length > 0 ? ent.pros : ['Key distinguishing strengths of ' + ent.name];
                 return (
-                  <div key={entIdx} className="w-full bg-slate-950/80 border border-slate-800/90 rounded-xl p-3.5 sm:p-4 space-y-2.5 sm:space-y-3">
+                  <div key={entIdx} className={`w-full ${t.cardInner} rounded-xl p-3.5 sm:p-4 space-y-2.5 sm:space-y-3`}>
                     <div className={`flex items-center gap-2 ${badge.text} font-semibold text-xs uppercase tracking-wider`}>
                       <CheckCircle2 className={`w-4 h-4 ${badge.text} shrink-0`} />
                       <span className="whitespace-normal break-words">Choose {ent.name} if:</span>
                     </div>
-                    <ul className="space-y-2 text-xs text-slate-300">
+                    <ul className={`space-y-2 text-xs leading-relaxed`}>
                       {pros.map((item, idx) => (
-                        <li key={idx} className="flex items-start gap-2 whitespace-normal break-words leading-relaxed">
+                        <li key={idx} className="flex items-start gap-2 whitespace-normal break-words">
                           <span className={`w-1.5 h-1.5 rounded-full ${badge.dot} shrink-0 mt-1.5`} />
                           <span>{item}</span>
                         </li>
@@ -2084,22 +2046,20 @@ export default function ComparisonApp() {
             </div>
           </section>
 
-          {/* Partitioned Tabs & Utility Toolbar (Fully Responsive) */}
+          {/* Partitioned Tabs & Utility Toolbar */}
           <section className="w-full space-y-3 no-print">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-900 border border-slate-800 p-2 rounded-2xl w-full">
-              <div className="flex flex-col xs:flex-row items-stretch xs:items-center gap-1.5 p-1 bg-slate-950 rounded-xl border border-slate-800 w-full sm:w-auto">
+            <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 ${t.card} p-2 rounded-2xl w-full`}>
+              <div className={`flex flex-col xs:flex-row items-stretch xs:items-center gap-1.5 p-1 ${t.cardInner} rounded-xl w-full sm:w-auto`}>
                 <button
                   type="button"
                   onClick={() => setActiveTab('verified')}
                   className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-1.5 sm:gap-2 ${
-                    activeTab === 'verified'
-                      ? 'bg-slate-800 text-white shadow-sm border border-slate-700'
-                      : 'text-slate-400 hover:text-slate-200'
+                    activeTab === 'verified' ? t.pillActive : t.pillInactive
                   }`}
                 >
                   <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
                   <span className="truncate">Verified Facts</span>
-                  <span className="text-[10px] sm:text-[11px] font-mono px-1.5 py-0.2 rounded bg-slate-900 text-slate-400 border border-slate-800">
+                  <span className={`text-[10px] sm:text-[11px] font-mono px-1.5 py-0.2 rounded ${t.cardInner}`}>
                     {flatVerifiedMetrics.length}
                   </span>
                 </button>
@@ -2108,14 +2068,12 @@ export default function ComparisonApp() {
                   type="button"
                   onClick={() => setActiveTab('community')}
                   className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-1.5 sm:gap-2 ${
-                    activeTab === 'community'
-                      ? 'bg-slate-800 text-white shadow-sm border border-slate-700'
-                      : 'text-slate-400 hover:text-slate-200'
+                    activeTab === 'community' ? t.pillActive : t.pillInactive
                   }`}
                 >
                   <MessageSquare className="w-4 h-4 text-sky-400 shrink-0" />
                   <span className="truncate">Reddit Sentiment</span>
-                  <span className="text-[10px] sm:text-[11px] font-mono px-1.5 py-0.2 rounded bg-slate-900 text-sky-300 border border-slate-800">
+                  <span className={`text-[10px] sm:text-[11px] font-mono px-1.5 py-0.2 rounded ${t.cardInner}`}>
                     {communitySentiment.length}
                   </span>
                 </button>
@@ -2124,25 +2082,25 @@ export default function ComparisonApp() {
               {/* Quick Filter Search */}
               <div className="flex items-center gap-2 px-1 sm:px-2 w-full sm:w-auto">
                 <div className="relative w-full sm:w-64">
-                  <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                   <input
                     type="text"
                     value={tableSearch}
                     onChange={(e) => setTableSearch(e.target.value)}
                     placeholder="Filter attributes & themes..."
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-slate-600"
+                    className={`w-full ${t.input} rounded-xl pl-8 pr-3 py-1.5 text-xs outline-none`}
                   />
                 </div>
               </div>
             </div>
 
-            {/* Action Utilities (Horizontal scroll or flex-wrap on small screens) */}
-            <div className="w-full bg-slate-900/90 border border-slate-800 rounded-2xl p-2.5 flex flex-wrap items-center justify-between gap-2 shadow-sm">
+            {/* Action Utilities */}
+            <div className={`w-full ${t.card} rounded-2xl p-2.5 flex flex-wrap items-center justify-between gap-2 shadow-sm`}>
               <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                 <button
                   type="button"
                   onClick={() => setIsSwapped((prev) => !prev)}
-                  className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 text-xs font-medium text-slate-300 hover:text-white transition-colors flex items-center gap-1.5"
+                  className={`px-2.5 sm:px-3 py-1.5 rounded-xl ${t.btnSecondary} text-xs font-medium transition-colors flex items-center gap-1.5`}
                   title="Swap Entity Columns"
                 >
                   <ArrowLeftRight className="w-3.5 h-3.5 text-sky-400" />
@@ -2152,10 +2110,10 @@ export default function ComparisonApp() {
                 <button
                   type="button"
                   onClick={() => setHighlightDiff((prev) => !prev)}
-                  className={`px-2.5 sm:px-3 py-1.5 rounded-xl border text-xs font-medium transition-colors flex items-center gap-1.5 ${
+                  className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-medium transition-colors flex items-center gap-1.5 ${
                     highlightDiff
-                      ? 'bg-sky-500/10 border-sky-500/40 text-sky-300'
-                      : 'bg-slate-950 hover:bg-slate-800 border-slate-800 text-slate-300 hover:text-white'
+                      ? 'bg-sky-500/10 border border-sky-500/40 text-sky-400 font-semibold'
+                      : t.btnSecondary
                   }`}
                 >
                   <Sparkles className="w-3.5 h-3.5 text-sky-400" />
@@ -2165,7 +2123,7 @@ export default function ComparisonApp() {
                 <button
                   type="button"
                   onClick={toggleAllSections}
-                  className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 text-xs font-medium text-slate-300 hover:text-white transition-colors flex items-center gap-1.5"
+                  className={`px-2.5 sm:px-3 py-1.5 rounded-xl ${t.btnSecondary} text-xs font-medium transition-colors flex items-center gap-1.5`}
                 >
                   <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
                   <span className="hidden xs:inline">Expand / Collapse</span>
@@ -2177,7 +2135,7 @@ export default function ComparisonApp() {
                 <button
                   type="button"
                   onClick={handleExportPDF}
-                  className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 text-xs font-medium text-slate-300 hover:text-white transition-colors flex items-center gap-1.5"
+                  className={`px-2.5 sm:px-3 py-1.5 rounded-xl ${t.btnSecondary} text-xs font-medium transition-colors flex items-center gap-1.5`}
                 >
                   <Printer className="w-3.5 h-3.5 text-slate-400" />
                   <span className="hidden xs:inline">Export PDF</span>
@@ -2186,7 +2144,7 @@ export default function ComparisonApp() {
                 <button
                   type="button"
                   onClick={handleShare}
-                  className="p-1.5 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white transition-colors"
+                  className={`p-1.5 rounded-xl ${t.btnSecondary} transition-colors`}
                   title="Share comparison summary"
                 >
                   <Share2 className="w-3.5 h-3.5" />
@@ -2195,15 +2153,15 @@ export default function ComparisonApp() {
             </div>
           </section>
 
-          {/* TAB 1: Verified Facts & Official Specs Table (Dynamic N-Way Columns) */}
+          {/* TAB 1: Verified Facts & Official Specs Table */}
           {activeTab === 'verified' && (
-            <section className="w-full bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden print-clean">
+            <section className={`w-full ${t.card} rounded-2xl shadow-xl overflow-hidden print-clean`}>
               <div className="w-full overflow-x-auto whitespace-nowrap md:whitespace-normal">
                 <div className="min-w-[650px] md:min-w-full">
                   {/* Table Header */}
-                  <div className="bg-slate-900 border-b border-slate-800 px-4 sm:px-6 py-3.5 flex items-center text-xs font-bold uppercase tracking-wider text-slate-400 shadow-sm gap-4">
+                  <div className={`${t.tableHeader} px-4 sm:px-6 py-3.5 flex items-center text-xs font-bold uppercase tracking-wider shadow-sm gap-4`}>
                     <div className="w-1/3 min-w-[180px] shrink-0 flex items-center gap-1.5">
-                      <FileSpreadsheet className="w-4 h-4 text-slate-500 shrink-0" />
+                      <FileSpreadsheet className="w-4 h-4 text-slate-400 shrink-0" />
                       <span className="truncate">Metric / Attribute</span>
                     </div>
                     {displayEntities.map((ent, idx) => {
@@ -2218,9 +2176,9 @@ export default function ComparisonApp() {
                   </div>
 
                   {/* Dynamic Categories Loop */}
-                  <div className="divide-y divide-slate-800">
+                  <div className="divide-y divide-slate-700/30">
                     {Object.keys(filteredCategories).length === 0 ? (
-                      <div className="p-8 sm:p-12 text-center text-slate-500 text-sm">
+                      <div className="p-8 sm:p-12 text-center text-slate-400 text-sm">
                         No verified metrics found for &quot;{tableSearch}&quot;.
                       </div>
                     ) : (
@@ -2232,24 +2190,24 @@ export default function ComparisonApp() {
                             <button
                               type="button"
                               onClick={() => toggleSection(categoryName)}
-                              className="w-full bg-slate-950/70 hover:bg-slate-950/90 px-4 sm:px-6 py-3 sm:py-3.5 flex items-center justify-between text-left transition-colors border-t first:border-t-0 border-slate-800"
+                              className={`w-full ${t.tableSection} px-4 sm:px-6 py-3 sm:py-3.5 flex items-center justify-between text-left transition-colors`}
                             >
                               <div className="flex items-center gap-2 whitespace-normal break-words">
                                 <SlidersHorizontal className="w-4 h-4 text-sky-400 shrink-0" />
-                                <span className="font-bold text-xs sm:text-sm text-slate-200 whitespace-normal break-words">
+                                <span className={`font-bold text-xs sm:text-sm ${t.title} whitespace-normal break-words`}>
                                   {categoryName}
                                 </span>
-                                <span className="text-[11px] text-slate-500 font-mono shrink-0">
+                                <span className={`text-[11px] ${t.subtext} font-mono shrink-0`}>
                                   ({metrics.length})
                                 </span>
                               </div>
-                              <div className="text-slate-500 hover:text-slate-300 shrink-0 ml-2">
+                              <div className={`${t.subtext} shrink-0 ml-2`}>
                                 {isOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                               </div>
                             </button>
 
                             {isOpen && (
-                              <div className="divide-y divide-slate-800/60 bg-slate-900/60">
+                              <div className="divide-y divide-slate-700/20">
                                 {metrics.map((m, idx) => {
                                   const isNewlyAdded = recentlyAddedMetric === m.metric;
                                   const rawVals = m.values || [m.entity_a, m.entity_b];
@@ -2258,24 +2216,24 @@ export default function ComparisonApp() {
                                   return (
                                     <div
                                       key={idx}
-                                      className={`flex items-start gap-4 px-4 sm:px-6 py-3.5 sm:py-4 text-xs sm:text-sm transition-all duration-500 ${
+                                      className={`flex items-start gap-4 px-4 sm:px-6 py-3.5 sm:py-4 text-xs sm:text-sm ${t.tableRow} transition-all duration-300 ${
                                         isNewlyAdded
-                                          ? 'bg-emerald-950/40 border-l-4 border-emerald-400'
+                                          ? 'bg-emerald-500/10 border-l-4 border-emerald-400'
                                           : highlightDiff && isDifferent
-                                          ? 'bg-sky-950/20 hover:bg-sky-950/30'
-                                          : 'hover:bg-slate-800/40'
+                                          ? 'bg-sky-500/5'
+                                          : ''
                                       }`}
                                     >
                                       <div className="w-1/3 min-w-[180px] shrink-0 pr-2 align-top whitespace-normal break-words">
-                                        <div className="font-semibold text-slate-200 leading-relaxed whitespace-normal break-words">
+                                        <div className={`font-semibold ${t.title} leading-relaxed whitespace-normal break-words`}>
                                           {m.metric}
                                         </div>
                                         <div className="flex items-center gap-1.5 mt-1">
-                                          <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">
+                                          <span className={`text-[10px] uppercase font-mono px-1.5 py-0.5 rounded ${t.cardInner}`}>
                                             Official
                                           </span>
                                           {isNewlyAdded && (
-                                            <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">
+                                            <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
                                               Custom Added
                                             </span>
                                           )}
@@ -2285,7 +2243,7 @@ export default function ComparisonApp() {
                                       {displayEntities.map((_, entIdx) => {
                                         const val = m.values?.[entIdx] !== undefined ? m.values[entIdx] : (entIdx === 0 ? m.entity_a : m.entity_b);
                                         return (
-                                          <div key={entIdx} className="flex-1 min-w-[160px] text-slate-300 leading-relaxed space-y-1.5 align-top whitespace-normal break-words">
+                                          <div key={entIdx} className="flex-1 min-w-[160px] leading-relaxed space-y-1.5 align-top whitespace-normal break-words">
                                             <div className="whitespace-normal break-words">{renderValueWithFallback(val)}</div>
                                           </div>
                                         );
@@ -2305,10 +2263,10 @@ export default function ComparisonApp() {
             </section>
           )}
 
-          {/* TAB 2: Community & Reddit Sentiment Table (Dynamic N-Way Columns) */}
+          {/* TAB 2: Community & Reddit Sentiment Table */}
           {activeTab === 'community' && (
-            <section className="w-full bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden print-clean">
-              <div className="p-3 sm:p-4 bg-slate-950/80 border-b border-slate-800 flex items-center justify-between text-xs text-slate-400">
+            <section className={`w-full ${t.card} rounded-2xl shadow-xl overflow-hidden print-clean`}>
+              <div className={`p-3 sm:p-4 ${t.tableHeader} flex items-center justify-between text-xs`}>
                 <div className="flex items-center gap-2">
                   <ShieldCheck className="w-4 h-4 text-sky-400 shrink-0" />
                   <span className="whitespace-normal break-words">
@@ -2320,9 +2278,9 @@ export default function ComparisonApp() {
               <div className="w-full overflow-x-auto whitespace-nowrap md:whitespace-normal">
                 <div className="min-w-[650px] md:min-w-full">
                   {/* Sentiment Header */}
-                  <div className="bg-slate-900 border-b border-slate-800 px-4 sm:px-6 py-3.5 flex items-center text-xs font-bold uppercase tracking-wider text-slate-400 shadow-sm gap-4">
+                  <div className={`${t.tableHeader} px-4 sm:px-6 py-3.5 flex items-center text-xs font-bold uppercase tracking-wider shadow-sm gap-4`}>
                     <div className="w-1/3 min-w-[180px] shrink-0 flex items-center gap-1.5">
-                      <MessageSquare className="w-4 h-4 text-slate-500 shrink-0" />
+                      <MessageSquare className="w-4 h-4 text-slate-400 shrink-0" />
                       <span className="truncate">Theme / Topic</span>
                     </div>
                     {displayEntities.map((ent, idx) => {
@@ -2337,27 +2295,27 @@ export default function ComparisonApp() {
                   </div>
 
                   {/* Sentiment Rows */}
-                  <div className="divide-y divide-slate-800/70 bg-slate-900/60">
+                  <div className="divide-y divide-slate-700/20">
                     {filteredCommunitySentiment.length === 0 ? (
-                      <div className="p-8 sm:p-12 text-center text-slate-500 text-sm">
+                      <div className="p-8 sm:p-12 text-center text-slate-400 text-sm">
                         No community themes match &quot;{tableSearch}&quot;.
                       </div>
                     ) : (
                       filteredCommunitySentiment.map((s, idx) => (
                         <div
                           key={idx}
-                          className="flex items-start gap-4 px-4 sm:px-6 py-3.5 sm:py-4 text-xs sm:text-sm hover:bg-slate-800/40 transition-colors"
+                          className={`flex items-start gap-4 px-4 sm:px-6 py-3.5 sm:py-4 text-xs sm:text-sm ${t.tableRow} transition-colors`}
                         >
                           <div className="w-1/3 min-w-[180px] shrink-0 pr-2 space-y-1.5 align-top whitespace-normal break-words">
-                            <div className="font-semibold text-slate-200 leading-snug whitespace-normal break-words">{s.topic}</div>
+                            <div className={`font-semibold ${t.title} leading-snug whitespace-normal break-words`}>{s.topic}</div>
                             <div>
                               <span
                                 className={`inline-flex items-center gap-1 text-[10px] uppercase font-mono px-2 py-0.5 rounded border ${
                                   s.sentiment === 'Positive'
-                                    ? 'bg-emerald-950/60 border-emerald-800/80 text-emerald-300'
+                                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
                                     : s.sentiment === 'Critical'
-                                    ? 'bg-rose-950/60 border-rose-800/80 text-rose-300'
-                                    : 'bg-amber-950/60 border-amber-800/80 text-amber-300'
+                                    ? 'bg-rose-500/10 border-rose-500/30 text-rose-400'
+                                    : 'bg-amber-500/10 border-amber-500/30 text-amber-400'
                                 }`}
                               >
                                 {s.sentiment === 'Positive' ? <ThumbsUp className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}
@@ -2369,7 +2327,7 @@ export default function ComparisonApp() {
                           {displayEntities.map((_, entIdx) => {
                             const con = s.consensuses?.[entIdx] !== undefined ? s.consensuses[entIdx] : (entIdx === 0 ? s.entity_a_consensus : s.entity_b_consensus);
                             return (
-                              <div key={entIdx} className="flex-1 min-w-[160px] text-slate-300 leading-relaxed bg-slate-950/50 p-2.5 sm:p-3 rounded-xl border border-slate-800/60 align-top whitespace-normal break-words">
+                              <div key={entIdx} className={`flex-1 min-w-[160px] leading-relaxed ${t.cardInner} p-2.5 sm:p-3 rounded-xl align-top whitespace-normal break-words`}>
                                 {renderValueWithFallback(con)}
                               </div>
                             );
@@ -2383,14 +2341,14 @@ export default function ComparisonApp() {
             </section>
           )}
 
-          {/* Interactive Custom Metrics & AI Suggestions (Full Width Responsive) */}
-          <section className="w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl space-y-4 no-print">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-3 border-b border-slate-800">
+          {/* Interactive Custom Metrics & AI Suggestions */}
+          <section className={`w-full ${t.card} rounded-2xl p-4 sm:p-6 shadow-xl space-y-4 no-print`}>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-3 border-b border-slate-700/40">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-sky-400 shrink-0" />
-                <h3 className="font-bold text-xs sm:text-sm text-white">AI-Suggested Comparison Metrics</h3>
+                <h3 className={`font-bold text-xs sm:text-sm ${t.title}`}>AI-Suggested Comparison Metrics</h3>
               </div>
-              <span className="text-[11px] sm:text-xs text-slate-400">Click any suggested chip to retrieve & append instantly</span>
+              <span className={`text-[11px] sm:text-xs ${t.subtext}`}>Click any suggested chip to retrieve & append instantly</span>
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
@@ -2400,7 +2358,7 @@ export default function ComparisonApp() {
                   type="button"
                   onClick={() => handleAddCustomMetric(sm)}
                   disabled={addingMetric}
-                  className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-950 hover:bg-slate-800 hover:border-sky-500/50 text-slate-300 hover:text-white border border-slate-800 text-xs font-medium transition-all flex items-center gap-1.5 active:scale-95 disabled:opacity-40"
+                  className={`px-2.5 sm:px-3 py-1.5 rounded-xl ${t.btnSecondary} text-xs font-medium transition-all flex items-center gap-1.5 active:scale-95 disabled:opacity-40 shadow-xs`}
                 >
                   <Plus className="w-3.5 h-3.5 text-sky-400" />
                   <span>{sm}</span>
@@ -2423,13 +2381,13 @@ export default function ComparisonApp() {
                     onChange={(e) => setCustomMetricInput(e.target.value)}
                     placeholder="+ Add custom metric (e.g. Midsole foam, Battery life, Lan speed)..."
                     disabled={addingMetric}
-                    className="w-full bg-slate-950 border border-slate-800 focus:border-sky-500 rounded-xl pl-3.5 pr-10 py-2 text-xs sm:text-sm text-slate-100 placeholder-slate-500 outline-none transition-all shadow-inner"
+                    className={`w-full ${t.input} rounded-xl pl-3.5 pr-10 py-2 text-xs sm:text-sm outline-none transition-all shadow-inner`}
                   />
                 </div>
                 <button
                   type="submit"
                   disabled={addingMetric || !customMetricInput.trim()}
-                  className="px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-sky-500 hover:bg-sky-400 text-white active:scale-95 transition-all flex items-center justify-center gap-1.5 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-sky-600 hover:bg-sky-500 text-white active:scale-95 transition-all flex items-center justify-center gap-1.5 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {addingMetric ? (
                     <>
@@ -2450,7 +2408,7 @@ export default function ComparisonApp() {
       )}
 
       {/* Footer */}
-      <footer className="border-t border-slate-800/80 bg-slate-900/40 py-6 mt-8 sm:mt-12 text-center text-xs text-slate-500 w-full">
+      <footer className={`${t.footer} py-6 mt-8 sm:mt-12 text-center text-xs w-full transition-colors duration-300`}>
         <div className="w-full max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
           <span>MorphUI • Persistent Dual-View Spec Sheet & Spatial Graph Runtime</span>
           <span>Zero-slop human-engineered architecture (2026)</span>
