@@ -9,7 +9,7 @@
  */
 
 import { GenerativeComparisonResponse, VerifiedMetric } from '@/types/morphui';
-import { fetchParallelEntityFacts } from '@/lib/factRetrieval';
+import { fetchParallelEntityFacts, fetchMultiEntityFacts, EntityFactsResult } from '@/lib/factRetrieval';
 import { generateComparisonMatrix } from '@/lib/llmMiddleware';
 
 export interface CachedComparisonEntry {
@@ -105,8 +105,9 @@ export function calculateExpirationWithJitter(isShortTtl = false): {
 export function validateComparisonSchema(obj: any): obj is GenerativeComparisonResponse {
   if (!obj || typeof obj !== 'object') return false;
   if (typeof obj.category !== 'string' || !obj.category.trim()) return false;
-  if (!obj.entity_a || typeof obj.entity_a.name !== 'string' || !Array.isArray(obj.entity_a.pros)) return false;
-  if (!obj.entity_b || typeof obj.entity_b.name !== 'string' || !Array.isArray(obj.entity_b.pros)) return false;
+  const hasEntities = Array.isArray(obj.entities) && obj.entities.length >= 2;
+  const hasEntityAB = Boolean(obj.entity_a && obj.entity_b);
+  if (!hasEntities && !hasEntityAB) return false;
   if (typeof obj.verdict_summary !== 'string' || !obj.verdict_summary.trim()) return false;
 
   const hasCategories =
@@ -122,12 +123,23 @@ export function validateComparisonSchema(obj: any): obj is GenerativeComparisonR
 // 5. CACHE KEY NORMALIZATION
 // ----------------------------------------------------------------------------
 
-export function normalizeCacheKey(entityA: string, entityB: string, contextTopic?: string): string {
-  const cleanA = entityA.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-  const cleanB = entityB.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-  const sorted = [cleanA, cleanB].sort().join(':');
+export function normalizeCacheKey(
+  entityAOrList: string | string[],
+  entityB?: string,
+  contextTopic?: string
+): string {
+  let entities: string[] = [];
+  if (Array.isArray(entityAOrList)) {
+    entities = entityAOrList;
+  } else {
+    entities = [entityAOrList, entityB || ''].filter(Boolean);
+  }
+  const cleanSorted = entities
+    .map((e) => e.trim().toLowerCase().replace(/[^a-z0-9]/g, ''))
+    .sort()
+    .join(':');
   const cleanTopic = contextTopic ? contextTopic.trim().toLowerCase().replace(/[^a-z0-9]/g, '') : '';
-  return `morph:cmp:${sorted}${cleanTopic ? `:${cleanTopic}` : ''}`;
+  return `morph:cmp:${cleanSorted}${cleanTopic ? `:${cleanTopic}` : ''}`;
 }
 
 // ----------------------------------------------------------------------------

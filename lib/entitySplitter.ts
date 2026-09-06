@@ -5,6 +5,14 @@ export interface ComparisonEntities {
   rawQuery: string;
 }
 
+export interface MultiComparisonEntities {
+  entities: string[];
+  entityA: string;
+  entityB: string;
+  contextTopic?: string;
+  rawQuery: string;
+}
+
 function capitalizeWords(str: string): string {
   return str
     .split(/\s+/)
@@ -12,77 +20,117 @@ function capitalizeWords(str: string): string {
     .join(' ');
 }
 
+function sanitizeEntity(str: string): string {
+  return str
+    .replace(/^[^\w\d"#]+|[^\w\d"#]+$/g, '')
+    .trim();
+}
+
 /**
- * Intercepts a search query and determines if it is a comparison between two entities.
- * If a comparison is detected (e.g., contains "vs", "versus", "compare X and Y", "X compared to Y"),
- * splits the query into clean Entity A and Entity B, alongside any specific focus topic.
+ * Splits a query into 2 or more entities (N-way comparison).
+ * Supports:
+ * - "React vs Vue vs Svelte"
+ * - "React, Vue, and Svelte"
+ * - "Compare A, B, C for CS"
+ * - "A vs B"
  */
-export function splitComparisonQuery(query: string): ComparisonEntities | null {
+export function splitMultiComparisonQuery(query: string): MultiComparisonEntities | null {
   if (!query || typeof query !== 'string') return null;
 
   const rawQuery = query.trim();
-  // Strip leading/trailing non-alphanumerics
   let clean = rawQuery.replace(/^[^\w\d"'#]+|[^\w\d"'#?.]+$/g, '').trim();
 
-  // Strip leading comparison keywords
+  // Strip leading comparison prefix
   clean = clean.replace(/^(?:compare|comparison\s+between|difference\s+between|between)\s+/i, '').trim();
 
-  let entityA = '';
-  let entityB = '';
   let contextTopic = '';
 
-  // Pattern 1: vs / vs. / versus / against
-  let match = clean.match(/^(.+?)\s+(?:\b(?:vs\.?|versus|against)\b)\s+(.+)$/i);
-
-  // Pattern 2: compared to
-  if (!match) {
-    match = clean.match(/^(.+?)\s+(?:\bcompared\s+to\b)\s+(.+)$/i);
-  }
-
-  // Pattern 3: A and B (when question begins or ends with compare/difference context)
-  if (!match) {
-    match = clean.match(/^(.+?)\s+(?:\band\b|\bor\b)\s+(.+)$/i);
-    // Only accept "and" / "or" if the original query contained comparison intent
-    if (match && !/compare|comparison|versus|diff|better|which|choice/i.test(rawQuery)) {
-      match = null;
-    }
-  }
-
-  if (!match) {
-    return null;
-  }
-
-  entityA = match[1].trim();
-  entityB = match[2].trim();
-
-  // Extract trailing context/topic (e.g. "for CS", ": placement and fees", "in 2026")
-  if (entityB.includes(':')) {
-    const parts = entityB.split(':');
-    entityB = parts[0].trim();
+  // Extract trailing context topic
+  if (clean.includes(':')) {
+    const parts = clean.split(':');
+    clean = parts[0].trim();
     contextTopic = parts.slice(1).join(':').trim();
-  } else if (/\s+for\s+/i.test(entityB)) {
-    const parts = entityB.split(/\s+for\s+/i);
-    entityB = parts[0].trim();
+  } else if (/\s+for\s+/i.test(clean)) {
+    const parts = clean.split(/\s+for\s+/i);
+    clean = parts[0].trim();
     contextTopic = parts.slice(1).join(' for ').trim();
-  } else if (/\s+in\s+terms\s+of\s+/i.test(entityB)) {
-    const parts = entityB.split(/\s+in\s+terms\s+of\s+/i);
-    entityB = parts[0].trim();
+  } else if (/\s+in\s+terms\s+of\s+/i.test(clean)) {
+    const parts = clean.split(/\s+in\s+terms\s+of\s+/i);
+    clean = parts[0].trim();
     contextTopic = parts.slice(1).join(' in terms of ').trim();
   }
 
-  // Clean trailing punctuation and question marks
-  entityA = entityA.replace(/^[^\w\d]+|[^\w\d]+$/g, '').trim();
-  entityB = entityB.replace(/^[^\w\d]+|[^\w\d]+$/g, '').trim();
-  contextTopic = contextTopic.replace(/^[^\w\d]+|[^\w\d]+$/g, '').trim();
+  let entityList: string[] = [];
 
-  if (!entityA || !entityB || entityA.toLowerCase() === entityB.toLowerCase()) {
+  // 1. Check for "vs", "vs.", "versus", "against" delimiter
+  if (/\b(?:vs\.?|versus|against)\b/i.test(clean)) {
+    const rawTokens = clean.split(/\s+(?:\b(?:vs\.?|versus|against)\b)\s+/i);
+    entityList = rawTokens
+      .map(sanitizeEntity)
+      .filter((t) => t.length > 0);
+  }
+  // 2. Check for comma-separated items ("React, Vue, Svelte" or "React, Vue, and Svelte")
+  else if (clean.includes(',')) {
+    const rawTokens = clean.split(',');
+    const tokens: string[] = [];
+    rawTokens.forEach((t) => {
+      const sub = t.split(/\b(?:and|or)\b/i);
+      sub.forEach((st) => {
+        const item = sanitizeEntity(st);
+        if (item.length > 0) tokens.push(item);
+      });
+    });
+    entityList = tokens;
+  }
+  // 3. Fallback to " A and B " or " A compared to B "
+  else if (/\b(?:compared\s+to|and|or)\b/i.test(clean)) {
+    const match = clean.match(/^(.+?)\s+(?:\b(?:compared\s+to|and|or)\b)\s+(.+)$/i);
+    if (match) {
+      const eA = sanitizeEntity(match[1]);
+      const eB = sanitizeEntity(match[2]);
+      if (eA && eB) {
+        entityList = [eA, eB];
+      }
+    }
+  }
+
+  // Deduplicate case-insensitively and filter
+  const seen = new Set<string>();
+  const finalizedEntities: string[] = [];
+
+  entityList.forEach((e) => {
+    const key = e.toLowerCase();
+    if (!seen.has(key) && e.length > 0) {
+      seen.add(key);
+      finalizedEntities.push(capitalizeWords(e));
+    }
+  });
+
+  if (finalizedEntities.length < 2) {
     return null;
   }
 
+  contextTopic = contextTopic.replace(/^[^\w\d]+|[^\w\d]+$/g, '').trim();
+
   return {
-    entityA: capitalizeWords(entityA),
-    entityB: capitalizeWords(entityB),
+    entities: finalizedEntities,
+    entityA: finalizedEntities[0],
+    entityB: finalizedEntities[1],
     contextTopic: contextTopic || undefined,
     rawQuery,
+  };
+}
+
+/**
+ * Backward-compatible 2-way splitter
+ */
+export function splitComparisonQuery(query: string): ComparisonEntities | null {
+  const multi = splitMultiComparisonQuery(query);
+  if (!multi) return null;
+  return {
+    entityA: multi.entityA,
+    entityB: multi.entityB,
+    contextTopic: multi.contextTopic,
+    rawQuery: multi.rawQuery,
   };
 }

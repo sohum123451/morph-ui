@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { MorphWidget, ImageInput, GenerativeComparisonResponse } from '@/types/morphui';
-import { splitComparisonQuery } from '@/lib/entitySplitter';
-import { fetchParallelEntityFacts } from '@/lib/factRetrieval';
+import crypto from 'crypto';
+import { MorphWidget, ImageInput, GenerativeComparisonResponse, EntityVerdict } from '@/types/morphui';
+import { splitMultiComparisonQuery, splitComparisonQuery } from '@/lib/entitySplitter';
+import { fetchMultiEntityFacts, fetchParallelEntityFacts } from '@/lib/factRetrieval';
 import { generateComparisonMatrix } from '@/lib/llmMiddleware';
 import {
   normalizeCacheKey,
@@ -11,6 +12,8 @@ import {
   recordSerpRequest,
   performBackgroundRevalidation,
 } from '@/lib/swrCache';
+import { createChat, saveMessage } from '@/lib/db';
+import { encryptData } from '@/lib/crypto';
 
 function formatComparisonResponse(
   matrix: GenerativeComparisonResponse,
@@ -18,13 +21,18 @@ function formatComparisonResponse(
   cacheHeader: 'HIT' | 'STALE' | 'MISS' | 'MISS-FALLBACK-LLM',
   cacheStatus: 'FRESH' | 'REVALIDATING' | 'FRESH-LIVE' | 'RATE-LIMITED-FALLBACK',
   ageSeconds = 0,
-  images: ImageInput[] = []
+  images: ImageInput[] = [],
+  chatId?: string
 ) {
+  const entityNames = matrix.entities?.map((e) => e.name) || [matrix.entity_a?.name || 'Option A', matrix.entity_b?.name || 'Option B'];
+  const title = `${entityNames.join(' vs ')}: ${matrix.category}`;
+
   const primaryWidget: MorphWidget = {
     widget_type: 'comparison_table',
-    title: `${matrix.entity_a.name} vs ${matrix.entity_b.name}: ${matrix.category}`,
+    title,
     data: {
       category: matrix.category,
+      entities: matrix.entities,
       entity_a: matrix.entity_a,
       entity_b: matrix.entity_b,
       categories: matrix.categories,
@@ -33,19 +41,21 @@ function formatComparisonResponse(
       suggested_metrics: matrix.suggested_metrics,
       comparison_points: matrix.comparison_points,
       verdict_summary: matrix.verdict_summary,
-      headers: ['Metric / Feature', matrix.entity_a.name, matrix.entity_b.name],
-      rows: matrix.verified_metrics.map((vm) => ({
-        'Metric / Feature': vm.metric,
-        [matrix.entity_a.name]: vm.entity_a,
-        [matrix.entity_b.name]: vm.entity_b,
-      })),
+      headers: ['Metric / Feature', ...entityNames],
+      rows: matrix.verified_metrics.map((vm) => {
+        const row: Record<string, string> = { 'Metric / Feature': vm.metric };
+        entityNames.forEach((name, idx) => {
+          row[name] = vm.values?.[idx] || (idx === 0 ? vm.entity_a || '' : vm.entity_b || '');
+        });
+        return row;
+      }),
       summary: matrix.verdict_summary,
       images:
         images.length > 0
           ? images.map((img, i) => ({
               url: img.data.startsWith('data:') ? img.data : `data:${img.mimeType};base64,${img.data}`,
-              name: img.name || (i === 0 ? matrix.entity_a.name : matrix.entity_b.name),
-              label: i === 0 ? matrix.entity_a.name : matrix.entity_b.name,
+              name: img.name || entityNames[i] || `Entity ${i + 1}`,
+              label: entityNames[i] || `Entity ${i + 1}`,
             }))
           : undefined,
     },
@@ -53,22 +63,26 @@ function formatComparisonResponse(
 
   const response = NextResponse.json({
     widgets: [primaryWidget],
+    chat_id: chatId,
     category: matrix.category,
-    entity_a: matrix.entity_a,
-    entity_b: matrix.entity_b,
+    entities: matrix.entities,
+    entity_a: matrix.entity_a || matrix.entities?.[0],
+    entity_b: matrix.entity_b || matrix.entities?.[1],
     categories: matrix.categories,
     verified_metrics: matrix.verified_metrics,
     community_sentiment: matrix.community_sentiment,
     suggested_metrics: matrix.suggested_metrics,
     verdict_summary: matrix.verdict_summary,
+    comparison_points: matrix.comparison_points,
     model_used:
-      cacheHeader === 'HIT'
+      matrix.model_used ||
+      (cacheHeader === 'HIT'
         ? 'SWR Cache (Instant Hit)'
         : cacheHeader === 'STALE'
         ? 'SWR Cache (Stale Served, Background Revalidation Triggered)'
         : cacheHeader === 'MISS-FALLBACK-LLM'
-        ? 'Zero-Shot LLM (Rate-Limit Circuit Breaker Engaged)'
-        : 'Live Precision Pipeline (SERP + Reddit De-Biased + Gemini)',
+        ? 'Zero-Shot LMM (Rate-Limit Circuit Breaker Engaged)'
+        : 'Live Precision Pipeline (SERP + Multi-Source)'),
     grounded: cacheHeader !== 'MISS-FALLBACK-LLM',
     raw_query: rawQuery,
     cache_info: {
@@ -82,37 +96,86 @@ function formatComparisonResponse(
   response.headers.set('X-Cache', cacheHeader);
   response.headers.set('X-Cache-Status', cacheStatus);
   response.headers.set('X-Cache-Age-Seconds', String(ageSeconds));
+  if (chatId) response.headers.set('X-Chat-ID', chatId);
 
   return response;
+}
+
+
+async function persistComparisonToDb(chatId: string, query: string, matrix: GenerativeComparisonResponse) {
+  try {
+    const userEnc = encryptData({ prompt: query });
+    await saveMessage(
+      crypto.randomUUID(),
+      chatId,
+      userEnc.encryptedPayload,
+      userEnc.iv,
+      'user'
+    );
+
+    const assistantEnc = encryptData(matrix);
+    await saveMessage(
+      crypto.randomUUID(),
+      chatId,
+      assistantEnc.encryptedPayload,
+      assistantEnc.iv,
+      'assistant'
+    );
+  } catch (err) {
+    console.error('Error persisting encrypted comparison to Turso DB:', err);
+  }
 }
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
-    const { prompt, entityA: directA, entityB: directB, contextTopic: directTopic, images = [] } = body;
+    const {
+      prompt,
+      chat_id,
+      entities: directEntities,
+      entityA: directA,
+      entityB: directB,
+      contextTopic: directTopic,
+      images = [],
+    } = body;
 
-    const rawQuery = (prompt || (directA && directB ? `${directA} vs ${directB}` : '') || '').trim();
+    const rawQuery = (prompt || (Array.isArray(directEntities) ? directEntities.join(' vs ') : directA && directB ? `${directA} vs ${directB}` : '') || '').trim();
 
     if (!rawQuery && images.length === 0) {
       return NextResponse.json({ error: 'Missing prompt, entities, or image input' }, { status: 400 });
     }
 
-    const comparison = (directA && directB)
-      ? { entityA: directA, entityB: directB, contextTopic: directTopic }
-      : splitComparisonQuery(rawQuery);
+    let entities: string[] = [];
+    let contextTopic: string | undefined = directTopic;
 
-    if (comparison) {
-      const { entityA, entityB, contextTopic } = comparison;
-      const cacheKey = normalizeCacheKey(entityA, entityB, contextTopic);
+    if (Array.isArray(directEntities) && directEntities.length >= 2) {
+      entities = directEntities;
+    } else if (directA && directB) {
+      entities = [directA, directB];
+    } else {
+      const parsed = splitMultiComparisonQuery(rawQuery);
+      if (parsed) {
+        entities = parsed.entities;
+        contextTopic = contextTopic || parsed.contextTopic;
+      }
+    }
+
+    const activeChatId = chat_id || crypto.randomUUID();
+    const chatTitle = entities.length >= 2 ? entities.join(' vs ') : rawQuery.slice(0, 50) || 'New Comparison';
+
+    await createChat(activeChatId, chatTitle);
+
+    if (entities.length >= 2) {
+      const cacheKey = normalizeCacheKey(entities, undefined, contextTopic);
       const now = Date.now();
 
-      // STEP 2: Check Cache
       const cached = await getCachedComparison(cacheKey);
 
       if (cached && cached.data) {
         const ageSeconds = Math.floor((now - cached.createdAt) / 1000);
 
-        // STEP 3: Cache Hit - FRESH (Data age <= 20 Hours)
+        persistComparisonToDb(activeChatId, rawQuery, cached.data);
+
         if (now < cached.staleAt) {
           return formatComparisonResponse(
             cached.data,
@@ -120,74 +183,64 @@ export async function POST(req: NextRequest) {
             'HIT',
             'FRESH',
             ageSeconds,
-            images
+            images,
+            activeChatId
           );
         }
 
-        // STEP 4: Cache Hit - STALE (20 Hours < Data age <= 24 Hours)
         if (now < cached.expiresAt) {
-          // Trigger background revalidation (safe detached promise)
           const backgroundTask = performBackgroundRevalidation(
             cacheKey,
-            entityA,
-            entityB,
+            entities[0],
+            entities[1],
             contextTopic,
             cached
           );
 
-          // If running under Next.js serverless with waitUntil available
           if ((req as any).waitUntil) {
             (req as any).waitUntil(backgroundTask);
           } else {
-            // Detached execution with unhandled rejection guard
             backgroundTask.catch((err) =>
               console.warn('[SWR Background Revalidation Detached Error]:', err)
             );
           }
 
-          // Return stale data IMMEDIATELY (zero latency)
           return formatComparisonResponse(
             cached.data,
             rawQuery,
             'STALE',
             'REVALIDATING',
             ageSeconds,
-            images
+            images,
+            activeChatId
           );
         }
       }
 
-      // STEP 5: Cache Miss / Expired
-      // Check Circuit Breaker for SERP API
       if (canMakeSerpRequest()) {
         recordSerpRequest();
 
-        // 1. Live Parallel Retrieval
-        const { factsA, factsB } = await fetchParallelEntityFacts(
-          entityA,
-          entityB,
+        const factsList = await fetchMultiEntityFacts(
+          entities,
           contextTopic,
           3500
         );
 
-        const isFallbackToInternal =
-          (!factsA.hasLiveResults && !factsB.hasLiveResults) ||
-          (!factsA.facts.trim() && !factsB.facts.trim());
+        const isFallbackToInternal = factsList.every((f) => !f.facts?.trim());
 
-        // 2. LLM Extraction with Dual-Mode Support
         const matrix = await generateComparisonMatrix(
-          entityA,
-          entityB,
-          factsA.facts,
-          factsB.facts,
-          factsA.communityReviews,
-          factsB.communityReviews,
+          entities,
+          factsList,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
           contextTopic,
           isFallbackToInternal
         );
 
-        // 3. Write to Cache with 24h + Jitter
         await setCachedComparison(cacheKey, matrix, rawQuery, 'serp_grounded');
+        await persistComparisonToDb(activeChatId, rawQuery, matrix);
 
         return formatComparisonResponse(
           matrix,
@@ -195,25 +248,34 @@ export async function POST(req: NextRequest) {
           'MISS',
           'FRESH-LIVE',
           0,
-          images
+          images,
+          activeChatId
         );
       } else {
-        // Circuit Breaker tripped: Fallback to Zero-Shot LLM method
-        console.warn(`[Circuit Breaker] SERP rate-limit active. Executing Zero-Shot LLM fallback for "${entityA} vs ${entityB}".`);
+        console.warn(`[Circuit Breaker] SERP rate-limit active. Executing Zero-Shot LLM fallback for "${entities.join(' vs ')}".`);
+
+        const emptyFacts = entities.map((e) => ({
+          entity: e,
+          queryUsed: e,
+          facts: '',
+          communityReviews: '',
+          source: 'internal_knowledge' as const,
+          hasLiveResults: false,
+        }));
 
         const matrix = await generateComparisonMatrix(
-          entityA,
-          entityB,
-          '',
-          '',
-          '',
-          '',
+          entities,
+          emptyFacts,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
           contextTopic,
           true
         );
 
-        // Cache Zero-Shot fallback with short TTL (1 Hour)
         await setCachedComparison(cacheKey, matrix, rawQuery, 'llm_zero_shot');
+        await persistComparisonToDb(activeChatId, rawQuery, matrix);
 
         return formatComparisonResponse(
           matrix,
@@ -221,77 +283,47 @@ export async function POST(req: NextRequest) {
           'MISS-FALLBACK-LLM',
           'RATE-LIMITED-FALLBACK',
           0,
-          images
+          images,
+          activeChatId
         );
       }
     }
 
-    // Single entity or general query fallback
-    const singleEntityA = {
-      name: rawQuery || 'Option A',
-      pros: [`Dedicated capabilities for ${rawQuery}`, 'Verified market standard specifications'],
-    };
-    const singleEntityB = {
-      name: 'Industry Benchmark',
-      pros: ['Standardized reference baseline', 'Broad comparative benchmark standard'],
-    };
-    const singleCategories = {
-      'General Specifications': [
-        { metric: 'Domain Focus', entity_a: rawQuery || 'Standard', entity_b: 'Market Baseline', source_type: 'official' as const },
-        { metric: 'Reliability & Uptime', entity_a: '99.9% High Availability', entity_b: 'Standard SLA', source_type: 'official' as const },
-      ],
-    };
+    const singleEntityFacts = await fetchMultiEntityFacts([rawQuery], undefined, 3000);
+    const matrix = await generateComparisonMatrix(
+      [rawQuery, 'Baseline Standard'],
+      singleEntityFacts,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      contextTopic,
+      true
+    );
 
-    const generalMatrix: GenerativeComparisonResponse = {
-      category: 'General Comparative Analysis',
-      entity_a: singleEntityA,
-      entity_b: singleEntityB,
-      categories: singleCategories,
-      verified_metrics: singleCategories['General Specifications'],
-      community_sentiment: [
-        {
-          topic: 'General User Consensus',
-          entity_a_consensus: `Consistent positive feedback on ${rawQuery}`,
-          entity_b_consensus: 'Industry standard reference metrics',
-          sentiment: 'Positive',
-        },
-      ],
-      suggested_metrics: ['Pricing & Total Value', 'Performance Benchmark', 'Reliability Index', 'Durability'],
-      verdict_summary: `${rawQuery} provides tailored domain strengths against standard benchmarks.`,
-      comparison_points: [
-        { feature_name: 'Domain Focus', entity_a_value: rawQuery, entity_b_value: 'Market Baseline' },
-      ],
-    };
+    await persistComparisonToDb(activeChatId, rawQuery, matrix);
 
     return formatComparisonResponse(
-      generalMatrix,
+      matrix,
       rawQuery,
       'MISS',
       'FRESH-LIVE',
       0,
-      images
-    );
+      images,
+      activeChatId
+     );
   } catch (err: any) {
-    console.error('Comparison API error:', err);
+    console.error('Error in /api/compare:', err);
     return NextResponse.json(
-      { error: err?.message || 'Failed to process comparison request' },
+      {
+        error: err?.message || 'Failed to generate comparison matrix',
+        fallback: true,
+      },
       { status: 500 }
     );
   }
 }
 
-export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const prompt = searchParams.get('q') || searchParams.get('prompt') || '';
-  const entityA = searchParams.get('entityA') || '';
-  const entityB = searchParams.get('entityB') || '';
-  const contextTopic = searchParams.get('contextTopic') || undefined;
-
-  const mockPostReq = new NextRequest(req.url, {
-    method: 'POST',
-    body: JSON.stringify({ prompt, entityA, entityB, contextTopic }),
-    headers: { 'Content-Type': 'application/json' },
-  });
-
-  return POST(mockPostReq);
+export async function GET() {
+  return NextResponse.json({ status: 'ok', service: 'MorphUI Dual-Engine Comparison API' });
 }

@@ -182,10 +182,10 @@ export const ComparisonTableWidget = memo(function ComparisonTableWidget({
     }
     if (Array.isArray(data?.comparison_points) && data.comparison_points.length > 0) {
       return {
-        [category || 'Key Metrics']: data.comparison_points.map((cp) => ({
-          metric: cp.feature_name,
-          entity_a: cp.entity_a_value,
-          entity_b: cp.entity_b_value,
+        [category || 'Key Metrics']: data.comparison_points.map((cp: any) => ({
+          metric: String(cp.feature_name || 'Metric'),
+          entity_a: String(cp.entity_a_value || 'N/A'),
+          entity_b: String(cp.entity_b_value || 'N/A'),
           source_type: 'official' as const,
         })),
       };
@@ -195,10 +195,10 @@ export const ComparisonTableWidget = memo(function ComparisonTableWidget({
       const hB = data.headers[2] || 'Entity B';
       const fHeader = data.headers[0] || 'Feature';
       return {
-        [category || 'Key Metrics']: data.rows.map((row) => ({
-          metric: row[fHeader] || Object.values(row)[0] || 'Metric',
-          entity_a: row[hA] ?? Object.values(row)[1] ?? 'N/A',
-          entity_b: row[hB] ?? Object.values(row)[2] ?? 'N/A',
+        [category || 'Key Metrics']: data.rows.map((row: any) => ({
+          metric: String(row[fHeader] || Object.values(row)[0] || 'Metric'),
+          entity_a: String(row[hA] ?? Object.values(row)[1] ?? 'N/A'),
+          entity_b: String(row[hB] ?? Object.values(row)[2] ?? 'N/A'),
           source_type: 'official' as const,
         })),
       };
@@ -219,8 +219,8 @@ export const ComparisonTableWidget = memo(function ComparisonTableWidget({
       const matchingMetrics = metrics.filter(
         (m) =>
           m.metric.toLowerCase().includes(term) ||
-          m.entity_a.toLowerCase().includes(term) ||
-          m.entity_b.toLowerCase().includes(term)
+          (m.entity_a || '').toLowerCase().includes(term) ||
+          (m.entity_b || '').toLowerCase().includes(term)
       );
       if (matchingMetrics.length > 0) {
         result[catName] = matchingMetrics;
@@ -376,8 +376,8 @@ export const ComparisonTableWidget = memo(function ComparisonTableWidget({
                       </div>
                     ))
                   : metrics.map((m, idx) => {
-                      const valA = parseNumericValue(m.entity_a);
-                      const valB = parseNumericValue(m.entity_b);
+                      const valA = parseNumericValue(m.entity_a || '');
+                      const valB = parseNumericValue(m.entity_b || '');
                       const hasNumeric = valA !== null && valB !== null && (valA > 0 || valB > 0);
 
                       let pctA = 50;

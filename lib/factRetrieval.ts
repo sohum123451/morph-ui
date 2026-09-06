@@ -171,3 +171,13 @@ export async function fetchParallelEntityFacts(
 
   return { factsA, factsB };
 }
+
+export async function fetchMultiEntityFacts(
+  entities: string[],
+  contextTopic?: string,
+  timeoutMs = 3000
+): Promise<EntityFactsResult[]> {
+  return Promise.all(
+    entities.map((entity) => fetchEntityFacts(entity, contextTopic, timeoutMs))
+  );
+}

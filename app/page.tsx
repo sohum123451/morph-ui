@@ -47,12 +47,66 @@ import {
   Network,
   LayoutGrid,
   ArrowRight,
+  History as HistoryIcon,
+  Trash2,
 } from 'lucide-react';
 import {
   VerifiedMetric,
   CommunitySentiment,
   GenerativeComparisonResponse,
+  EntityVerdict,
 } from '@/types/morphui';
+
+type MorphTheme = 'dark' | 'light' | 'pink';
+
+// Theme helper classes dictionary
+const THEME_STYLES = {
+  dark: {
+    bg: 'bg-slate-950 text-slate-100 selection:bg-slate-800 selection:text-white',
+    card: 'bg-slate-900 border-slate-800 text-slate-100',
+    cardInner: 'bg-slate-950/70 border-slate-800/80',
+    nav: 'bg-slate-900/90 border-slate-800/80 text-white',
+    input: 'bg-slate-950 border-slate-800 text-slate-100 focus:border-sky-500 placeholder-slate-500',
+    btnPrimary: 'bg-sky-500 hover:bg-sky-400 text-white shadow-sky-500/20',
+    accentText: 'text-sky-400',
+    border: 'border-slate-800',
+    nodeBorder: 'border-slate-700/80 hover:border-sky-500/50 hover:shadow-sky-500/10',
+    edgeStroke1: '#38bdf8',
+    edgeStroke2: '#818cf8',
+    edgeStroke3: '#34d399',
+    bgGrid: '#1e293b',
+  },
+  light: {
+    bg: 'bg-slate-50 text-slate-900 selection:bg-slate-200 selection:text-slate-900',
+    card: 'bg-white border-slate-200 text-slate-900 shadow-lg shadow-slate-200/50',
+    cardInner: 'bg-slate-100/80 border-slate-200',
+    nav: 'bg-white/95 border-slate-200/90 text-slate-900',
+    input: 'bg-white border-slate-300 text-slate-900 focus:border-sky-500 placeholder-slate-400',
+    btnPrimary: 'bg-sky-600 hover:bg-sky-500 text-white shadow-sky-600/20',
+    accentText: 'text-sky-600',
+    border: 'border-slate-200',
+    nodeBorder: 'border-slate-300 hover:border-sky-400 hover:shadow-sky-400/20',
+    edgeStroke1: '#0284c7',
+    edgeStroke2: '#6366f1',
+    edgeStroke3: '#059669',
+    bgGrid: '#cbd5e1',
+  },
+  pink: {
+    bg: 'bg-[#0f0714] text-pink-50 selection:bg-pink-500 selection:text-white',
+    card: 'bg-[#1a0c24] border-pink-950/80 text-pink-50 shadow-lg shadow-pink-950/40',
+    cardInner: 'bg-[#0d0512]/90 border-pink-900/40',
+    nav: 'bg-[#170a20]/95 border-pink-900/60 text-pink-50',
+    input: 'bg-[#0d0512] border-pink-900/60 text-pink-50 focus:border-pink-500 placeholder-pink-400/40',
+    btnPrimary: 'bg-pink-500 hover:bg-pink-400 text-white shadow-pink-500/30',
+    accentText: 'text-pink-400',
+    border: 'border-pink-900/60',
+    nodeBorder: 'border-pink-900/80 hover:border-pink-500 hover:shadow-pink-500/20',
+    edgeStroke1: '#ec4899',
+    edgeStroke2: '#f43f5e',
+    edgeStroke3: '#d946ef',
+    bgGrid: '#3b0764',
+  },
+};
 
 interface UploadedVisual {
   data: string; // base64 string
@@ -60,6 +114,14 @@ interface UploadedVisual {
   name: string;
   previewUrl: string;
 }
+
+const ENTITY_BADGES = [
+  { bg: 'bg-sky-500/10 text-sky-400 border-sky-500/20', dot: 'bg-sky-400', text: 'text-sky-400', label: 'Option A' },
+  { bg: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20', dot: 'bg-indigo-400', text: 'text-indigo-400', label: 'Option B' },
+  { bg: 'bg-purple-500/10 text-purple-400 border-purple-500/20', dot: 'bg-purple-400', text: 'text-purple-400', label: 'Option C' },
+  { bg: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20', dot: 'bg-emerald-400', text: 'text-emerald-400', label: 'Option D' },
+  { bg: 'bg-amber-500/10 text-amber-400 border-amber-500/20', dot: 'bg-amber-400', text: 'text-amber-400', label: 'Option E' },
+];
 
 function isMissingValue(val: any): boolean {
   if (val === null || val === undefined) return true;
@@ -96,9 +158,15 @@ function parseNumericValue(val: string): number | null {
 // ============================================================================
 
 const SpecMatrixNode = memo(function SpecMatrixNode({ data }: any) {
-  const { entityA, entityB, category, metrics = [] } = data;
+  const { entities = [], category, metrics = [] } = data;
+  const entityList: string[] = entities.length > 0 ? entities.map((e: any) => typeof e === 'object' ? e.name : e) : [data.entityA || 'Option A', data.entityB || 'Option B'];
+
   return (
-    <div className="w-[320px] sm:w-[380px] min-h-min h-auto bg-slate-900/95 border border-slate-700/80 rounded-2xl p-4 sm:p-5 shadow-2xl text-slate-100 backdrop-blur-xl">
+    <div className="w-[340px] sm:w-[440px] min-h-min h-auto bg-slate-900/95 dark:bg-slate-900/95 border border-slate-700/80 hover:border-sky-500/70 hover:shadow-sky-500/20 rounded-2xl p-4 sm:p-5 shadow-2xl text-slate-100 backdrop-blur-xl transition-all duration-300 hover:scale-[1.02] group">
+      <div className="flex items-center gap-2 mb-1">
+        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+        <span className="text-[10px] uppercase font-mono tracking-wider text-slate-400">Live Matrix Stream</span>
+      </div>
       <Handle type="target" position={Position.Left} className="!bg-sky-500 !w-3 !h-3 !border-2 !border-slate-900" />
       <Handle type="source" position={Position.Right} className="!bg-sky-500 !w-3 !h-3 !border-2 !border-slate-900" />
       <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
@@ -116,24 +184,27 @@ const SpecMatrixNode = memo(function SpecMatrixNode({ data }: any) {
         </span>
       </div>
 
-      <div className="grid grid-cols-12 gap-2 text-[10px] uppercase font-mono text-slate-400 pb-1.5 border-b border-slate-800/60">
-        <div className="col-span-5">Metric</div>
-        <div className="col-span-3 text-sky-400 whitespace-normal break-words">{entityA}</div>
-        <div className="col-span-4 text-indigo-400 whitespace-normal break-words">{entityB}</div>
+      <div className="flex items-center divide-x divide-slate-800/80 text-[10px] uppercase font-mono text-slate-400 pb-1.5 border-b border-slate-800/60">
+        <div className="w-28 shrink-0 pr-2">Metric</div>
+        {entityList.map((name, i) => (
+          <div key={i} className="flex-1 px-1.5 truncate text-sky-300 font-semibold">{name}</div>
+        ))}
       </div>
 
       <div className="divide-y divide-slate-800/60 text-xs">
         {metrics.slice(0, 7).map((m: VerifiedMetric, idx: number) => (
-          <div key={idx} className="grid grid-cols-12 gap-2 py-2 items-start">
-            <div className="col-span-5 text-slate-300 font-medium text-[11px] whitespace-normal break-words">
+          <div key={idx} className="flex items-start divide-x divide-slate-800/40 py-2">
+            <div className="w-28 shrink-0 pr-2 text-slate-300 font-medium text-[11px] whitespace-normal break-words">
               {m.metric}
             </div>
-            <div className="col-span-3 text-slate-100 text-[11px] whitespace-normal break-words">
-              {renderValueWithFallback(m.entity_a)}
-            </div>
-            <div className="col-span-4 text-slate-100 text-[11px] whitespace-normal break-words">
-              {renderValueWithFallback(m.entity_b)}
-            </div>
+            {entityList.map((_, i) => {
+              const val = m.values?.[i] !== undefined ? m.values[i] : (i === 0 ? m.entity_a : m.entity_b);
+              return (
+                <div key={i} className="flex-1 px-1.5 text-slate-100 text-[11px] whitespace-normal break-words">
+                  {renderValueWithFallback(val)}
+                </div>
+              );
+            })}
           </div>
         ))}
       </div>
@@ -142,9 +213,15 @@ const SpecMatrixNode = memo(function SpecMatrixNode({ data }: any) {
 });
 
 const SentimentBreakdownNode = memo(function SentimentBreakdownNode({ data }: any) {
-  const { entityA, entityB, sentiments = [] } = data;
+  const { entities = [], sentiments = [] } = data;
+  const entityList: string[] = entities.length > 0 ? entities.map((e: any) => typeof e === 'object' ? e.name : e) : [data.entityA || 'Option A', data.entityB || 'Option B'];
+
   return (
-    <div className="w-[320px] sm:w-[420px] min-h-min h-auto bg-slate-900/95 border border-slate-700/80 rounded-2xl p-4 sm:p-5 shadow-2xl text-slate-100 backdrop-blur-xl">
+    <div className="w-[340px] sm:w-[460px] min-h-min h-auto bg-slate-900/95 dark:bg-slate-900/95 border border-slate-700/80 hover:border-indigo-500/70 hover:shadow-indigo-500/20 rounded-2xl p-4 sm:p-5 shadow-2xl text-slate-100 backdrop-blur-xl transition-all duration-300 hover:scale-[1.02] group">
+      <div className="flex items-center gap-2 mb-1">
+        <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse shrink-0" />
+        <span className="text-[10px] uppercase font-mono tracking-wider text-slate-400">De-Biasing Pipeline</span>
+      </div>
       <Handle type="target" position={Position.Left} className="!bg-indigo-500 !w-3 !h-3 !border-2 !border-slate-900" />
       <Handle type="source" position={Position.Right} className="!bg-indigo-500 !w-3 !h-3 !border-2 !border-slate-900" />
       <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
@@ -180,14 +257,16 @@ const SentimentBreakdownNode = memo(function SentimentBreakdownNode({ data }: an
               </span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-300 pt-1">
-              <div className="bg-slate-900/90 p-2 rounded-lg border border-slate-800 whitespace-normal break-words leading-relaxed">
-                <span className="text-[10px] text-sky-400 font-semibold block mb-0.5">{entityA}:</span>
-                {renderValueWithFallback(s.entity_a_consensus)}
-              </div>
-              <div className="bg-slate-900/90 p-2 rounded-lg border border-slate-800 whitespace-normal break-words leading-relaxed">
-                <span className="text-[10px] text-indigo-400 font-semibold block mb-0.5">{entityB}:</span>
-                {renderValueWithFallback(s.entity_b_consensus)}
-              </div>
+              {entityList.map((name, i) => {
+                const con = s.consensuses?.[i] !== undefined ? s.consensuses[i] : (i === 0 ? s.entity_a_consensus : s.entity_b_consensus);
+                const badge = ENTITY_BADGES[i % ENTITY_BADGES.length];
+                return (
+                  <div key={i} className="bg-slate-900/90 p-2 rounded-lg border border-slate-800 whitespace-normal break-words leading-relaxed">
+                    <span className={`text-[10px] ${badge.text} font-semibold block mb-0.5`}>{name}:</span>
+                    {renderValueWithFallback(con)}
+                  </div>
+                );
+              })}
             </div>
           </div>
         ))}
@@ -197,34 +276,30 @@ const SentimentBreakdownNode = memo(function SentimentBreakdownNode({ data }: an
 });
 
 const LedgerNode = memo(function LedgerNode({ data }: any) {
-  const { entityA, entityB, metrics = [] } = data;
+  const { entities = [], metrics = [] } = data;
+  const entityList: string[] = entities.length > 0 ? entities.map((e: any) => typeof e === 'object' ? e.name : e) : [data.entityA || 'Option A', data.entityB || 'Option B'];
 
-  const scoreA = useMemo(() => {
-    let aWins = 0;
-    metrics.forEach((m: VerifiedMetric) => {
-      const vA = parseNumericValue(m.entity_a);
-      const vB = parseNumericValue(m.entity_b);
-      if (vA !== null && vB !== null) {
-        if (vA > vB) aWins++;
-      }
+  const scores = useMemo(() => {
+    return entityList.map((_, entIdx) => {
+      let wins = 0;
+      metrics.forEach((m: VerifiedMetric) => {
+        const values = m.values || [m.entity_a, m.entity_b];
+        const numVal = parseNumericValue(values[entIdx] || '');
+        if (numVal !== null) {
+          const isMax = values.every((otherVal, otherIdx) => {
+            if (otherIdx === entIdx) return true;
+            const otherNum = parseNumericValue(otherVal || '');
+            return otherNum === null || numVal >= otherNum;
+          });
+          if (isMax) wins++;
+        }
+      });
+      return wins;
     });
-    return aWins;
-  }, [metrics]);
-
-  const scoreB = useMemo(() => {
-    let bWins = 0;
-    metrics.forEach((m: VerifiedMetric) => {
-      const vA = parseNumericValue(m.entity_a);
-      const vB = parseNumericValue(m.entity_b);
-      if (vA !== null && vB !== null) {
-        if (vB > vA) bWins++;
-      }
-    });
-    return bWins;
-  }, [metrics]);
+  }, [entityList, metrics]);
 
   return (
-    <div className="w-[300px] sm:w-[340px] min-h-min h-auto bg-slate-900/95 border border-slate-700/80 rounded-2xl p-4 sm:p-5 shadow-2xl text-slate-100 backdrop-blur-xl">
+    <div className="w-[320px] sm:w-[400px] min-h-min h-auto bg-slate-900/95 border border-slate-700/80 rounded-2xl p-4 sm:p-5 shadow-2xl text-slate-100 backdrop-blur-xl">
       <Handle type="target" position={Position.Left} className="!bg-emerald-500 !w-3 !h-3 !border-2 !border-slate-900" />
       <Handle type="source" position={Position.Right} className="!bg-emerald-500 !w-3 !h-3 !border-2 !border-slate-900" />
       <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
@@ -242,33 +317,35 @@ const LedgerNode = memo(function LedgerNode({ data }: any) {
         </span>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 mb-4">
-        <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 text-center space-y-1">
-          <span className="text-[10px] text-sky-400 font-mono uppercase truncate block">{entityA}</span>
-          <div className="text-2xl font-black text-white">{scoreA}</div>
-          <span className="text-[9px] text-slate-400">Winning Attributes</span>
-        </div>
-        <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 text-center space-y-1">
-          <span className="text-[10px] text-indigo-400 font-mono uppercase truncate block">{entityB}</span>
-          <div className="text-2xl font-black text-white">{scoreB}</div>
-          <span className="text-[9px] text-slate-400">Winning Attributes</span>
-        </div>
+      <div className={`grid grid-cols-${Math.min(entityList.length, 3)} gap-2.5 mb-4`}>
+        {entityList.map((name, i) => {
+          const badge = ENTITY_BADGES[i % ENTITY_BADGES.length];
+          return (
+            <div key={i} className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 text-center space-y-1">
+              <span className={`text-[10px] ${badge.text} font-mono uppercase truncate block`}>{name}</span>
+              <div className="text-xl font-black text-white">{scores[i]}</div>
+              <span className="text-[9px] text-slate-400">Leading Points</span>
+            </div>
+          );
+        })}
       </div>
 
       <div className="text-xs text-slate-400 leading-relaxed bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/80">
-        <span className="font-semibold text-slate-300">Analysis:</span> Numeric metrics evaluated for direct quantitative edge.
+        <span className="font-semibold text-slate-300">Analysis:</span> Multi-entity metrics benchmarked across comparative categories.
       </div>
     </div>
   );
 });
 
 const VerdictNode = memo(function VerdictNode({ data }: any) {
-  const { entityA, entityB, verdictSummary, prosA = [], prosB = [] } = data;
-  const safeProsA = (Array.isArray(prosA) ? prosA : []).filter((p: any) => !isMissingVerdictBullet(p));
-  const safeProsB = (Array.isArray(prosB) ? prosB : []).filter((p: any) => !isMissingVerdictBullet(p));
+  const { entities = [], verdictSummary } = data;
+  const entityList: EntityVerdict[] = entities.length > 0 ? entities : [
+    { name: data.entityA || 'Option A', pros: data.prosA || [] },
+    { name: data.entityB || 'Option B', pros: data.prosB || [] },
+  ];
 
   return (
-    <div className="w-[320px] sm:w-[400px] min-h-min h-auto bg-slate-900/95 border border-slate-700/80 rounded-2xl p-4 sm:p-5 shadow-2xl text-slate-100 backdrop-blur-xl">
+    <div className="w-[340px] sm:w-[460px] min-h-min h-auto bg-slate-900/95 border border-slate-700/80 rounded-2xl p-4 sm:p-5 shadow-2xl text-slate-100 backdrop-blur-xl">
       <Handle type="target" position={Position.Left} className="!bg-amber-500 !w-3 !h-3 !border-2 !border-slate-900" />
       <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
         <div className="flex items-center gap-2">
@@ -289,15 +366,17 @@ const VerdictNode = memo(function VerdictNode({ data }: any) {
         {verdictSummary}
       </p>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-        <div className="p-2.5 bg-slate-950/70 rounded-lg border border-slate-800 whitespace-normal break-words leading-relaxed">
-          <span className="text-sky-400 font-semibold block mb-1">Pick {entityA}:</span>
-          <span className="text-slate-300">{safeProsA[0] || 'Established core specifications'}</span>
-        </div>
-        <div className="p-2.5 bg-slate-950/70 rounded-lg border border-slate-800 whitespace-normal break-words leading-relaxed">
-          <span className="text-indigo-400 font-semibold block mb-1">Pick {entityB}:</span>
-          <span className="text-slate-300">{safeProsB[0] || 'Targeted performance benchmarks'}</span>
-        </div>
+      <div className={`grid grid-cols-1 sm:grid-cols-${Math.min(entityList.length, 3)} gap-2 text-xs`}>
+        {entityList.map((ent, i) => {
+          const badge = ENTITY_BADGES[i % ENTITY_BADGES.length];
+          const pros = (Array.isArray(ent.pros) ? ent.pros : []).filter((p: string) => !isMissingVerdictBullet(p));
+          return (
+            <div key={i} className="p-2.5 bg-slate-950/70 rounded-lg border border-slate-800 whitespace-normal break-words leading-relaxed">
+              <span className={`${badge.text} font-semibold block mb-1`}>Pick {ent.name}:</span>
+              <span className="text-slate-300">{pros[0] || `Core domain baseline advantages for ${ent.name}`}</span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -315,26 +394,27 @@ const nodeTypes = {
 // ============================================================================
 
 interface SpatialCanvasViewProps {
-  entityA: string;
-  entityB: string;
+  entities: EntityVerdict[];
+  entityA?: string;
+  entityB?: string;
   category: string;
   verifiedMetrics: VerifiedMetric[];
   communitySentiment: CommunitySentiment[];
   verdictSummary: string;
-  prosA: string[];
-  prosB: string[];
+  prosA?: string[];
+  prosB?: string[];
+  theme?: MorphTheme;
 }
 
 function SpatialCanvasWorkspace({
-  entityA,
-  entityB,
+  entities = [],
   category,
   verifiedMetrics,
   communitySentiment,
   verdictSummary,
-  prosA,
-  prosB,
+  theme = 'dark',
 }: SpatialCanvasViewProps) {
+  const currentTheme = THEME_STYLES[theme] || THEME_STYLES.dark;
   const { fitView } = useReactFlow();
 
   const generatedNodes: Node[] = useMemo(() => {
@@ -344,8 +424,7 @@ function SpatialCanvasWorkspace({
         type: 'spec_matrix',
         position: { x: 50, y: 140 },
         data: {
-          entityA,
-          entityB,
+          entities,
           category,
           metrics: verifiedMetrics,
         },
@@ -353,37 +432,32 @@ function SpatialCanvasWorkspace({
       {
         id: 'node-sentiment',
         type: 'sentiment_breakdown',
-        position: { x: 480, y: 140 },
+        position: { x: 520, y: 140 },
         data: {
-          entityA,
-          entityB,
+          entities,
           sentiments: communitySentiment,
         },
       },
       {
         id: 'node-ledger',
         type: 'ledger_node',
-        position: { x: 960, y: 140 },
+        position: { x: 1020, y: 140 },
         data: {
-          entityA,
-          entityB,
+          entities,
           metrics: verifiedMetrics,
         },
       },
       {
         id: 'node-verdict',
         type: 'verdict_node',
-        position: { x: 1380, y: 140 },
+        position: { x: 1460, y: 140 },
         data: {
-          entityA,
-          entityB,
+          entities,
           verdictSummary,
-          prosA,
-          prosB,
         },
       },
     ];
-  }, [entityA, entityB, category, verifiedMetrics, communitySentiment, verdictSummary, prosA, prosB]);
+  }, [entities, category, verifiedMetrics, communitySentiment, verdictSummary]);
 
   const generatedEdges: Edge[] = useMemo(() => {
     return [
@@ -449,7 +523,7 @@ function SpatialCanvasWorkspace({
         </span>
       </div>
 
-      <ReactFlow
+      <ReactFlow proOptions={{ hideAttribution: true }}
         nodes={nodes}
         edges={edges}
         onNodesChange={onNodesChange}
@@ -691,6 +765,127 @@ export default function ComparisonApp() {
   const [highlightDiff, setHighlightDiff] = useState(false);
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
   const [tableSearch, setTableSearch] = useState('');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [chatHistory, setChatHistory] = useState<Array<{ id: string; title: string; created_at: string }>>([]);
+  const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
+  const fetchChatHistory = useCallback(async () => {
+    try {
+      setLoadingHistory(true);
+      const res = await fetch('/api/chats');
+      if (res.ok) {
+        const data = await res.json();
+        setChatHistory(data.chats || []);
+      }
+    } catch (err) {
+      console.warn('Failed to load chat history:', err);
+    } finally {
+      setLoadingHistory(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchChatHistory();
+  }, [fetchChatHistory]);
+
+  const handleSelectChat = async (chatId: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      setActiveChatId(chatId);
+      setIsSidebarOpen(false);
+      const res = await fetch('/api/chats/' + chatId);
+      if (!res.ok) throw new Error('Failed to load chat');
+      const data = await res.json();
+
+      const assistantMsg = data.messages?.find((m: any) => m.sender === 'assistant' && m.payload);
+      const userMsg = data.messages?.find((m: any) => m.sender === 'user' && m.payload);
+
+      if (userMsg?.payload?.prompt) {
+        setPrompt(userMsg.payload.prompt);
+      } else if (data.chat?.title) {
+        setPrompt(data.chat.title);
+      }
+
+      if (assistantMsg?.payload) {
+        const comp = assistantMsg.payload;
+        let resolvedEntities: EntityVerdict[] = [];
+        if (Array.isArray(comp.entities) && comp.entities.length > 0) {
+          resolvedEntities = comp.entities.map((e: any, idx: number) => {
+            const name = typeof e === 'object' && e?.name ? String(e.name) : typeof e === 'string' ? e : 'Option ' + String.fromCharCode(65 + idx);
+            const pros = typeof e === 'object' && Array.isArray(e?.pros)
+              ? e.pros.map(String).filter((p: string) => !isMissingVerdictBullet(p))
+              : [];
+            return {
+              name,
+              pros: pros.length > 0 ? pros : ['Established baseline capabilities for ' + name],
+            };
+          });
+        } else if (comp.entity_a && comp.entity_b) {
+          resolvedEntities = [comp.entity_a, comp.entity_b];
+        }
+
+        let resolvedCategories = comp.categories || {};
+        if (Object.keys(resolvedCategories).length === 0 && Array.isArray(comp.verified_metrics)) {
+          resolvedCategories = { [comp.category || 'Core Specifications']: comp.verified_metrics };
+        }
+
+        setComparisonData({
+          category: comp.category || 'Comparative Analysis',
+          entities: resolvedEntities,
+          entity_a: resolvedEntities[0],
+          entity_b: resolvedEntities[1],
+          categories: resolvedCategories,
+          verified_metrics: Object.values(resolvedCategories).flat() as VerifiedMetric[],
+          community_sentiment: Array.isArray(comp.community_sentiment) ? comp.community_sentiment : [],
+          suggested_metrics: Array.isArray(comp.suggested_metrics) ? comp.suggested_metrics : [],
+          verdict_summary: comp.veridict_summary || '',
+          comparison_points: comp.comparison_points || [],
+        });
+      }
+    } catch (err: any) {
+      console.error('Error loading chat:', err);
+      setError(err?.message || 'Could not load historical comparison');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteChat = async (e: React.MouseEvent, chatId: string) => {
+    e.stopPropagation();
+    try {
+      await fetch('/api/chats?id=' + chatId, { method: 'DELETE' });
+      setChatHistory((prev) => prev.filter((c) => c.id !== chatId));
+      if (activeChatId === chatId) {
+        setActiveChatId(null);
+      }
+    } catch (err) {
+      console.warn('Failed to delete chat:', err);
+    }
+  };
+
+  const handleNewComparison = () => {
+    setComparisonData(null);
+    setPrompt('');
+    setActiveChatId(null);
+    setError(null);
+    setUploadedImages([]);
+    setIsSidebarOpen(false);
+  };
+  const [theme, setTheme] = useState<MorphTheme>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('morph-theme');
+      if (saved === 'light' || saved === 'pink' || saved === 'dark') return saved;
+    }
+    return 'dark';
+  });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('morph-theme', theme);
+    }
+  }, [theme]);
   const [activeModel, setActiveModel] = useState('Gemini 2.5 Flash + Web Retrieval');
 
   // Keyboard shortcut listener ('v' to toggle Spec Sheet / Canvas)
@@ -714,28 +909,27 @@ export default function ComparisonApp() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Safe entity resolution
-  const displayEntityA = isSwapped
-    ? comparisonData?.entity_b?.name || 'Option B'
-    : comparisonData?.entity_a?.name || 'Option A';
+  // Dynamic Multi-Entity Resolution
+  const rawEntities: EntityVerdict[] = useMemo(() => {
+    if (comparisonData?.entities && comparisonData.entities.length > 0) {
+      return comparisonData.entities;
+    }
+    if (comparisonData?.entity_a && comparisonData?.entity_b) {
+      return [comparisonData.entity_a, comparisonData.entity_b];
+    }
+    return [];
+  }, [comparisonData]);
 
-  const displayEntityB = isSwapped
-    ? comparisonData?.entity_a?.name || 'Option A'
-    : comparisonData?.entity_b?.name || 'Option B';
+  const displayEntities: EntityVerdict[] = useMemo(() => {
+    if (rawEntities.length === 0) return [];
+    if (isSwapped && rawEntities.length === 2) {
+      return [rawEntities[1], rawEntities[0]];
+    }
+    return rawEntities;
+  }, [rawEntities, isSwapped]);
 
-  const displayProsA = useMemo(() => {
-    const raw = isSwapped ? comparisonData?.entity_b?.pros : comparisonData?.entity_a?.pros;
-    const arr = Array.isArray(raw) ? raw : [];
-    const filtered = arr.filter((item) => !isMissingVerdictBullet(item));
-    return filtered.length > 0 ? filtered : ['Established baseline specifications and capabilities'];
-  }, [comparisonData, isSwapped]);
-
-  const displayProsB = useMemo(() => {
-    const raw = isSwapped ? comparisonData?.entity_a?.pros : comparisonData?.entity_b?.pros;
-    const arr = Array.isArray(raw) ? raw : [];
-    const filtered = arr.filter((item) => !isMissingVerdictBullet(item));
-    return filtered.length > 0 ? filtered : ['Targeted performance benchmarks and advantages'];
-  }, [comparisonData, isSwapped]);
+  const displayEntityA = displayEntities[0]?.name || 'Option A';
+  const displayEntityB = displayEntities[1]?.name || 'Option B';
 
   const category = comparisonData?.category || 'Comparative Analysis';
   const verdictSummary = comparisonData?.verdict_summary || '';
@@ -755,23 +949,37 @@ export default function ComparisonApp() {
   const normalizedCategories = useMemo(() => {
     const result: Record<string, VerifiedMetric[]> = {};
     for (const [catName, metrics] of Object.entries(categories)) {
-      result[catName] = metrics.map((m) => ({
-        metric: m.metric,
-        entity_a: isSwapped ? m.entity_b : m.entity_a,
-        entity_b: isSwapped ? m.entity_a : m.entity_b,
-        source_type: m.source_type,
-      }));
+      result[catName] = metrics.map((m) => {
+        let values = m.values ? [...m.values] : [m.entity_a || '', m.entity_b || ''];
+        if (isSwapped && values.length === 2) {
+          values = [values[1], values[0]];
+        }
+        return {
+          metric: m.metric,
+          values,
+          entity_a: values[0] || 'Not specified',
+          entity_b: values[1] || 'Not specified',
+          source_type: m.source_type,
+        };
+      });
     }
     return result;
   }, [categories, isSwapped]);
 
   const normalizedCommunitySentiment = useMemo(() => {
-    return communitySentiment.map((s) => ({
-      topic: s.topic,
-      entity_a_consensus: isSwapped ? s.entity_b_consensus : s.entity_a_consensus,
-      entity_b_consensus: isSwapped ? s.entity_a_consensus : s.entity_b_consensus,
-      sentiment: s.sentiment,
-    }));
+    return communitySentiment.map((s) => {
+      let consensuses = s.consensuses ? [...s.consensuses] : [s.entity_a_consensus || '', s.entity_b_consensus || ''];
+      if (isSwapped && consensuses.length === 2) {
+        consensuses = [consensuses[1], consensuses[0]];
+      }
+      return {
+        topic: s.topic,
+        consensuses,
+        entity_a_consensus: consensuses[0] || 'General consensus',
+        entity_b_consensus: consensuses[1] || 'General consensus',
+        sentiment: s.sentiment,
+      };
+    });
   }, [communitySentiment, isSwapped]);
 
   // Dynamic Filtered Categories
@@ -784,8 +992,9 @@ export default function ComparisonApp() {
       const matching = metrics.filter(
         (m) =>
           m.metric.toLowerCase().includes(term) ||
-          m.entity_a.toLowerCase().includes(term) ||
-          m.entity_b.toLowerCase().includes(term)
+          (m.values && m.values.some((v) => v.toLowerCase().includes(term))) ||
+          (m.entity_a && m.entity_a.toLowerCase().includes(term)) ||
+          (m.entity_b && m.entity_b.toLowerCase().includes(term))
       );
       if (matching.length > 0) {
         result[catName] = matching;
@@ -800,8 +1009,9 @@ export default function ComparisonApp() {
     return normalizedCommunitySentiment.filter(
       (s) =>
         s.topic.toLowerCase().includes(term) ||
-        s.entity_a_consensus.toLowerCase().includes(term) ||
-        s.entity_b_consensus.toLowerCase().includes(term)
+        (s.consensuses && s.consensuses.some((c) => c.toLowerCase().includes(term))) ||
+        (s.entity_a_consensus && s.entity_a_consensus.toLowerCase().includes(term)) ||
+        (s.entity_b_consensus && s.entity_b_consensus.toLowerCase().includes(term))
     );
   }, [normalizedCommunitySentiment, tableSearch]);
 
@@ -877,59 +1087,106 @@ export default function ComparisonApp() {
     if (!targetMetric || !comparisonData) return;
 
     setAddingMetric(true);
-    setError(null);
+    // Optimistic Insertion with inline fetching state
+    const targetCat = 'User Added Metrics';
+    const optimisticMetric: VerifiedMetric = {
+      metric: targetMetric,
+      entity_a: 'Fetching...',
+      entity_b: 'Fetching...',
+      values: displayEntities.map(() => 'Fetching...'),
+      source_type: 'official',
+    };
+
+    setComparisonData((prev) => {
+      if (!prev) return prev;
+      const updatedCategories = { ...prev.categories };
+      if (!updatedCategories[targetCat]) {
+        updatedCategories[targetCat] = [];
+      }
+      updatedCategories[targetCat] = [
+        ...updatedCategories[targetCat].filter((m) => m.metric !== targetMetric),
+        optimisticMetric,
+      ];
+      return {
+        ...prev,
+        categories: updatedCategories,
+        verified_metrics: [...prev.verified_metrics.filter((m) => m.metric !== targetMetric), optimisticMetric],
+        suggested_metrics: prev.suggested_metrics.filter((sm) => sm !== targetMetric),
+      };
+    });
+
+    setCustomMetricInput('');
 
     try {
       const res = await fetch('/api/compare/custom-metric', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          entityA: comparisonData.entity_a.name,
-          entityB: comparisonData.entity_b.name,
+          entityA: displayEntities[0]?.name || 'Option A',
+          entityB: displayEntities[1]?.name || 'Option B',
           metric: targetMetric,
           category: comparisonData.category,
         }),
       });
 
-      if (!res.ok) throw new Error('Failed to fetch custom metric data');
-      const data = await res.json();
+      const data = res.ok ? await res.json() : null;
 
-      if (data.metric) {
-        const newMetric: VerifiedMetric = {
-          metric: data.metric.metric || targetMetric,
-          entity_a: data.metric.entity_a || 'N/A',
-          entity_b: data.metric.entity_b || 'N/A',
-          source_type: 'official',
+      const finalValA = data?.metric?.entity_a || 'Not available in current sources';
+      const finalValB = data?.metric?.entity_b || 'Not available in current sources';
+      const resolvedMetric: VerifiedMetric = {
+        metric: targetMetric,
+        entity_a: finalValA,
+        entity_b: finalValB,
+        values: [finalValA, finalValB],
+        source_type: 'official',
+      };
+
+      setComparisonData((prev) => {
+        if (!prev) return prev;
+        const updatedCategories = { ...prev.categories };
+        if (!updatedCategories[targetCat]) {
+          updatedCategories[targetCat] = [];
+        }
+        updatedCategories[targetCat] = [
+          ...updatedCategories[targetCat].filter((m) => m.metric !== targetMetric),
+          resolvedMetric,
+        ];
+        return {
+          ...prev,
+          categories: updatedCategories,
+          verified_metrics: [...prev.verified_metrics.filter((m) => m.metric !== targetMetric), resolvedMetric],
         };
+      });
 
-        const targetCat = data.metric.category || 'User Added Metrics';
-
-        setComparisonData((prev) => {
-          if (!prev) return prev;
-          const updatedCategories = { ...prev.categories };
-          if (!updatedCategories[targetCat]) {
-            updatedCategories[targetCat] = [];
-          }
-          updatedCategories[targetCat] = [
-            ...updatedCategories[targetCat].filter((m) => m.metric !== newMetric.metric),
-            newMetric,
-          ];
-
-          return {
-            ...prev,
-            categories: updatedCategories,
-            verified_metrics: [...prev.verified_metrics.filter((m) => m.metric !== newMetric.metric), newMetric],
-            suggested_metrics: prev.suggested_metrics.filter((sm) => sm !== targetMetric),
-          };
-        });
-
-        setRecentlyAddedMetric(newMetric.metric);
-        setTimeout(() => setRecentlyAddedMetric(null), 3000);
-        setCustomMetricInput('');
-      }
+      setRecentlyAddedMetric(targetMetric);
+      setTimeout(() => setRecentlyAddedMetric(null), 3000);
     } catch (err: any) {
-      console.error('Add metric error:', err);
-      setError('Could not retrieve fact for this metric. Please try another.');
+      console.warn('Graceful fallback for custom metric:', err);
+      // Resilient non-blocking fallback
+      const fallbackMetric: VerifiedMetric = {
+        metric: targetMetric,
+        entity_a: 'Not available in current sources',
+        entity_b: 'Not available in current sources',
+        values: displayEntities.map(() => 'Not available in current sources'),
+        source_type: 'official',
+      };
+
+      setComparisonData((prev) => {
+        if (!prev) return prev;
+        const updatedCategories = { ...prev.categories };
+        if (!updatedCategories[targetCat]) {
+          updatedCategories[targetCat] = [];
+        }
+        updatedCategories[targetCat] = [
+          ...updatedCategories[targetCat].filter((m) => m.metric !== targetMetric),
+          fallbackMetric,
+        ];
+        return {
+          ...prev,
+          categories: updatedCategories,
+          verified_metrics: [...prev.verified_metrics.filter((m) => m.metric !== targetMetric), fallbackMetric],
+        };
+      });
     } finally {
       setAddingMetric(false);
     }
@@ -972,31 +1229,32 @@ export default function ComparisonApp() {
 
       const data = await res.json();
 
-      const resolvedEntityA =
-        typeof data.entity_a === 'object' && data.entity_a !== null
-          ? {
-              name: data.entity_a.name || 'Option A',
-              pros: Array.isArray(data.entity_a.pros) ? data.entity_a.pros : [],
-              tagline: data.entity_a.tagline || '',
-            }
-          : {
-              name: typeof data.entity_a === 'string' ? data.entity_a : 'Option A',
-              pros: [],
-              tagline: '',
-            };
-
-      const resolvedEntityB =
-        typeof data.entity_b === 'object' && data.entity_b !== null
-          ? {
-              name: data.entity_b.name || 'Option B',
-              pros: Array.isArray(data.entity_b.pros) ? data.entity_b.pros : [],
-              tagline: data.entity_b.tagline || '',
-            }
-          : {
-              name: typeof data.entity_b === 'string' ? data.entity_b : 'Option B',
-              pros: [],
-              tagline: '',
-            };
+      let resolvedEntities: EntityVerdict[] = [];
+      if (Array.isArray(data.entities) && data.entities.length > 0) {
+        resolvedEntities = data.entities.map((e: any, idx: number) => {
+          const name = typeof e === 'object' && e?.name ? String(e.name) : typeof e === 'string' ? e : `Option ${String.fromCharCode(65 + idx)}`;
+          const pros = typeof e === 'object' && Array.isArray(e?.pros)
+            ? e.pros.map(String).filter((p: string) => !isMissingVerdictBullet(p))
+            : [];
+          return {
+            name,
+            pros: pros.length > 0 ? pros : [`Established baseline capabilities for ${name}`],
+          };
+        });
+      } else {
+        const nameA = typeof data.entity_a === 'object' && data.entity_a?.name ? data.entity_a.name : 'Option A';
+        const nameB = typeof data.entity_b === 'object' && data.entity_b?.name ? data.entity_b.name : 'Option B';
+        const prosA = typeof data.entity_a === 'object' && Array.isArray(data.entity_a?.pros)
+          ? data.entity_a.pros.filter((p: any) => !isMissingVerdictBullet(p))
+          : [];
+        const prosB = typeof data.entity_b === 'object' && Array.isArray(data.entity_b?.pros)
+          ? data.entity_b.pros.filter((p: any) => !isMissingVerdictBullet(p))
+          : [];
+        resolvedEntities = [
+          { name: nameA, pros: prosA.length > 0 ? prosA : [`Established baseline for ${nameA}`] },
+          { name: nameB, pros: prosB.length > 0 ? prosB : [`Targeted advantages for ${nameB}`] },
+        ];
+      }
 
       let resolvedCategories: Record<string, VerifiedMetric[]> = {};
       if (data.categories && Object.keys(data.categories).length > 0) {
@@ -1008,28 +1266,17 @@ export default function ComparisonApp() {
       }
 
       const flatM = Object.values(resolvedCategories).flat();
-      const validMetricsA = flatM.filter((m) => !isMissingValue(m.entity_a));
-      const validMetricsB = flatM.filter((m) => !isMissingValue(m.entity_b));
-
-      resolvedEntityA.pros = resolvedEntityA.pros.filter((p: any) => !isMissingVerdictBullet(p));
-      resolvedEntityB.pros = resolvedEntityB.pros.filter((p: any) => !isMissingVerdictBullet(p));
-
-      if (resolvedEntityA.pros.length === 0) {
-        resolvedEntityA.pros = validMetricsA.slice(0, 3).map((m) => `${m.metric}: ${m.entity_a}`);
-      }
-      if (resolvedEntityB.pros.length === 0) {
-        resolvedEntityB.pros = validMetricsB.slice(0, 3).map((m) => `${m.metric}: ${m.entity_b}`);
-      }
 
       setComparisonData({
         category: data.category || 'Comparative Analysis',
-        entity_a: resolvedEntityA,
-        entity_b: resolvedEntityB,
+        entities: resolvedEntities,
+        entity_a: resolvedEntities[0],
+        entity_b: resolvedEntities[1],
         categories: resolvedCategories,
         verified_metrics: flatM,
         community_sentiment: Array.isArray(data.community_sentiment) ? data.community_sentiment : [],
         suggested_metrics: Array.isArray(data.suggested_metrics) ? data.suggested_metrics : [],
-        verdict_summary: data.verdict_summary || `${resolvedEntityA.name} and ${resolvedEntityB.name} provide distinct tradeoffs.`,
+        verdict_summary: data.verdict_summary || `Multi-entity comparison across ${resolvedEntities.map((e) => e.name).join(', ')}.`,
       });
 
       if (data.model_used) setActiveModel(data.model_used);
@@ -1102,9 +1349,28 @@ export default function ComparisonApp() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 text-xs text-slate-400">
-              <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span className="hidden sm:inline">De-Biased Fact Engine & Spatial Matrix</span>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsSidebarOpen(true);
+                  fetchChatHistory();
+                }}
+                className="px-2.5 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-medium border border-slate-700/60 transition-all flex items-center gap-1.5 shadow-sm"
+                title="View Past Comparisons"
+              >
+                <HistoryIcon className="w-3.5 h-3.5 text-sky-400" />
+                <span>History</span>
+                {chatHistory.length > 0 && (
+                  <span className="px-1.5 py-0.2 bg-sky-500/20 text-sky-300 rounded-full text-[10px] font-mono">
+                    {chatHistory.length}
+                  </span>
+                )}
+              </button>
+              <div className="hidden sm:flex items-center gap-2 text-xs text-slate-400">
+                <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>De-Biased Fact Engine</span>
+              </div>
             </div>
           </div>
         </header>
@@ -1305,23 +1571,145 @@ export default function ComparisonApp() {
         className="hidden"
       />
 
+            {/* History Sidebar Drawer (Accessible on all screens) */}
+      <div
+        className={`fixed inset-0 z-50 transition-opacity duration-300 ${
+          isSidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
+      >
+        {/* Backdrop */}
+        <div
+          className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+        {/* Drawer Panel */}
+        <aside
+          className={`absolute top-0 left-0 bottom-0 w-80 max-w-[85vw] bg-slate-900 border-r border-slate-800 shadow-2xl p-4 flex flex-col justify-between transition-transform duration-300 ease-in-out ${
+            isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
+        >
+          <div className="flex flex-col h-full">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <HistoryIcon className="w-4 h-4 text-sky-400" />
+                <span className="font-bold text-sm text-white">Comparison History</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsSidebarOpen(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="py-3">
+              <button
+                type="button"
+                onClick={handleNewComparison}
+                className="w-full py-2 px-3 rounded-xl bg-sky-500 hover:bg-sky-400 text-white text-xs font-semibold flex items-center justify-center gap-2 shadow-sm transition-all"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>New Comparison</span>
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 text-xs">
+              {loadingHistory ? (
+                <div className="flex items-center justify-center py-8 text-slate-500 gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin text-sky-400" />
+                  <span>Loading past chats...</span>
+                </div>
+              ) : chatHistory.length === 0 ? (
+                <div className="text-center py-8 text-slate-500">
+                  <p>No previous comparisons saved.</p>
+                  <p className="text-[11px] text-slate-600 mt-1">Comparisons are encrypted & saved automatically.</p>
+                </div>
+              ) : (
+                chatHistory.map((chat) => (
+                  <div
+                    key={chat.id}
+                    onClick={() => handleSelectChat(chat.id)}
+                    className={`group flex items-center justify-between p-2.5 rounded-xl border transition-all cursor-pointer ${
+                      activeChatId === chat.id
+                        ? 'bg-sky-500/10 border-sky-500/30 text-sky-200'
+                        : 'bg-slate-950/40 border-slate-800/80 text-slate-300 hover:bg-slate-800 hover:text-white'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <Scale className="w-3.5 h-3.5 text-slate-400 shrink-0 group-hover:text-sky-400" />
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium truncate text-xs">{chat.title}</p>
+                        <p className="text-[10px] text-slate-500">
+                          {new Date(chat.created_at).toLocaleDateString(undefined, {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => handleDeleteChat(e, chat.id)}
+                      title="Delete comparison"
+                      className="opacity-0 group-hover:opacity-100 p-1 rounded-md text-slate-500 hover:text-rose-400 hover:bg-slate-800/80 transition-all shrink-0 ml-1"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="pt-3 border-t border-slate-800 text-[11px] text-slate-500 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> AES-256 Encrypted
+              </span>
+              <span className="text-[10px] font-mono text-slate-600">Turso DB</span>
+            </div>
+          </div>
+        </aside>
+      </div>
+
       {/* Fully Responsive Active Navigation Bar (Stacks on mobile, inline on desktop) */}
       <header className="border-b border-slate-800/80 bg-slate-900/90 backdrop-blur-xl sticky top-0 z-40 w-full">
         <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-col md:flex-row items-center justify-between gap-3 md:gap-4">
-          {/* Top Bar Row 1 on Mobile: Logo and View Switcher */}
+          {/* Top Bar Row 1 on Mobile: Logo, History Toggle, and View Switcher */}
           <div className="flex items-center justify-between w-full md:w-auto gap-3 shrink-0">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-sky-400 shadow-sm shrink-0">
-                <Scale className="w-4 h-4 sm:w-5 sm:h-5" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-sm sm:text-base tracking-tight text-white">MorphUI</span>
-                  <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-slate-800 text-sky-300 border border-slate-700">
-                    Dual-Engine
+            <div className="flex items-center gap-2 sm:gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsSidebarOpen(true);
+                  fetchChatHistory();
+                }}
+                className="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/60 transition-all flex items-center gap-1.5 shadow-sm"
+                title="Open History Sidebar"
+              >
+                <HistoryIcon className="w-4 h-4 text-sky-400" />
+                <span className="hidden lg:inline text-xs font-medium">History</span>
+                {chatHistory.length > 0 && (
+                  <span className="px-1.5 py-0.2 bg-sky-500/20 text-sky-300 rounded-full text-[10px] font-mono">
+                    {chatHistory.length}
                   </span>
+                )}
+              </button>
+
+              <div className="flex items-center gap-2 cursor-pointer" onClick={handleNewComparison} title="New Comparison">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-sky-400 shadow-sm shrink-0">
+                  <Scale className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
-                <p className="text-[11px] text-slate-400 hidden sm:block">Spec Sheet & Spatial Graph Runtime</p>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-sm sm:text-base tracking-tight text-white">MorphUI</span>
+                    <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-slate-800 text-sky-300 border border-slate-700">
+                      Dual-Engine
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 hidden sm:block">Spec Sheet & Spatial Graph Runtime</p>
+                </div>
               </div>
             </div>
 
@@ -1411,6 +1799,48 @@ export default function ComparisonApp() {
 
           {/* Desktop-only View Switcher & Keyboard Shortcut */}
           <div className="hidden md:flex items-center gap-3 shrink-0">
+            {/* 3-Tier Theme Switcher */}
+            <div className="flex items-center p-1 rounded-xl bg-slate-950/80 border border-slate-800 shadow-inner">
+              <button
+                type="button"
+                onClick={() => setTheme('dark')}
+                title="Dark Mode"
+                className={`px-2 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${
+                  theme === 'dark'
+                    ? 'bg-slate-800 text-sky-400 shadow-sm border border-slate-700'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <span>🌙</span>
+                <span className="hidden xl:inline text-[11px]">Dark</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setTheme('light')}
+                title="Clean White Mode"
+                className={`px-2 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${
+                  theme === 'light'
+                    ? 'bg-slate-800 text-amber-300 shadow-sm border border-slate-700'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <span>☀️</span>
+                <span className="hidden xl:inline text-[11px]">Light</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setTheme('pink')}
+                title="C2C Pink Mode"
+                className={`px-2 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${
+                  theme === 'pink'
+                    ? 'bg-pink-600 text-white shadow-sm border border-pink-500'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <span>🌸</span>
+                <span className="hidden xl:inline text-[11px]">Pink</span>
+              </button>
+            </div>
             <div className="flex items-center p-1 rounded-xl bg-slate-950/80 border border-slate-800 shadow-inner">
               <button
                 type="button"
@@ -1464,14 +1894,12 @@ export default function ComparisonApp() {
         <main className="w-full max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-4">
           <ReactFlowProvider>
             <SpatialCanvasWorkspace
-              entityA={displayEntityA}
-              entityB={displayEntityB}
+              entities={displayEntities}
               category={category}
               verifiedMetrics={flatVerifiedMetrics}
               communitySentiment={normalizedCommunitySentiment}
               verdictSummary={verdictSummary}
-              prosA={displayProsA}
-              prosB={displayProsB}
+              theme={theme}
             />
           </ReactFlowProvider>
         </main>
@@ -1515,50 +1943,81 @@ export default function ComparisonApp() {
             </div>
           )}
 
-          {/* Main Entity Comparison Hero Card (Fully Responsive Side-by-Side: grid-cols-1 md:grid-cols-2) */}
+          {/* Main Entity Comparison Hero Card (Dynamic Multi-Entity or 2-way VS layout) */}
           <section className="w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 lg:p-8 shadow-xl relative overflow-hidden">
-            <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4 sm:gap-6 pb-4 sm:pb-6 border-b border-slate-800">
-              {/* Entity A */}
-              <div className="flex-1 space-y-1.5 sm:space-y-2 w-full">
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded bg-slate-800 text-sky-400 border border-slate-700 shrink-0">
-                    Option A
-                  </span>
-                  <span className="text-xs text-slate-400 whitespace-normal break-words">{category}</span>
+            {displayEntities.length <= 2 ? (
+              <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4 sm:gap-6 pb-4 sm:pb-6 border-b border-slate-800">
+                {/* Entity A */}
+                <div className="flex-1 space-y-1.5 sm:space-y-2 w-full">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded bg-slate-800 text-sky-400 border border-slate-700 shrink-0">
+                      Option A
+                    </span>
+                    <span className="text-xs text-slate-400 whitespace-normal break-words">{category}</span>
+                  </div>
+                  <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-white whitespace-normal break-words leading-tight">
+                    {displayEntityA}
+                  </h1>
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-800/90 border border-slate-700 text-xs font-medium text-slate-200">
+                    <Award className="w-3.5 h-3.5 text-sky-400" />
+                    <span>Verified Baseline</span>
+                  </div>
                 </div>
-                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-white whitespace-normal break-words leading-tight">
-                  {displayEntityA}
-                </h1>
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-800/90 border border-slate-700 text-xs font-medium text-slate-200">
-                  <Award className="w-3.5 h-3.5 text-sky-400" />
-                  <span>Verified Baseline</span>
-                </div>
-              </div>
 
-              {/* VS Badge */}
-              <div className="flex flex-row md:flex-col items-center justify-center shrink-0 my-1 md:my-0">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-slate-950 border border-slate-800 flex items-center justify-center shadow-md">
-                  <span className="font-bold font-mono text-xs sm:text-sm text-slate-400">VS</span>
+                {/* VS Badge */}
+                <div className="flex flex-row md:flex-col items-center justify-center shrink-0 my-1 md:my-0">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-slate-950 border border-slate-800 flex items-center justify-center shadow-md">
+                    <span className="font-bold font-mono text-xs sm:text-sm text-slate-400">VS</span>
+                  </div>
+                </div>
+
+                {/* Entity B */}
+                <div className="flex-1 space-y-1.5 sm:space-y-2 md:text-right w-full">
+                  <div className="flex items-center gap-2 md:justify-end">
+                    <span className="text-xs text-slate-400 whitespace-normal break-words">{category}</span>
+                    <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded bg-slate-800 text-indigo-400 border border-slate-700 shrink-0">
+                      Option B
+                    </span>
+                  </div>
+                  <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-white whitespace-normal break-words leading-tight">
+                    {displayEntityB}
+                  </h1>
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-800/90 border border-slate-700 text-xs font-medium text-slate-200">
+                    <Award className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>Verified Baseline</span>
+                  </div>
                 </div>
               </div>
-
-              {/* Entity B */}
-              <div className="flex-1 space-y-1.5 sm:space-y-2 md:text-right w-full">
-                <div className="flex items-center gap-2 md:justify-end">
-                  <span className="text-xs text-slate-400 whitespace-normal break-words">{category}</span>
-                  <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded bg-slate-800 text-indigo-400 border border-slate-700 shrink-0">
-                    Option B
+            ) : (
+              <div className="relative z-10 space-y-4 pb-4 sm:pb-6 border-b border-slate-800">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{category}</span>
+                  <span className="text-xs font-mono px-2 py-0.5 rounded bg-slate-800 text-sky-300 border border-slate-700">
+                    {displayEntities.length}-Way Comparison
                   </span>
                 </div>
-                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-white whitespace-normal break-words leading-tight">
-                  {displayEntityB}
-                </h1>
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-800/90 border border-slate-700 text-xs font-medium text-slate-200">
-                  <Award className="w-3.5 h-3.5 text-indigo-400" />
-                  <span>Verified Baseline</span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {displayEntities.map((ent, idx) => {
+                    const badge = ENTITY_BADGES[idx % ENTITY_BADGES.length];
+                    return (
+                      <div key={idx} className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800/90 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded border ${badge.bg}`}>
+                            {badge.label}
+                          </span>
+                          <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+                        </div>
+                        <h2 className="text-base sm:text-lg font-bold text-white leading-snug break-words">{ent.name}</h2>
+                        <div className="text-[11px] text-slate-400 flex items-center gap-1">
+                          <Award className={`w-3 h-3 ${badge.text}`} />
+                          <span>Verified Baseline</span>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Telemetry and Trust Badges */}
             <div className="pt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between text-xs text-slate-500 gap-2">
@@ -1588,37 +2047,28 @@ export default function ComparisonApp() {
               {verdictSummary}
             </p>
 
-            {/* Side-by-Side Pros (grid-cols-1 md:grid-cols-2) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 w-full">
-              <div className="w-full bg-slate-950/80 border border-slate-800/90 rounded-xl p-3.5 sm:p-4 space-y-2.5 sm:space-y-3">
-                <div className="flex items-center gap-2 text-sky-400 font-semibold text-xs uppercase tracking-wider">
-                  <CheckCircle2 className="w-4 h-4 text-sky-400 shrink-0" />
-                  <span className="whitespace-normal break-words">Choose {displayEntityA} if:</span>
-                </div>
-                <ul className="space-y-2 text-xs text-slate-300">
-                  {(displayProsA.length > 0 ? displayProsA : ['Verified domain baseline features']).map((item, idx) => (
-                    <li key={idx} className="flex items-start gap-2 whitespace-normal break-words leading-relaxed">
-                      <span className="w-1.5 h-1.5 rounded-full bg-sky-400 shrink-0 mt-1.5" />
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="w-full bg-slate-950/80 border border-slate-800/90 rounded-xl p-3.5 sm:p-4 space-y-2.5 sm:space-y-3">
-                <div className="flex items-center gap-2 text-indigo-400 font-semibold text-xs uppercase tracking-wider">
-                  <CheckCircle2 className="w-4 h-4 text-indigo-400 shrink-0" />
-                  <span className="whitespace-normal break-words">Choose {displayEntityB} if:</span>
-                </div>
-                <ul className="space-y-2 text-xs text-slate-300">
-                  {(displayProsB.length > 0 ? displayProsB : ['Targeted competitive benchmark features']).map((item, idx) => (
-                    <li key={idx} className="flex items-start gap-2 whitespace-normal break-words leading-relaxed">
-                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 shrink-0 mt-1.5" />
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+            {/* Dynamic Multi-Entity Pros Recommendation Grid */}
+            <div className={`grid grid-cols-1 ${displayEntities.length > 2 ? 'md:grid-cols-2 lg:grid-cols-3' : 'md:grid-cols-2'} gap-3 sm:gap-4 w-full`}>
+              {displayEntities.map((ent, entIdx) => {
+                const badge = ENTITY_BADGES[entIdx % ENTITY_BADGES.length];
+                const pros = ent.pros && ent.pros.length > 0 ? ent.pros : ['Established baseline capabilities for ' + ent.name];
+                return (
+                  <div key={entIdx} className="w-full bg-slate-950/80 border border-slate-800/90 rounded-xl p-3.5 sm:p-4 space-y-2.5 sm:space-y-3">
+                    <div className={`flex items-center gap-2 ${badge.text} font-semibold text-xs uppercase tracking-wider`}>
+                      <CheckCircle2 className={`w-4 h-4 ${badge.text} shrink-0`} />
+                      <span className="whitespace-normal break-words">Choose {ent.name} if:</span>
+                    </div>
+                    <ul className="space-y-2 text-xs text-slate-300">
+                      {pros.map((item, idx) => (
+                        <li key={idx} className="flex items-start gap-2 whitespace-normal break-words leading-relaxed">
+                          <span className={`w-1.5 h-1.5 rounded-full ${badge.dot} shrink-0 mt-1.5`} />
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })}
             </div>
           </section>
 
@@ -1733,25 +2183,26 @@ export default function ComparisonApp() {
             </div>
           </section>
 
-          {/* TAB 1: Verified Facts & Official Specs Table (Responsive Wrapper: w-full overflow-x-auto whitespace-nowrap md:whitespace-normal & min-w-[150px]) */}
+          {/* TAB 1: Verified Facts & Official Specs Table (Dynamic N-Way Columns) */}
           {activeTab === 'verified' && (
             <section className="w-full bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden print-clean">
               <div className="w-full overflow-x-auto whitespace-nowrap md:whitespace-normal">
                 <div className="min-w-[650px] md:min-w-full">
                   {/* Table Header */}
-                  <div className="bg-slate-900 border-b border-slate-800 px-4 sm:px-6 py-3.5 grid grid-cols-12 gap-4 items-center text-xs font-bold uppercase tracking-wider text-slate-400 shadow-sm">
-                    <div className="col-span-4 min-w-[150px] flex items-center gap-1.5">
+                  <div className="bg-slate-900 border-b border-slate-800 px-4 sm:px-6 py-3.5 flex items-center text-xs font-bold uppercase tracking-wider text-slate-400 shadow-sm gap-4">
+                    <div className="w-1/3 min-w-[180px] shrink-0 flex items-center gap-1.5">
                       <FileSpreadsheet className="w-4 h-4 text-slate-500 shrink-0" />
                       <span className="truncate">Metric / Attribute</span>
                     </div>
-                    <div className="col-span-4 min-w-[150px] text-sky-400 flex items-center gap-1.5 whitespace-normal break-words">
-                      <span className="w-2 h-2 rounded-full bg-sky-400 shrink-0" />
-                      <span>{displayEntityA}</span>
-                    </div>
-                    <div className="col-span-4 min-w-[150px] text-indigo-400 flex items-center gap-1.5 whitespace-normal break-words">
-                      <span className="w-2 h-2 rounded-full bg-indigo-400 shrink-0" />
-                      <span>{displayEntityB}</span>
-                    </div>
+                    {displayEntities.map((ent, idx) => {
+                      const badge = ENTITY_BADGES[idx % ENTITY_BADGES.length];
+                      return (
+                        <div key={idx} className={`flex-1 min-w-[160px] ${badge.text} flex items-center gap-1.5 whitespace-normal break-words`}>
+                          <span className={`w-2 h-2 rounded-full ${badge.dot} shrink-0`} />
+                          <span>{ent.name}</span>
+                        </div>
+                      );
+                    })}
                   </div>
 
                   {/* Dynamic Categories Loop */}
@@ -1788,25 +2239,14 @@ export default function ComparisonApp() {
                             {isOpen && (
                               <div className="divide-y divide-slate-800/60 bg-slate-900/60">
                                 {metrics.map((m, idx) => {
-                                  const valA = parseNumericValue(m.entity_a);
-                                  const valB = parseNumericValue(m.entity_b);
-                                  const hasNumeric = valA !== null && valB !== null && (valA > 0 || valB > 0);
-
-                                  let pctA = 50;
-                                  let pctB = 50;
-                                  if (hasNumeric && valA !== null && valB !== null) {
-                                    const sum = valA + valB;
-                                    pctA = sum > 0 ? Math.round((valA / sum) * 100) : 50;
-                                    pctB = 100 - pctA;
-                                  }
-
-                                  const isDifferent = m.entity_a.trim().toLowerCase() !== m.entity_b.trim().toLowerCase();
                                   const isNewlyAdded = recentlyAddedMetric === m.metric;
+                                  const rawVals = m.values || [m.entity_a, m.entity_b];
+                                  const isDifferent = rawVals.length > 1 && new Set(rawVals.map((v) => String(v).trim().toLowerCase())).size > 1;
 
                                   return (
                                     <div
                                       key={idx}
-                                      className={`grid grid-cols-12 gap-4 px-4 sm:px-6 py-3.5 sm:py-4 items-start text-xs sm:text-sm transition-all duration-500 ${
+                                      className={`flex items-start gap-4 px-4 sm:px-6 py-3.5 sm:py-4 text-xs sm:text-sm transition-all duration-500 ${
                                         isNewlyAdded
                                           ? 'bg-emerald-950/40 border-l-4 border-emerald-400'
                                           : highlightDiff && isDifferent
@@ -1814,7 +2254,7 @@ export default function ComparisonApp() {
                                           : 'hover:bg-slate-800/40'
                                       }`}
                                     >
-                                      <div className="col-span-4 min-w-[150px] pr-2 align-top whitespace-normal break-words">
+                                      <div className="w-1/3 min-w-[180px] shrink-0 pr-2 align-top whitespace-normal break-words">
                                         <div className="font-semibold text-slate-200 leading-relaxed whitespace-normal break-words">
                                           {m.metric}
                                         </div>
@@ -1830,33 +2270,14 @@ export default function ComparisonApp() {
                                         </div>
                                       </div>
 
-                                      <div className="col-span-4 min-w-[150px] text-slate-300 leading-relaxed pr-2 space-y-1.5 align-top whitespace-normal break-words">
-                                        <div className="whitespace-normal break-words">{renderValueWithFallback(m.entity_a)}</div>
-                                        {hasNumeric && (
-                                          <div className="pt-1">
-                                            <div className="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
-                                              <div
-                                                style={{ width: `${pctA}%` }}
-                                                className="h-full bg-sky-500 rounded-full transition-all duration-500"
-                                              />
-                                            </div>
+                                      {displayEntities.map((_, entIdx) => {
+                                        const val = m.values?.[entIdx] !== undefined ? m.values[entIdx] : (entIdx === 0 ? m.entity_a : m.entity_b);
+                                        return (
+                                          <div key={entIdx} className="flex-1 min-w-[160px] text-slate-300 leading-relaxed space-y-1.5 align-top whitespace-normal break-words">
+                                            <div className="whitespace-normal break-words">{renderValueWithFallback(val)}</div>
                                           </div>
-                                        )}
-                                      </div>
-
-                                      <div className="col-span-4 min-w-[150px] text-slate-300 leading-relaxed space-y-1.5 align-top whitespace-normal break-words">
-                                        <div className="whitespace-normal break-words">{renderValueWithFallback(m.entity_b)}</div>
-                                        {hasNumeric && (
-                                          <div className="pt-1">
-                                            <div className="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
-                                              <div
-                                                style={{ width: `${pctB}%` }}
-                                                className="h-full bg-indigo-500 rounded-full transition-all duration-500"
-                                              />
-                                            </div>
-                                          </div>
-                                        )}
-                                      </div>
+                                        );
+                                      })}
                                     </div>
                                   );
                                 })}
@@ -1872,7 +2293,7 @@ export default function ComparisonApp() {
             </section>
           )}
 
-          {/* TAB 2: Community & Reddit Sentiment Table (Responsive Wrapper: w-full overflow-x-auto whitespace-nowrap md:whitespace-normal & min-w-[150px]) */}
+          {/* TAB 2: Community & Reddit Sentiment Table (Dynamic N-Way Columns) */}
           {activeTab === 'community' && (
             <section className="w-full bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden print-clean">
               <div className="p-3 sm:p-4 bg-slate-950/80 border-b border-slate-800 flex items-center justify-between text-xs text-slate-400">
@@ -1887,19 +2308,20 @@ export default function ComparisonApp() {
               <div className="w-full overflow-x-auto whitespace-nowrap md:whitespace-normal">
                 <div className="min-w-[650px] md:min-w-full">
                   {/* Sentiment Header */}
-                  <div className="bg-slate-900 border-b border-slate-800 px-4 sm:px-6 py-3.5 grid grid-cols-12 gap-4 items-center text-xs font-bold uppercase tracking-wider text-slate-400 shadow-sm">
-                    <div className="col-span-4 min-w-[150px] flex items-center gap-1.5">
+                  <div className="bg-slate-900 border-b border-slate-800 px-4 sm:px-6 py-3.5 flex items-center text-xs font-bold uppercase tracking-wider text-slate-400 shadow-sm gap-4">
+                    <div className="w-1/3 min-w-[180px] shrink-0 flex items-center gap-1.5">
                       <MessageSquare className="w-4 h-4 text-slate-500 shrink-0" />
                       <span className="truncate">Theme / Topic</span>
                     </div>
-                    <div className="col-span-4 min-w-[150px] text-sky-400 flex items-center gap-1.5 whitespace-normal break-words">
-                      <span className="w-2 h-2 rounded-full bg-sky-400 shrink-0" />
-                      <span>{displayEntityA} Consensus</span>
-                    </div>
-                    <div className="col-span-4 min-w-[150px] text-indigo-400 flex items-center gap-1.5 whitespace-normal break-words">
-                      <span className="w-2 h-2 rounded-full bg-indigo-400 shrink-0" />
-                      <span>{displayEntityB} Consensus</span>
-                    </div>
+                    {displayEntities.map((ent, idx) => {
+                      const badge = ENTITY_BADGES[idx % ENTITY_BADGES.length];
+                      return (
+                        <div key={idx} className={`flex-1 min-w-[160px] ${badge.text} flex items-center gap-1.5 whitespace-normal break-words`}>
+                          <span className={`w-2 h-2 rounded-full ${badge.dot} shrink-0`} />
+                          <span>{ent.name} Consensus</span>
+                        </div>
+                      );
+                    })}
                   </div>
 
                   {/* Sentiment Rows */}
@@ -1912,9 +2334,9 @@ export default function ComparisonApp() {
                       filteredCommunitySentiment.map((s, idx) => (
                         <div
                           key={idx}
-                          className="grid grid-cols-12 gap-4 px-4 sm:px-6 py-3.5 sm:py-4 items-start text-xs sm:text-sm hover:bg-slate-800/40 transition-colors"
+                          className="flex items-start gap-4 px-4 sm:px-6 py-3.5 sm:py-4 text-xs sm:text-sm hover:bg-slate-800/40 transition-colors"
                         >
-                          <div className="col-span-4 min-w-[150px] pr-2 space-y-1.5 align-top whitespace-normal break-words">
+                          <div className="w-1/3 min-w-[180px] shrink-0 pr-2 space-y-1.5 align-top whitespace-normal break-words">
                             <div className="font-semibold text-slate-200 leading-snug whitespace-normal break-words">{s.topic}</div>
                             <div>
                               <span
@@ -1932,13 +2354,14 @@ export default function ComparisonApp() {
                             </div>
                           </div>
 
-                          <div className="col-span-4 min-w-[150px] text-slate-300 leading-relaxed pr-2 bg-slate-950/50 p-2.5 sm:p-3 rounded-xl border border-slate-800/60 align-top whitespace-normal break-words">
-                            {renderValueWithFallback(s.entity_a_consensus)}
-                          </div>
-
-                          <div className="col-span-4 min-w-[150px] text-slate-300 leading-relaxed bg-slate-950/50 p-2.5 sm:p-3 rounded-xl border border-slate-800/60 align-top whitespace-normal break-words">
-                            {renderValueWithFallback(s.entity_b_consensus)}
-                          </div>
+                          {displayEntities.map((_, entIdx) => {
+                            const con = s.consensuses?.[entIdx] !== undefined ? s.consensuses[entIdx] : (entIdx === 0 ? s.entity_a_consensus : s.entity_b_consensus);
+                            return (
+                              <div key={entIdx} className="flex-1 min-w-[160px] text-slate-300 leading-relaxed bg-slate-950/50 p-2.5 sm:p-3 rounded-xl border border-slate-800/60 align-top whitespace-normal break-words">
+                                {renderValueWithFallback(con)}
+                              </div>
+                            );
+                          })}
                         </div>
                       ))
                     )}

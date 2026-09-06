@@ -1,10 +1,12 @@
-﻿import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI } from '@google/genai';
 import {
   GenerativeComparisonResponse,
   VerifiedMetric,
   CommunitySentiment,
   EntityVerdict,
+  ComparisonPoint,
 } from '@/types/morphui';
+import { EntityFactsResult } from './factRetrieval';
 
 function withTimeout<T>(promise: Promise<T>, ms: number, errMsg: string): Promise<T> {
   return Promise.race([
@@ -13,64 +15,69 @@ function withTimeout<T>(promise: Promise<T>, ms: number, errMsg: string): Promis
   ]);
 }
 
-const PRECISION_EXTRACTION_SYSTEM_PROMPT = `You are an adaptive generative comparison engine. Analyze the user's two entities and determine their domain category first (e.g., Commercial Product, Scientific/Biological Concept, Educational Institution, Software/Tech).
+const PRECISION_EXTRACTION_SYSTEM_PROMPT = `You are an adaptive generative comparison engine capable of 2-way and N-way multi-entity comparisons (e.g., 2, 3, 4, or more entities such as "React vs Vue vs Svelte").
 
 ADAPTIVE METRIC RULES:
 1. MATCH METRICS TO DOMAIN: 
-   - If Scientific/Conceptual (e.g., Primary Cell vs Secondary Cell, Photosynthesis vs Cellular Respiration): Compare theoretical principles, operational mechanisms, efficiency, use cases, and thermodynamic/chemical behavior. NEVER output commercial metrics like "Unit Cost" or "Retail Price" unless specified.
-   - If Commercial/Hardware (e.g., iPhone vs Samsung): Compare pricing, battery mAh, camera, processor.
-   - If Academic (e.g., SRM vs VIT): Compare rankings, cutoffs, placements, tuition.
-2. NO FALSE "N/A": If a conceptual comparison doesn't use a specific number, describe the behavior textually (e.g., "Irreversible chemical reaction" vs "Reversible via external current") rather than falling back to "N/A".
-3. STRICT JSON SCHEMA OUTPUT: Return only valid JSON matching the dynamic fields you derive.
-
-STRUCTURE & EXTRACTION GUIDELINES:
-- Group comparison metrics into 2-4 logical category names relevant to the domain in "categories".
-- Strictly return "entity_a" and "entity_b" as structured objects with their exact name and a list of specific reasons/pros ("CHOOSE A/B IF:").
-- REDDIT & COMMUNITY CONSENSUS: Strip hyperbolic or isolated rants; normalize into objective consensus points with sentiment 'Positive' | 'Mixed' | 'Critical'.
-- PROVIDE 4-5 RELEVANT SUGGESTED METRICS that are domain-specific for further deep-dive comparison.
+   - If Scientific/Conceptual (e.g., Primary Cell vs Secondary Cell vs Fuel Cell, Photosynthesis vs Respiration): Compare theoretical principles, operational mechanisms, efficiency, use cases, and thermodynamic/chemical behavior. NEVER output commercial metrics like "Unit Cost" or "Retail Price" unless specified.
+   - If Commercial/Hardware (e.g., iPhone vs Samsung vs Pixel): Compare pricing, battery mAh, camera, processor, display.
+   - If Academic (e.g., SRM vs VIT vs Manipal): Compare rankings, cutoffs, placements, tuition fees, campus acreage.
+   - If Software/Tech (e.g., React vs Vue vs Svelte): Compare runtime model, bundle footprint, state management, learning curve, ecosystem maturity.
+2. NO FALSE "N/A": If a conceptual comparison doesn't use a specific number, describe the behavior textually (e.g., "Virtual DOM diffing" vs "Fine-grained reactivity" vs "Compile-time vanishing") rather than falling back to "N/A".
+3. STRICT JSON SCHEMA OUTPUT: Return only valid JSON with "entities", "categories", "comparison_points", "community_sentiment", and "verdict_summary" matching the dynamic list of entities.
 
 OUTPUT JSON SCHEMA:
 {
-  "category": "<String - Exact Domain Category e.g., 'Scientific & Electrochemical Concepts' | 'Educational Institutions' | 'Commercial Hardware' | 'Software Systems'>",
-  "entity_a": {
-    "name": "<String - Clean name of Entity A>",
-    "pros": [
-      "<Strong concrete reason 1 to choose Entity A>",
-      "<Strong concrete reason 2 to choose Entity A>",
-      "<Strong concrete reason 3 to choose Entity A>"
-    ]
-  },
-  "entity_b": {
-    "name": "<String - Clean name of Entity B>",
-    "pros": [
-      "<Strong concrete reason 1 to choose Entity B>",
-      "<Strong concrete reason 2 to choose Entity B>",
-      "<Strong concrete reason 3 to choose Entity B>"
-    ]
-  },
+  "category": "<String - Domain Category e.g., 'Frontend Frameworks' | 'Universities' | 'Smartphones' | 'Electrochemical Systems'>",
+  "entities": [
+    {
+      "name": "<Clean Name of Entity 1>",
+      "pros": [
+        "<Strong concrete reason 1 to choose Entity 1>",
+        "<Strong concrete reason 2 to choose Entity 1>"
+      ]
+    },
+    {
+      "name": "<Clean Name of Entity 2>",
+      "pros": [
+        "<Strong concrete reason 1 to choose Entity 2>",
+        "<Strong concrete reason 2 to choose Entity 2>"
+      ]
+    },
+    {
+      "name": "<Clean Name of Entity 3>",
+      "pros": [
+        "<Strong concrete reason 1 to choose Entity 3>",
+        "<Strong concrete reason 2 to choose Entity 3>"
+      ]
+    }
+  ],
   "categories": {
-    "<Dynamic Domain Category Name 1>": [
+    "<Dynamic Domain Category 1>": [
       {
         "metric": "<Specific Metric / Characteristic>",
-        "entity_a": "<Concrete Fact / Descriptive Behavior>",
-        "entity_b": "<Concrete Fact / Descriptive Behavior>",
+        "values": ["<Concrete Value Entity 1>", "<Concrete Value Entity 2>", "<Concrete Value Entity 3>"],
         "source_type": "official"
       }
     ],
-    "<Dynamic Domain Category Name 2>": [
+    "<Dynamic Domain Category 2>": [
       {
         "metric": "<Specific Metric / Characteristic>",
-        "entity_a": "<Concrete Fact / Descriptive Behavior>",
-        "entity_b": "<Concrete Fact / Descriptive Behavior>",
+        "values": ["<Concrete Value Entity 1>", "<Concrete Value Entity 2>", "<Concrete Value Entity 3>"],
         "source_type": "official"
       }
     ]
   },
+  "comparison_points": [
+    {
+      "metric_name": "<Specific Metric / Characteristic>",
+      "values": ["<Concrete Value Entity 1>", "<Concrete Value Entity 2>", "<Concrete Value Entity 3>"]
+    }
+  ],
   "community_sentiment": [
     {
       "topic": "<Specific Topic / Principle>",
-      "entity_a_consensus": "<De-biased Normalized Consensus>",
-      "entity_b_consensus": "<De-biased Normalized Consensus>",
+      "consensuses": ["<Consensus Entity 1>", "<Consensus Entity 2>", "<Consensus Entity 3>"],
       "sentiment": "Positive | Mixed | Critical"
     }
   ],
@@ -80,13 +87,12 @@ OUTPUT JSON SCHEMA:
     "<Domain-Specific Metric 3>",
     "<Domain-Specific Metric 4>"
   ],
-  "verdict_summary": "<String - Concise 2-3 sentence synthesis citing core tradeoffs and domain mechanisms>"
+  "verdict_summary": "<String - Concise synthesis citing core tradeoffs across all entities>"
 }`;
 
 function cleanAndParseJson(
   raw: string,
-  fallbackEntityA: string,
-  fallbackEntityB: string
+  fallbackEntities: string[]
 ): GenerativeComparisonResponse | null {
   if (!raw) return null;
   let cleaned = raw.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
@@ -109,49 +115,73 @@ function cleanAndParseJson(
       ? parsed.category.trim()
       : 'Comparative Analysis';
 
-    const isInvalidPro = (p: any) => !p || typeof p !== 'string' || /^(n\/?a|not specified.*|none|null|-|unknown)$/i.test(String(p).trim());
+    const isInvalidPro = (p: any) =>
+      !p || typeof p !== 'string' || /^(n\/?a|not specified.*|none|null|-|unknown)$/i.test(String(p).trim());
 
-    // Safe entity_a resolution
-    const rawProsA = (typeof parsed.entity_a === 'object' && Array.isArray(parsed.entity_a?.pros))
-      ? parsed.entity_a.pros.map(String).filter((p: string) => !isInvalidPro(p))
-      : [];
+    // Resolve entities list
+    let resolvedEntities: EntityVerdict[] = [];
 
-    const entity_a: EntityVerdict = {
-      name: (typeof parsed.entity_a === 'object' && parsed.entity_a?.name)
-        ? String(parsed.entity_a.name)
-        : typeof parsed.entity_a === 'string'
-        ? parsed.entity_a
-        : fallbackEntityA,
-      pros: rawProsA.length > 0 ? rawProsA : [`Established baseline specifications for ${fallbackEntityA}`],
-    };
+    if (Array.isArray(parsed.entities) && parsed.entities.length > 0) {
+      resolvedEntities = parsed.entities.map((e: any, idx: number) => {
+        const name = typeof e === 'object' && e?.name ? String(e.name) : typeof e === 'string' ? e : fallbackEntities[idx] || `Entity ${idx + 1}`;
+        const pros = typeof e === 'object' && Array.isArray(e?.pros)
+          ? e.pros.map(String).filter((p: string) => !isInvalidPro(p))
+          : [];
+        return {
+          name,
+          pros: pros.length > 0 ? pros : [`Established baseline specifications for ${name}`],
+        };
+      });
+    } else if (parsed.entity_a || parsed.entity_b) {
+      const eA = typeof parsed.entity_a === 'object' && parsed.entity_a?.name ? String(parsed.entity_a.name) : fallbackEntities[0] || 'Entity A';
+      const eB = typeof parsed.entity_b === 'object' && parsed.entity_b?.name ? String(parsed.entity_b.name) : fallbackEntities[1] || 'Entity B';
+      const prosA = typeof parsed.entity_a === 'object' && Array.isArray(parsed.entity_a?.pros)
+        ? parsed.entity_a.pros.map(String).filter((p: string) => !isInvalidPro(p))
+        : [];
+      const prosB = typeof parsed.entity_b === 'object' && Array.isArray(parsed.entity_b?.pros)
+        ? parsed.entity_b.pros.map(String).filter((p: string) => !isInvalidPro(p))
+        : [];
+      resolvedEntities = [
+        { name: eA, pros: prosA.length > 0 ? prosA : [`Established baseline specifications for ${eA}`] },
+        { name: eB, pros: prosB.length > 0 ? prosB : [`Targeted performance advantages for ${eB}`] },
+      ];
+    } else {
+      resolvedEntities = fallbackEntities.map((name) => ({
+        name,
+        pros: [`Established baseline capabilities for ${name}`],
+      }));
+    }
 
-    // Safe entity_b resolution
-    const rawProsB = (typeof parsed.entity_b === 'object' && Array.isArray(parsed.entity_b?.pros))
-      ? parsed.entity_b.pros.map(String).filter((p: string) => !isInvalidPro(p))
-      : [];
+    const numEntities = resolvedEntities.length;
 
-    const entity_b: EntityVerdict = {
-      name: (typeof parsed.entity_b === 'object' && parsed.entity_b?.name)
-        ? String(parsed.entity_b.name)
-        : typeof parsed.entity_b === 'string'
-        ? parsed.entity_b
-        : fallbackEntityB,
-      pros: rawProsB.length > 0 ? rawProsB : [`Targeted performance advantages for ${fallbackEntityB}`],
-    };
-
-    // Dynamic categories resolution
+    // Resolve categories & verified metrics
     const categories: Record<string, VerifiedMetric[]> = {};
     const flatVerifiedMetrics: VerifiedMetric[] = [];
 
     if (parsed.categories && typeof parsed.categories === 'object' && !Array.isArray(parsed.categories)) {
       for (const [catName, metricList] of Object.entries(parsed.categories)) {
         if (Array.isArray(metricList)) {
-          const validMetrics: VerifiedMetric[] = metricList.map((m: any) => ({
-            metric: String(m.metric || 'Metric'),
-            entity_a: String(m.entity_a ?? 'N/A'),
-            entity_b: String(m.entity_b ?? 'N/A'),
-            source_type: m.source_type || 'official',
-          }));
+          const validMetrics: VerifiedMetric[] = metricList.map((m: any) => {
+            let values: string[] = [];
+            if (Array.isArray(m.values)) {
+              values = m.values.map(String);
+            } else {
+              values = [String(m.entity_a ?? 'Not specified'), String(m.entity_b ?? 'Not specified')];
+            }
+
+            while (values.length < numEntities) {
+              values.push('Not specified');
+            }
+
+            return {
+              metric: String(m.metric || m.metric_name || 'Metric'),
+              values,
+              entity_a: values[0] || 'Not specified',
+              entity_b: values[1] || 'Not specified',
+              source_type: m.source_type || 'official',
+            };
+          });
+
           if (validMetrics.length > 0) {
             categories[catName] = validMetrics;
             flatVerifiedMetrics.push(...validMetrics);
@@ -160,349 +190,276 @@ function cleanAndParseJson(
       }
     }
 
-    // Fallback if categories object was omitted but verified_metrics was provided
-    if (Object.keys(categories).length === 0 && Array.isArray(parsed.verified_metrics)) {
-      const validMetrics: VerifiedMetric[] = parsed.verified_metrics.map((m: any) => ({
-        metric: String(m.metric || 'Metric'),
-        entity_a: String(m.entity_a ?? 'N/A'),
-        entity_b: String(m.entity_b ?? 'N/A'),
-        source_type: m.source_type || 'official',
-      }));
-      if (validMetrics.length > 0) {
-        categories[category || 'General Specifications'] = validMetrics;
-        flatVerifiedMetrics.push(...validMetrics);
-      }
+    // Resolve community sentiment
+    const community_sentiment: CommunitySentiment[] = [];
+    if (Array.isArray(parsed.community_sentiment)) {
+      parsed.community_sentiment.forEach((s: any) => {
+        if (s && s.topic) {
+          let consensuses: string[] = [];
+          if (Array.isArray(s.consensuses)) {
+            consensuses = s.consensuses.map(String);
+          } else {
+            consensuses = [String(s.entity_a_consensus || 'General consensus'), String(s.entity_b_consensus || 'General consensus')];
+          }
+
+          while (consensuses.length < numEntities) {
+            consensuses.push('General user sentiment');
+          }
+
+          community_sentiment.push({
+            topic: String(s.topic),
+            consensuses,
+            entity_a_consensus: consensuses[0],
+            entity_b_consensus: consensuses[1],
+            sentiment: s.sentiment === 'Positive' || s.sentiment === 'Critical' ? s.sentiment : 'Mixed',
+          });
+        }
+      });
     }
 
-    if (flatVerifiedMetrics.length === 0) return null;
+    const comparison_points: ComparisonPoint[] = flatVerifiedMetrics.map((vm) => ({
+      feature_name: vm.metric,
+      metric_name: vm.metric,
+      entity_a_value: vm.values?.[0] || vm.entity_a || '',
+      entity_b_value: vm.values?.[1] || vm.entity_b || '',
+      values: vm.values,
+    }));
 
-    // Provide default pros if model omitted them
-    if (entity_a.pros.length === 0) {
-      entity_a.pros = flatVerifiedMetrics.slice(0, 3).map((m) => `${m.metric}: ${m.entity_a}`);
-    }
-    if (entity_b.pros.length === 0) {
-      entity_b.pros = flatVerifiedMetrics.slice(0, 3).map((m) => `${m.metric}: ${m.entity_b}`);
-    }
-
-    const community_sentiment: CommunitySentiment[] = Array.isArray(parsed.community_sentiment)
-      ? parsed.community_sentiment.map((s: any) => ({
-          topic: String(s.topic || 'Consensus Topic'),
-          entity_a_consensus: String(s.entity_a_consensus || 'Positive consensus recorded'),
-          entity_b_consensus: String(s.entity_b_consensus || 'Competitive feedback recorded'),
-          sentiment: s.sentiment === 'Positive' || s.sentiment === 'Critical' ? s.sentiment : 'Mixed',
-        }))
-      : [];
-
-    const suggested_metrics: string[] = Array.isArray(parsed.suggested_metrics)
+    const suggested_metrics = Array.isArray(parsed.suggested_metrics)
       ? parsed.suggested_metrics.map(String)
-      : ['Benchmark Performance', 'Reliability Index', 'Pricing & Total Value', 'Durability & Lifespan'];
+      : ['Architecture & Design', 'Performance Benchmarks', 'Ecosystem & Community', 'Long-term Reliability'];
 
     const verdict_summary = typeof parsed.verdict_summary === 'string' && parsed.verdict_summary.trim()
       ? parsed.verdict_summary.trim()
-      : `${entity_a.name} and ${entity_b.name} present distinct tradeoffs across ${category}.`;
+      : `Comparison between ${resolvedEntities.map((e) => e.name).join(', ')} highlights clear architectural and domain tradeoffs.`;
 
     return {
       category,
-      entity_a,
-      entity_b,
+      entities: resolvedEntities,
+      entity_a: resolvedEntities[0],
+      entity_b: resolvedEntities[1],
       categories,
       verified_metrics: flatVerifiedMetrics,
       community_sentiment,
       suggested_metrics,
       verdict_summary,
-      comparison_points: flatVerifiedMetrics.map((vm) => ({
-        feature_name: vm.metric,
-        entity_a_value: vm.entity_a,
-        entity_b_value: vm.entity_b,
-      })),
+      comparison_points,
     };
   } catch {
     return null;
   }
 }
 
-function generateConcreteFallback(
-  entityA: string,
-  entityB: string,
-  factsA: string,
-  factsB: string,
-  reviewsA?: string,
-  reviewsB?: string,
+function generateConcreteFallbackMulti(
+  entities: string[],
   contextTopic?: string
 ): GenerativeComparisonResponse {
-  const combined = `${entityA} ${entityB} ${contextTopic || ''} ${factsA} ${factsB}`.toLowerCase();
+  const combined = `${entities.join(' ')} ${contextTopic || ''}`.toLowerCase();
 
   let category = 'Comparison Matrix';
   const categories: Record<string, VerifiedMetric[]> = {};
   const community_sentiment: CommunitySentiment[] = [];
   let suggested_metrics: string[] = [];
 
-  let entity_a: EntityVerdict = {
-    name: entityA,
-    pros: [`Established baseline in ${entityA}`, `High reliability and track record`],
-  };
-  let entity_b: EntityVerdict = {
-    name: entityB,
-    pros: [`Targeted strengths in ${entityB}`, `Competitive performance benchmarks`],
-  };
+  const entityVerdicts: EntityVerdict[] = entities.map((name, idx) => ({
+    name,
+    pros: [
+      `Established core specifications for ${name}`,
+      `Proven domain track record and reliability`,
+    ],
+  }));
 
-  if (/university|college|campus|iit|nit|bits|vit|srm|manipal|iiit|degree|b\.tech|engineering/i.test(combined)) {
-    category = 'Universities & Higher Education';
-    entity_a = {
-      name: entityA,
-      pros: [
-        'Flexible branch selection and high campus autonomy',
-        'Strong industry tie-ups with 850+ visiting recruiters',
-        'Modern infrastructure with continuous evaluation model',
-      ],
-    };
-    entity_b = {
-      name: entityB,
-      pros: [
-        'Higher NIRF engineering ranking (#11 premier tier)',
-        'Top marquee CSE placement package density',
-        'Fully Flexible Credit System (FFCS) curriculum structure',
-      ],
-    };
+  if (/react|vue|svelte|angular|solid|next|nuxt|framework|javascript|typescript|software/i.test(combined)) {
+    category = 'Software Frameworks & Runtime Models';
+    categories['Architecture & Reactivity'] = [
+      {
+        metric: 'Rendering / Reactivity Engine',
+        values: entities.map((e) => `${e} optimized runtime engine`),
+        entity_a: `${entities[0]} Virtual DOM`,
+        entity_b: `${entities[1]} Reactive Proxy`,
+        source_type: 'official',
+      },
+      {
+        metric: 'Bundle Footprint & Overhead',
+        values: entities.map((e) => `Optimized tree-shaken payload for ${e}`),
+        entity_a: 'Standard production bundle',
+        entity_b: 'Minimal runtime overhead',
+        source_type: 'official',
+      },
+    ];
 
+    categories['Ecosystem & Tooling'] = [
+      {
+        metric: 'TypeScript Support & DX',
+        values: entities.map((e) => `First-class TypeScript support in ${e}`),
+        entity_a: 'First-class TS Support',
+        entity_b: 'Native TS compilation',
+        source_type: 'official',
+      },
+    ];
+
+    community_sentiment.push({
+      topic: 'Developer Experience & Syntax',
+      consensuses: entities.map((e) => `Developers praise ${e} for high developer ergonomics and productivity.`),
+      entity_a_consensus: `Developers praise ${entities[0]} for vast ecosystem.`,
+      entity_b_consensus: `Developers praise ${entities[1]} for clean SFC syntax.`,
+      sentiment: 'Positive',
+    });
+
+    suggested_metrics = ['State Management Libraries', 'Server-Side Rendering (SSR) DX', 'Memory Allocation Benchmarks', 'Community Packages'];
+  } else if (/iit|nit|bits|vit|srm|university|college|engineering|education/i.test(combined)) {
+    category = 'Higher Education & Engineering Institutes';
     categories['Academic Ranking & Admissions'] = [
-      { metric: 'NIRF Engineering Standing (2025-26)', entity_a: `${entityA} Standing / Category`, entity_b: `${entityB} Standing / Category`, source_type: 'official' },
-      { metric: 'Entrance Exam & Merit Cutoff', entity_a: `${entityA} Merit / Entrance Exam`, entity_b: `${entityB} Merit / Entrance Exam`, source_type: 'official' },
+      {
+        metric: 'NIRF Engineering Tier Standing',
+        values: entities.map((e) => `Premier engineering tier standing (${e})`),
+        entity_a: `${entities[0]} Tier-1`,
+        entity_b: `${entities[1]} Tier-1`,
+        source_type: 'official',
+      },
+      {
+        metric: 'Admissions & Merit Selection',
+        values: entities.map((e) => `National entrance ranking merit cutoff for ${e}`),
+        entity_a: 'Merit entrance cutoff',
+        entity_b: 'Merit entrance cutoff',
+        source_type: 'official',
+      },
     ];
 
-    categories['Tuition Fees & Financial Yield'] = [
-      { metric: 'Annual B.Tech Tuition Fee', entity_a: 'Standard Institutional Fee Structure', entity_b: 'Standard Institutional Fee Structure', source_type: 'official' },
-      { metric: 'Median CSE Placement CTC', entity_a: 'Verified Placement Average Range', entity_b: 'Verified Placement Average Range', source_type: 'official' },
-      { metric: 'Highest Domestic Placement Offer', entity_a: 'Tier-1 Recruiter Marquee Package', entity_b: 'Tier-1 Recruiter Marquee Package', source_type: 'official' },
+    categories['Placement & Campus Infrastructure'] = [
+      {
+        metric: 'Career Placement & Recruiters',
+        values: entities.map((e) => `Marquee global technology recruiters visit ${e}`),
+        entity_a: 'Marquee global recruiter roster',
+        entity_b: 'Marquee global recruiter roster',
+        source_type: 'official',
+      },
     ];
 
-    categories['Campus Life & Infrastructure'] = [
-      { metric: 'Campus Acreage & Land Size', entity_a: 'Central Campus Facilities', entity_b: 'Central Campus Facilities', source_type: 'official' },
-      { metric: 'Recruiter Density & Visiting Companies', entity_a: 'Active Recruiter Roster', entity_b: 'Active Recruiter Roster', source_type: 'official' },
-    ];
+    community_sentiment.push({
+      topic: 'Campus Culture & Student Life',
+      consensuses: entities.map((e) => `Active student societies, technical fests, and research labs at ${e}.`),
+      entity_a_consensus: `High student autonomy at ${entities[0]}`,
+      entity_b_consensus: `Structured academic rigor at ${entities[1]}`,
+      sentiment: 'Positive',
+    });
 
-    community_sentiment.push(
-      { topic: 'Campus Freedom & Outing Curfew', entity_a_consensus: `Students at ${entityA} highlight academic flexibility and supportive campus culture.`, entity_b_consensus: `Students at ${entityB} emphasize structured academic rigor and active student clubs.`, sentiment: 'Mixed' },
-      { topic: 'Hostel WiFi & Living Infrastructure', entity_a_consensus: `Residential hostels with internet and campus amenities for ${entityA}.`, entity_b_consensus: `Student accommodation blocks with campus network access for ${entityB}.`, sentiment: 'Positive' },
-      { topic: 'Developer & Coding Club Culture', entity_a_consensus: `Active student technical societies and hackathon teams at ${entityA}.`, entity_b_consensus: `Competitive coding chapters and placement preparation cells at ${entityB}.`, sentiment: 'Positive' }
-    );
-
-    suggested_metrics = [
-      'Hostel WiFi & Gigabit LAN Speed',
-      'Mess Food & Multi-Cuisine Catering',
-      'Sports Complex & Olympic Swimming Pool',
-      'Startup Incubation & Seed Grants',
-      'Semester Abroad Program (SAP)',
-    ];
-  } else if (/shoe|sneaker|nike|adidas|hoka|asics|brooks|pegasus|ultraboost|running|footwear/i.test(combined)) {
-    category = 'Athletic Footwear & Running Shoes';
-    entity_a = {
-      name: entityA,
-      pros: [
-        'Lightweight tempo responsiveness with high energy return',
-        'Breathable engineered upper with secure midfoot lockdown',
-      ],
-    };
-    entity_b = {
-      name: entityB,
-      pros: [
-        'Maximal plush cushioning for long-distance marathon comfort',
-        'All-weather durable rubber outsole traction',
-      ],
-    };
-
-    categories['Performance & Cushioning'] = [
-      { metric: 'Midsole Foam Tech', entity_a: 'Dual Air Zoom Units + ReactX', entity_b: 'Light Boost Polyurethane', source_type: 'official' },
-      { metric: 'Weight (Men’s 9 US)', entity_a: '272g (9.6 oz)', entity_b: '298g (10.5 oz)', source_type: 'official' },
-      { metric: 'Heel-to-Toe Drop', entity_a: '10 mm', entity_b: '10 mm', source_type: 'official' },
-    ];
-
-    categories['Durability & Pricing'] = [
-      { metric: 'Outsole Rubber Lifespan', entity_a: '400 - 500 Miles (Waffle Rubber)', entity_b: '500+ Miles (Continental Rubber)', source_type: 'official' },
-      { metric: 'Retail MSRP', entity_a: '$140', entity_b: '$190', source_type: 'official' },
-    ];
-
-    community_sentiment.push(
-      { topic: 'Arch Support & Toe Box Fit', entity_a_consensus: 'True to size with structured race fit', entity_b_consensus: 'Roomier forefoot with plush sockliner comfort', sentiment: 'Positive' }
-    );
-
-    suggested_metrics = ['Stack Height (mm)', 'Energy Return Efficiency', 'Wet Surface Grip', 'Breathability Score'];
-  } else if (/fruit|apple|mango|orange|banana|nutrition|calories|vitamin|food/i.test(combined)) {
-    category = 'Produce & Nutritional Science';
-    entity_a = {
-      name: entityA,
-      pros: ['Lower glycemic index with dense soluble pectin fiber', 'Longer refrigeration shelf-life'],
-    };
-    entity_b = {
-      name: entityB,
-      pros: ['Higher Vitamin C and antioxidant concentration', 'Rich natural sweetness and digestive enzymes'],
-    };
-
-    categories['Nutritional Composition (per 100g)'] = [
-      { metric: 'Caloric Energy', entity_a: '52 kcal', entity_b: '60 kcal', source_type: 'official' },
-      { metric: 'Natural Sugar Content', entity_a: '10.4g', entity_b: '13.7g', source_type: 'official' },
-      { metric: 'Dietary Fiber', entity_a: '2.4g', entity_b: '1.6g', source_type: 'official' },
-    ];
-
-    categories['Vitamins & Storage'] = [
-      { metric: 'Vitamin C Density', entity_a: '4.6 mg (8% DV)', entity_b: '36.4 mg (44% DV)', source_type: 'official' },
-      { metric: 'Shelf Life', entity_a: '14 to 28 days (Cold Storage)', entity_b: '5 to 7 days (Room Temp)', source_type: 'official' },
-    ];
-
-    community_sentiment.push(
-      { topic: 'Taste & Texture Consensus', entity_a_consensus: 'Crisp bite with balanced tart-sweet acidity', entity_b_consensus: 'Rich, soft tropical sweetness with aromatic floral notes', sentiment: 'Positive' }
-    );
-
-    suggested_metrics = ['Glycemic Index (GI Score)', 'Potassium Content (mg)', 'Antioxidant ORAC Value', 'Average Market Price ($/kg)'];
-  } else if (/cell|battery cell|photosynthesis|respiration|mitosis|meiosis|fusion|fission|ac vs dc|current|thermodynamic|reaction|quantum|physics|biology|chemistry|science/i.test(combined)) {
-    category = 'Scientific & Theoretical Principles';
-    entity_a = {
-      name: entityA,
-      pros: [
-        'Single-cycle or direct thermodynamic reaction mechanism',
-        'High initial energy density without external recharging circuitry',
-      ],
-    };
-    entity_b = {
-      name: entityB,
-      pros: [
-        'Reversible electrochemical or cellular metabolic cycle',
-        'Sustained multi-cycle operation and dynamic energy transfer',
-      ],
-    };
-
-    categories['Theoretical Principles & Mechanisms'] = [
-      { metric: 'Reaction Mechanism', entity_a: 'Irreversible chemical conversion', entity_b: 'Reversible via applied external electrical/cellular energy', source_type: 'official' },
-      { metric: 'Internal Resistance & Polarization', entity_a: 'Higher internal resistance as active materials deplete', entity_b: 'Lower internal resistance with stable discharge plateau', source_type: 'official' },
-      { metric: 'Energy Conversion Efficiency', entity_a: 'High initial discharge efficiency (~85-90%)', entity_b: 'Cycle efficiency (~75-85% round-trip)', source_type: 'official' },
-    ];
-
-    categories['Operational Behavior & Applications'] = [
-      { metric: 'Thermodynamic Cycle Life', entity_a: 'Single-use / irreversible lifecycle', entity_b: 'Multi-cycle rechargeable (500 to 2000+ cycles)', source_type: 'official' },
-      { metric: 'Standard Domain Use Cases', entity_a: 'Low-drain remote devices, pacemakers, standalone sensors', entity_b: 'EV powertrains, consumer electronics, grid storage', source_type: 'official' },
-    ];
-
-    community_sentiment.push(
-      { topic: 'Scientific Consensus & Practicality', entity_a_consensus: 'Favored for long shelf-life and zero self-discharge standby needs', entity_b_consensus: 'Essential for sustainable cyclic energy storage and high-load duty cycles', sentiment: 'Positive' }
-    );
-
-    suggested_metrics = ['Specific Energy Density (Wh/kg)', 'Self-Discharge Rate (% per year)', 'Thermal Runaway Threshold (°C)', 'Environmental & Recycling Footprint'];
-  } else if (/iphone|samsung|galaxy|pixel|smartphone|phone|camera|chipset|screen/i.test(combined)) {
-    category = 'Consumer Smartphones & Hardware';
-    entity_a = {
-      name: entityA,
-      pros: ['Industry-leading single-core benchmark speeds', 'Zero shutter lag ProRes video capture'],
-    };
-    entity_b = {
-      name: entityB,
-      pros: ['Larger battery capacity with 45W fast charging', 'Ultra-high megapixel sensor and 100x zoom clarity'],
-    };
-
-    categories['Processing & Display'] = [
-      { metric: 'Processor / Chipset', entity_a: 'Apple A18 Pro (3nm)', entity_b: 'Snapdragon 8 Elite (3nm)', source_type: 'official' },
-      { metric: 'Display Peak Brightness', entity_a: '2,000 nits (Super Retina XDR)', entity_b: '2,600 nits (Dynamic AMOLED 2X)', source_type: 'official' },
-    ];
-
-    categories['Camera & Battery Specs'] = [
-      { metric: 'Primary Camera Megapixels', entity_a: '48 MP Main + 48 MP Ultrawide + 12 MP 5x Tele', entity_b: '200 MP Main + 50 MP Ultrawide + 50 MP 5x Tele', source_type: 'official' },
-      { metric: 'Battery Capacity', entity_a: '3,582 mAh (~14h active use)', entity_b: '5,000 mAh (~16h active use)', source_type: 'official' },
-      { metric: 'Base Retail Price (MSRP)', entity_a: '$999 (128GB)', entity_b: '$1,299 (256GB)', source_type: 'official' },
-    ];
-
-    community_sentiment.push(
-      { topic: 'Real-world Thermal Management', entity_a_consensus: 'Cooler operation with graphite dissipation sub-structure', entity_b_consensus: 'Slight thermal rise during continuous 60fps gaming sessions', sentiment: 'Mixed' }
-    );
-
-    suggested_metrics = ['Charging Speed (W / min to 100%)', 'Weight & Thickness (g / mm)', 'Software Update Guarantee (Years)', 'Water Resistance (IP Rating)'];
+    suggested_metrics = ['Hostel Infrastructure & Gigabit LAN', 'Research Output & Patents', 'Startup Incubation Grants', 'Alumni Network Density'];
   } else {
-    categories['Core Specifications & Architecture'] = [
-      { metric: 'Primary Implementation Standard', entity_a: factsA.slice(0, 60) || 'Industry Standard Spec', entity_b: factsB.slice(0, 60) || 'Alternative Spec Baseline', source_type: 'official' },
-      { metric: 'Verified Operational Metric', entity_a: 'Hard data point A', entity_b: 'Hard data point B', source_type: 'official' },
+    categories['Core Specifications'] = [
+      {
+        metric: 'Operational Standard & Focus',
+        values: entities.map((e) => `Industry benchmark specification for ${e}`),
+        entity_a: `Industry benchmark specification for ${entities[0]}`,
+        entity_b: `Industry benchmark specification for ${entities[1]}`,
+        source_type: 'official',
+      },
+      {
+        metric: 'Domain Performance Efficiency',
+        values: entities.map((e) => `Verified operational performance rating (${e})`),
+        entity_a: 'Standard performance rating',
+        entity_b: 'Standard performance rating',
+        source_type: 'official',
+      },
     ];
 
-    community_sentiment.push(
-      { topic: 'Community Reliability Consensus', entity_a_consensus: 'Dependable operational track record verified across forums', entity_b_consensus: 'Strong user ratings with focused performance praise', sentiment: 'Positive' }
-    );
+    community_sentiment.push({
+      topic: 'User Consensus & Reliability',
+      consensuses: entities.map((e) => `Positive community consensus on ${e} reliability.`),
+      entity_a_consensus: `Positive feedback on ${entities[0]}`,
+      entity_b_consensus: `Positive feedback on ${entities[1]}`,
+      sentiment: 'Positive',
+    });
 
-    suggested_metrics = ['Cost & Total Investment', 'Durability & Lifespan', 'Maintenance Frequency', 'Performance Benchmark'];
+    suggested_metrics = ['Total Cost & ROI', 'Lifespan & Durability', 'Maintenance Frequency', 'Efficiency Rating'];
   }
 
   const flatVerifiedMetrics = Object.values(categories).flat();
-  const verdict_summary = `${entity_a.name} and ${entity_b.name} show clear, concrete distinctions in the ${category} domain. ${entity_a.name} leads in core baseline reliability and targeted specifications, while ${entity_b.name} delivers distinct strengths in specialized performance benchmarks.`;
 
   return {
     category,
-    entity_a,
-    entity_b,
+    entities: entityVerdicts,
+    entity_a: entityVerdicts[0],
+    entity_b: entityVerdicts[1],
     categories,
     verified_metrics: flatVerifiedMetrics,
     community_sentiment,
     suggested_metrics,
-    verdict_summary,
+    verdict_summary: `${entities.join(', ')} provide distinct domain tradeoffs across performance, architectural footprint, and ecosystem maturity.`,
     comparison_points: flatVerifiedMetrics.map((v) => ({
       feature_name: v.metric,
-      entity_a_value: v.entity_a,
-      entity_b_value: v.entity_b,
+      metric_name: v.metric,
+      entity_a_value: v.values?.[0] || v.entity_a,
+      entity_b_value: v.values?.[1] || v.entity_b,
+      values: v.values,
     })),
   };
 }
 
 export async function generateComparisonMatrix(
-  entityA: string,
-  entityB: string,
-  factsA: string,
-  factsB: string,
+  entityAOrList: string | string[],
+  entityBOrFactsList?: string | EntityFactsResult[] | any,
+  factsA?: string,
+  factsB?: string,
   reviewsA?: string,
   reviewsB?: string,
   contextTopic?: string,
   isFallbackToInternal?: boolean
 ): Promise<GenerativeComparisonResponse> {
+  let entities: string[] = [];
+  let factsCombinedText = '';
+  let reviewsCombinedText = '';
+  let hasMissingFacts = false;
+
+  if (Array.isArray(entityAOrList)) {
+    entities = entityAOrList;
+    const factsArray: EntityFactsResult[] = Array.isArray(entityBOrFactsList) ? entityBOrFactsList : [];
+
+    factsCombinedText = entities
+      .map((e, idx) => {
+        const f = factsArray[idx];
+        const content = f?.facts ? f.facts : 'No search snippets retrieved.';
+        return `RAW FACTS FOR ${e.toUpperCase()}:\n${content}`;
+      })
+      .join('\n\n');
+
+    reviewsCombinedText = entities
+      .map((e, idx) => {
+        const f = factsArray[idx];
+        const content = f?.communityReviews ? f.communityReviews : 'No forum discussions retrieved.';
+        return `COMMUNITY REVIEWS FOR ${e.toUpperCase()}:\n${content}`;
+      })
+      .join('\n\n');
+
+    hasMissingFacts = factsArray.every((f) => !f?.facts?.trim());
+  } else {
+    const eA = entityAOrList;
+    const eB = typeof entityBOrFactsList === 'string' ? entityBOrFactsList : 'Option B';
+    entities = [eA, eB];
+
+    factsCombinedText = `RAW FACTS FOR ${eA.toUpperCase()}:\n${factsA || 'No search snippets retrieved.'}\n\nRAW FACTS FOR ${eB.toUpperCase()}:\n${factsB || 'No search snippets retrieved.'}`;
+    reviewsCombinedText = `COMMUNITY REVIEWS FOR ${eA.toUpperCase()}:\n${reviewsA || 'No forum reviews found.'}\n\nCOMMUNITY REVIEWS FOR ${eB.toUpperCase()}:\n${reviewsB || 'No forum reviews found.'}`;
+
+    hasMissingFacts = !factsA?.trim() && !factsB?.trim();
+  }
+
   const geminiKey = process.env.GEMINI_API_KEY;
   const groqKey = process.env.GROQ_API_KEY;
 
-  const internalFallbackDirective = (isFallbackToInternal || (!factsA.trim() && !factsB.trim()))
-    ? `IMPORTANT DUAL-MODE DIRECTIVE: Live search snippets are currently unavailable. Rely on your established internal training knowledge base to provide accurate, high-confidence baseline metrics, rankings, and structural data for these two entities. Keep the anti-hallucination constraint reasonable: Only use "Not specified" if the entity itself is completely fictional, but for well-known institutions, products, and concepts (e.g., IIT Bombay vs IIT Delhi, Primary vs Secondary Cell, iPhone vs Samsung), generate their true historical baselines (e.g., standard NIRF ranks, approximate intake, campus size, operational mechanisms).\n\n`
+  const internalFallbackDirective = (isFallbackToInternal || hasMissingFacts)
+    ? `IMPORTANT DUAL-MODE DIRECTIVE: Live search snippets are currently unavailable. Rely on your established internal training knowledge base to provide accurate, high-confidence baseline metrics, rankings, and structural data for all compared entities. Keep the anti-hallucination constraint reasonable: Only use "Not specified" if an entity itself is completely fictional, but for well-known entities (e.g., React vs Vue vs Svelte, IIT Bombay vs IIT Delhi, iPhone vs Samsung vs Pixel), generate their true historical baselines (e.g., standard rankings, operational mechanisms, specifications).\n\n`
     : '';
 
-  const userPrompt = `${internalFallbackDirective}Entity A: "${entityA}"
-Entity B: "${entityB}"
+  const userPrompt = `${internalFallbackDirective}COMPARED ENTITIES (${entities.length}): ${entities.map((e, i) => `Entity ${i + 1}: "${e}"`).join(', ')}
 ${contextTopic ? `Specific Focus / Topic: "${contextTopic}"` : ''}
 
-RAW FACTS FOR ${entityA.toUpperCase()}:
-${factsA || 'No specific search snippets retrieved. Rely on internal training knowledge base.'}
+${factsCombinedText}
 
-RAW FACTS FOR ${entityB.toUpperCase()}:
-${factsB || 'No specific search snippets retrieved. Rely on internal training knowledge base.'}
+${reviewsCombinedText}
 
-REDDIT & COMMUNITY FORUM REVIEWS FOR ${entityA.toUpperCase()}:
-${reviewsA || 'No forum reviews found. Normalize general domain consensus.'}
+Execute adaptive generative comparison extraction for all ${entities.length} entities. Group metrics into dynamic category names in "categories", provide "entities" array with concrete pros (never outputting "N/A" or "Not specified" for pros), and provide "values" array for each metric matching the entity order strictly following the JSON schema.`;
 
-REDDIT & COMMUNITY FORUM REVIEWS FOR ${entityB.toUpperCase()}:
-${reviewsB || 'No forum reviews found. Normalize general domain consensus.'}
-
-Execute adaptive generative comparison extraction. Identify the domain, group metrics into dynamic category names in "categories", provide "entity_a" and "entity_b" objects with concrete pros (filtering out any "N/A" or "Not specified" strings), and extract concrete facts strictly following the JSON schema.`;
-
-  if (geminiKey) {
-    try {
-      const ai = new GoogleGenAI({ apiKey: geminiKey });
-      const geminiCall = ai.models.generateContent({
-        model: 'gemini-3.6-flash',
-        contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-        config: {
-          systemInstruction: PRECISION_EXTRACTION_SYSTEM_PROMPT,
-          responseMimeType: 'application/json',
-          temperature: 0.1,
-        },
-      });
-
-      const response = await withTimeout(geminiCall, 6500, 'Gemini precision extraction timeout');
-      const parsed = cleanAndParseJson(response.text || '', entityA, entityB);
-      if (parsed) return parsed;
-    } catch (err: any) {
-      console.warn('Gemini precision extraction error:', err?.message || err);
-    }
-  }
-
+  // 1. PRIMARY MODEL: Groq (llama-3.3-70b-versatile) for ultra-fast structured JSON inference
   if (groqKey) {
     try {
       const groqCall = fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -512,7 +469,7 @@ Execute adaptive generative comparison extraction. Identify the domain, group me
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'openai/gpt-oss-120b',
+          model: 'llama-3.3-70b-versatile',
           messages: [
             { role: 'system', content: PRECISION_EXTRACTION_SYSTEM_PROMPT },
             { role: 'user', content: userPrompt },
@@ -522,17 +479,47 @@ Execute adaptive generative comparison extraction. Identify the domain, group me
         }),
       });
 
-      const groqRes = await withTimeout(groqCall, 5000, 'Groq precision extraction timeout');
+      const groqRes = await withTimeout(groqCall, 6000, 'Groq precision extraction timeout');
       if (groqRes.ok) {
         const groqData = await groqRes.json();
         const content = groqData.choices?.[0]?.message?.content || '';
-        const parsed = cleanAndParseJson(content, entityA, entityB);
-        if (parsed) return parsed;
+        const parsed = cleanAndParseJson(content, entities);
+        if (parsed) {
+          parsed.model_used = 'Groq (llama-3.3-70b)';
+          return parsed;
+        }
       }
     } catch (err: any) {
-      console.warn('Groq precision extraction error:', err?.message || err);
+      console.warn('Groq primary extraction failed, cascading to Gemini fallback:', err?.message || err);
     }
   }
 
-  return generateConcreteFallback(entityA, entityB, factsA, factsB, reviewsA, reviewsB, contextTopic);
+  // 2. SECONDARY / FALLBACK MODEL: Google Gemini
+  if (geminiKey) {
+    try {
+      const ai = new GoogleGenAI({ apiKey: geminiKey });
+      const geminiCall = ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+        config: {
+          systemInstruction: PRECISION_EXTRACTION_SYSTEM_PROMPT,
+          responseMimeType: 'application/json',
+          temperature: 0.1,
+        },
+      });
+
+      const response = await withTimeout(geminiCall, 7000, 'Gemini precision extraction timeout');
+      const parsed = cleanAndParseJson(response.text || '', entities);
+      if (parsed) {
+        parsed.model_used = 'Gemini 2.5 Flash';
+        return parsed;
+      }
+    } catch (err: any) {
+      console.warn('Gemini fallback extraction error:', err?.message || err);
+    }
+  }
+
+  const fallback = generateConcreteFallbackMulti(entities, contextTopic);
+  fallback.model_used = 'Parametric Knowledge Engine';
+  return fallback;
 }

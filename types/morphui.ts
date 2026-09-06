@@ -1,4 +1,4 @@
-﻿export type WidgetType = 'comparison_table' | 'timeline_calendar' | 'budget_tracker' | 'admission_predictor';
+export type WidgetType = 'comparison_table' | 'timeline_calendar' | 'budget_tracker' | 'admission_predictor';
 
 export interface WidgetImage {
   url: string;
@@ -7,22 +7,26 @@ export interface WidgetImage {
 }
 
 export interface ComparisonPoint {
-  feature_name: string;
-  entity_a_value: string;
-  entity_b_value: string;
+  feature_name?: string;
+  metric_name?: string;
+  entity_a_value?: string;
+  entity_b_value?: string;
+  values?: string[];
 }
 
 export interface VerifiedMetric {
   metric: string;
-  entity_a: string;
-  entity_b: string;
+  values?: string[];
+  entity_a?: string;
+  entity_b?: string;
   source_type?: 'official' | 'benchmark' | 'verified_database';
 }
 
 export interface CommunitySentiment {
   topic: string;
-  entity_a_consensus: string;
-  entity_b_consensus: string;
+  consensuses?: string[];
+  entity_a_consensus?: string;
+  entity_b_consensus?: string;
   sentiment?: 'Positive' | 'Mixed' | 'Critical';
 }
 
@@ -30,18 +34,26 @@ export interface EntityVerdict {
   name: string;
   pros: string[];
   cons?: string[];
+  tagline?: string;
 }
 
 export interface GenerativeComparisonResponse {
+  chat_id?: string;
   category: string;
-  entity_a: EntityVerdict;
-  entity_b: EntityVerdict;
+  entities: EntityVerdict[];
+  entity_a?: EntityVerdict;
+  entity_b?: EntityVerdict;
   categories: Record<string, VerifiedMetric[]>;
   verified_metrics: VerifiedMetric[];
   community_sentiment: CommunitySentiment[];
   suggested_metrics: string[];
   verdict_summary: string;
   comparison_points?: ComparisonPoint[];
+  model_used?: string;
+  grounded?: boolean;
+  raw_query?: string;
+  cache_info?: any;
+  visual_comparison?: boolean;
 }
 
 export interface ComparisonTableData {
@@ -50,6 +62,7 @@ export interface ComparisonTableData {
   summary?: string;
   images?: WidgetImage[];
   category?: string;
+  entities?: EntityVerdict[];
   entity_a?: string | EntityVerdict;
   entity_b?: string | EntityVerdict;
   categories?: Record<string, VerifiedMetric[]>;
@@ -98,20 +111,4 @@ export interface ImageInput {
   data: string; // base64 string or data URL
   mimeType: string;
   name?: string;
-}
-
-export interface AgentApiResponse {
-  widgets: MorphWidget[];
-  category?: string;
-  entity_a?: EntityVerdict;
-  entity_b?: EntityVerdict;
-  categories?: Record<string, VerifiedMetric[]>;
-  verified_metrics?: VerifiedMetric[];
-  community_sentiment?: CommunitySentiment[];
-  suggested_metrics?: string[];
-  verdict_summary?: string;
-  raw_query?: string;
-  grounded?: boolean;
-  model_used?: string;
-  visual_comparison?: boolean;
 }
