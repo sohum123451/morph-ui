@@ -1,4 +1,4 @@
-export type WidgetType = 'comparison_table' | 'timeline_calendar' | 'budget_tracker' | 'admission_predictor';
+﻿export type WidgetType = 'comparison_table' | 'timeline_calendar' | 'budget_tracker' | 'admission_predictor';
 
 export interface WidgetImage {
   url: string;
@@ -12,10 +12,36 @@ export interface ComparisonPoint {
   entity_b_value: string;
 }
 
+export interface VerifiedMetric {
+  metric: string;
+  entity_a: string;
+  entity_b: string;
+  source_type?: 'official' | 'benchmark' | 'verified_database';
+}
+
+export interface CommunitySentiment {
+  topic: string;
+  entity_a_consensus: string;
+  entity_b_consensus: string;
+  sentiment?: 'Positive' | 'Mixed' | 'Critical';
+}
+
+export interface EntityVerdict {
+  name: string;
+  pros: string[];
+  cons?: string[];
+}
+
 export interface GenerativeComparisonResponse {
   category: string;
-  comparison_points: ComparisonPoint[];
+  entity_a: EntityVerdict;
+  entity_b: EntityVerdict;
+  categories: Record<string, VerifiedMetric[]>;
+  verified_metrics: VerifiedMetric[];
+  community_sentiment: CommunitySentiment[];
+  suggested_metrics: string[];
   verdict_summary: string;
+  comparison_points?: ComparisonPoint[];
 }
 
 export interface ComparisonTableData {
@@ -23,11 +49,14 @@ export interface ComparisonTableData {
   rows?: Record<string, string>[];
   summary?: string;
   images?: WidgetImage[];
-  // Generative UI comparison additions
   category?: string;
-  entity_a?: string;
-  entity_b?: string;
+  entity_a?: string | EntityVerdict;
+  entity_b?: string | EntityVerdict;
+  categories?: Record<string, VerifiedMetric[]>;
   comparison_points?: ComparisonPoint[];
+  verified_metrics?: VerifiedMetric[];
+  community_sentiment?: CommunitySentiment[];
+  suggested_metrics?: string[];
   verdict_summary?: string;
 }
 
@@ -73,6 +102,14 @@ export interface ImageInput {
 
 export interface AgentApiResponse {
   widgets: MorphWidget[];
+  category?: string;
+  entity_a?: EntityVerdict;
+  entity_b?: EntityVerdict;
+  categories?: Record<string, VerifiedMetric[]>;
+  verified_metrics?: VerifiedMetric[];
+  community_sentiment?: CommunitySentiment[];
+  suggested_metrics?: string[];
+  verdict_summary?: string;
   raw_query?: string;
   grounded?: boolean;
   model_used?: string;

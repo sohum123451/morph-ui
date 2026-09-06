@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { memo, useState, useMemo } from 'react';
 import { Handle, Position } from '@xyflow/react';
@@ -16,16 +16,19 @@ import {
   Search,
   CheckCircle2,
   HelpCircle,
+  Footprints,
 } from 'lucide-react';
-import { ComparisonPoint, WidgetImage } from '@/types/morphui';
+import { ComparisonPoint, WidgetImage, VerifiedMetric, EntityVerdict } from '@/types/morphui';
 
 interface ComparisonTableWidgetProps {
   data: {
     title?: string;
     category?: string;
-    entity_a?: string;
-    entity_b?: string;
+    entity_a?: string | EntityVerdict;
+    entity_b?: string | EntityVerdict;
+    categories?: Record<string, VerifiedMetric[]>;
     comparison_points?: ComparisonPoint[];
+    verified_metrics?: VerifiedMetric[];
     verdict_summary?: string;
     headers?: string[];
     rows?: Record<string, string>[];
@@ -39,7 +42,6 @@ interface ComparisonTableWidgetProps {
  */
 function parseNumericValue(val: string): number | null {
   if (!val || val === 'N/A' || val === '-') return null;
-  // Match first number (with optional decimals)
   const clean = val.replace(/,/g, '');
   const match = clean.match(/[-+]?\d*\.?\d+/);
   if (!match) return null;
@@ -52,6 +54,17 @@ function parseNumericValue(val: string): number | null {
  */
 function getCategoryMeta(categoryName = '') {
   const cat = categoryName.toLowerCase();
+  if (cat.includes('shoe') || cat.includes('footwear') || cat.includes('sneaker')) {
+    return {
+      icon: Footprints,
+      label: 'Footwear & Athletic Gear',
+      gradient: 'from-amber-500/20 via-orange-500/10 to-transparent',
+      accentColor: 'text-amber-400',
+      badgeBg: 'bg-amber-500/10 border-amber-500/20 text-amber-300',
+      barA: 'bg-amber-500',
+      barB: 'bg-orange-500',
+    };
+  }
   if (cat.includes('university') || cat.includes('college') || cat.includes('education')) {
     return {
       icon: GraduationCap,
@@ -63,7 +76,7 @@ function getCategoryMeta(categoryName = '') {
       barB: 'bg-indigo-500',
     };
   }
-  if (cat.includes('fruit') || cat.includes('food') || cat.includes('nutrition')) {
+  if (cat.includes('fruit') || cat.includes('food') || cat.includes('nutrition') || cat.includes('produce')) {
     return {
       icon: Apple,
       label: 'Nutritional Comparison',
@@ -74,7 +87,7 @@ function getCategoryMeta(categoryName = '') {
       barB: 'bg-amber-500',
     };
   }
-  if (cat.includes('phone') || cat.includes('tech') || cat.includes('hardware')) {
+  if (cat.includes('phone') || cat.includes('tech') || cat.includes('hardware') || cat.includes('smartphone')) {
     return {
       icon: Smartphone,
       label: 'Tech Specifications',
@@ -85,7 +98,7 @@ function getCategoryMeta(categoryName = '') {
       barB: 'bg-pink-500',
     };
   }
-  if (cat.includes('car') || cat.includes('auto')) {
+  if (cat.includes('car') || cat.includes('auto') || cat.includes('automobile')) {
     return {
       icon: Car,
       label: 'Automotive Benchmark',
@@ -96,7 +109,7 @@ function getCategoryMeta(categoryName = '') {
       barB: 'bg-red-500',
     };
   }
-  if (cat.includes('software') || cat.includes('framework') || cat.includes('code')) {
+  if (cat.includes('software') || cat.includes('framework') || cat.includes('code') || cat.includes('app')) {
     return {
       icon: Code2,
       label: 'Software Comparison',
@@ -135,46 +148,84 @@ export const ComparisonTableWidget = memo(function ComparisonTableWidget({
   const [viewMode, setViewMode] = useState<'table' | 'bars'>('table');
   const [searchTerm, setSearchTerm] = useState('');
 
-  // 1. Normalize comparison points from either the new schema or legacy rows/headers
-  const points: ComparisonPoint[] = useMemo(() => {
-    if (Array.isArray(data?.comparison_points) && data.comparison_points.length > 0) {
-      return data.comparison_points;
+  // Safe entity extraction
+  const entityAName = typeof data?.entity_a === 'object' && data?.entity_a?.name
+    ? data.entity_a.name
+    : typeof data?.entity_a === 'string'
+    ? data.entity_a
+    : data?.headers?.[1] || 'Entity A';
+
+  const entityBName = typeof data?.entity_b === 'object' && data?.entity_b?.name
+    ? data.entity_b.name
+    : typeof data?.entity_b === 'string'
+    ? data.entity_b
+    : data?.headers?.[2] || 'Entity B';
+
+  const category = data?.category || 'Comparative Analysis';
+  const verdictSummary = data?.verdict_summary || data?.summary;
+  const title = data?.title || `${entityAName} vs ${entityBName}`;
+  const images = Array.isArray(data?.images) ? data.images : [];
+
+  // Dynamic Categories Map
+  const categoriesMap: Record<string, VerifiedMetric[]> = useMemo(() => {
+    if (data?.categories && Object.keys(data.categories).length > 0) {
+      return data.categories;
     }
-    // Fallback: construct from rows & headers
+    if (Array.isArray(data?.verified_metrics) && data.verified_metrics.length > 0) {
+      return { [category || 'Key Metrics']: data.verified_metrics };
+    }
+    if (Array.isArray(data?.comparison_points) && data.comparison_points.length > 0) {
+      return {
+        [category || 'Key Metrics']: data.comparison_points.map((cp) => ({
+          metric: cp.feature_name,
+          entity_a: cp.entity_a_value,
+          entity_b: cp.entity_b_value,
+          source_type: 'official' as const,
+        })),
+      };
+    }
     if (Array.isArray(data?.rows) && data.rows.length > 0 && Array.isArray(data?.headers)) {
       const hA = data.headers[1] || 'Entity A';
       const hB = data.headers[2] || 'Entity B';
       const fHeader = data.headers[0] || 'Feature';
-      return data.rows.map((row) => ({
-        feature_name: row[fHeader] || Object.values(row)[0] || 'Metric',
-        entity_a_value: row[hA] ?? Object.values(row)[1] ?? 'N/A',
-        entity_b_value: row[hB] ?? Object.values(row)[2] ?? 'N/A',
-      }));
+      return {
+        [category || 'Key Metrics']: data.rows.map((row) => ({
+          metric: row[fHeader] || Object.values(row)[0] || 'Metric',
+          entity_a: row[hA] ?? Object.values(row)[1] ?? 'N/A',
+          entity_b: row[hB] ?? Object.values(row)[2] ?? 'N/A',
+          source_type: 'official' as const,
+        })),
+      };
     }
-    return [];
-  }, [data?.comparison_points, data?.rows, data?.headers]);
+    return {};
+  }, [data?.categories, data?.verified_metrics, data?.comparison_points, data?.rows, data?.headers, category]);
 
-  const entityA = data?.entity_a || data?.headers?.[1] || 'Entity A';
-  const entityB = data?.entity_b || data?.headers?.[2] || 'Entity B';
-  const category = data?.category || 'Comparative Analysis';
-  const verdictSummary = data?.verdict_summary || data?.summary;
-  const title = data?.title || `${entityA} vs ${entityB}`;
-  const images = Array.isArray(data?.images) ? data.images : [];
+  // Flatten for quick metric counts and search filtering
+  const allMetricsCount = useMemo(() => {
+    return Object.values(categoriesMap).reduce((acc, curr) => acc + curr.length, 0);
+  }, [categoriesMap]);
+
+  const filteredCategories = useMemo(() => {
+    if (!searchTerm.trim()) return categoriesMap;
+    const term = searchTerm.toLowerCase();
+    const result: Record<string, VerifiedMetric[]> = {};
+
+    for (const [catName, metrics] of Object.entries(categoriesMap)) {
+      const matchingMetrics = metrics.filter(
+        (m) =>
+          m.metric.toLowerCase().includes(term) ||
+          m.entity_a.toLowerCase().includes(term) ||
+          m.entity_b.toLowerCase().includes(term)
+      );
+      if (matchingMetrics.length > 0) {
+        result[catName] = matchingMetrics;
+      }
+    }
+    return result;
+  }, [categoriesMap, searchTerm]);
 
   const categoryMeta = useMemo(() => getCategoryMeta(category), [category]);
   const CategoryIcon = categoryMeta.icon;
-
-  // Filter points based on search input
-  const filteredPoints = useMemo(() => {
-    if (!searchTerm.trim()) return points;
-    const term = searchTerm.toLowerCase();
-    return points.filter(
-      (p) =>
-        p.feature_name.toLowerCase().includes(term) ||
-        p.entity_a_value.toLowerCase().includes(term) ||
-        p.entity_b_value.toLowerCase().includes(term)
-    );
-  }, [points, searchTerm]);
 
   return (
     <div className="w-[580px] min-h-[520px] bg-slate-900/95 border border-slate-800/90 rounded-2xl p-5 shadow-2xl flex flex-col text-slate-100 backdrop-blur-xl relative overflow-hidden transition-all duration-200">
@@ -198,7 +249,7 @@ export const ComparisonTableWidget = memo(function ComparisonTableWidget({
                 {categoryMeta.label}
               </span>
               <span className="text-[11px] text-slate-400 font-medium">
-                {points.length} {points.length === 1 ? 'Data Point' : 'Data Points'}
+                {allMetricsCount} {allMetricsCount === 1 ? 'Data Point' : 'Data Points'}
               </span>
             </div>
             <h3 className="font-bold text-base tracking-tight text-white mt-0.5 line-clamp-1">
@@ -249,7 +300,7 @@ export const ComparisonTableWidget = memo(function ComparisonTableWidget({
                   className="w-full h-full object-cover"
                 />
                 <span className="absolute top-1 left-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-900/80 text-sky-300 border border-sky-500/30">
-                  {i === 0 ? entityA : entityB}
+                  {i === 0 ? entityAName : entityBName}
                 </span>
               </div>
             </div>
@@ -258,7 +309,7 @@ export const ComparisonTableWidget = memo(function ComparisonTableWidget({
       )}
 
       {/* Quick Search & Filter */}
-      {points.length > 5 && (
+      {allMetricsCount > 5 && (
         <div className="relative z-10 mb-2.5">
           <div className="relative flex items-center">
             <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 pointer-events-none" />
@@ -266,7 +317,7 @@ export const ComparisonTableWidget = memo(function ComparisonTableWidget({
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder={`Search ${points.length} features (e.g. fees, calories, camera)...`}
+              placeholder={`Filter ${allMetricsCount} dynamic metrics...`}
               className="w-full bg-slate-950/60 border border-slate-800/80 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-sky-500/50"
             />
           </div>
@@ -275,138 +326,117 @@ export const ComparisonTableWidget = memo(function ComparisonTableWidget({
 
       {/* Entity Columns Subheader */}
       <div className="relative z-10 grid grid-cols-12 gap-2 px-3 py-2 rounded-lg bg-slate-950/80 border border-slate-800/90 text-xs font-semibold uppercase tracking-wider mb-2">
-        <div className="col-span-4 text-slate-400">Feature / Metric</div>
+        <div className="col-span-4 text-slate-400">Metric / Attribute</div>
         <div className="col-span-4 text-sky-400 flex items-center gap-1 truncate">
           <span className="w-2 h-2 rounded-full bg-sky-400" />
-          <span className="truncate">{entityA}</span>
+          <span className="truncate">{entityAName}</span>
         </div>
         <div className="col-span-4 text-indigo-400 flex items-center gap-1 truncate">
           <span className="w-2 h-2 rounded-full bg-indigo-400" />
-          <span className="truncate">{entityB}</span>
+          <span className="truncate">{entityBName}</span>
         </div>
       </div>
 
-      {/* Main Dynamic Rendering Area */}
-      <div className="relative z-10 flex-1 overflow-auto max-h-[290px] rounded-xl border border-slate-800/80 bg-slate-950/50 p-1 divide-y divide-slate-800/50">
-        {filteredPoints.length === 0 ? (
+      {/* Main Dynamic Table Loop (100% Dynamic by Category) */}
+      <div className="relative z-10 flex-1 overflow-auto max-h-[290px] rounded-xl border border-slate-800/80 bg-slate-950/50 p-1 space-y-2">
+        {Object.keys(filteredCategories).length === 0 ? (
           <div className="p-8 text-center text-slate-500 text-xs flex flex-col items-center justify-center gap-2">
             <HelpCircle className="w-6 h-6 text-slate-600" />
             <span>No matching comparison points found</span>
           </div>
-        ) : viewMode === 'table' ? (
-          // 1. Table View
-          filteredPoints.map((pt, idx) => {
-            const isNA_A = pt.entity_a_value === 'N/A';
-            const isNA_B = pt.entity_b_value === 'N/A';
-
-            return (
-              <div
-                key={idx}
-                className="grid grid-cols-12 gap-2 p-2.5 text-xs hover:bg-slate-800/40 rounded-lg transition-colors items-center"
-              >
-                {/* Feature Name */}
-                <div className="col-span-4 font-medium text-slate-200 pr-1 flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-slate-600 shrink-0" />
-                  <span className="line-clamp-2">{pt.feature_name}</span>
-                </div>
-
-                {/* Entity A Value */}
-                <div className="col-span-4 pr-1">
-                  {isNA_A ? (
-                    <span className="px-2 py-0.5 rounded text-[11px] font-mono bg-slate-800 text-slate-500 border border-slate-700/50">
-                      N/A
-                    </span>
-                  ) : (
-                    <span className="text-slate-300 font-medium leading-relaxed line-clamp-3">
-                      {pt.entity_a_value}
-                    </span>
-                  )}
-                </div>
-
-                {/* Entity B Value */}
-                <div className="col-span-4">
-                  {isNA_B ? (
-                    <span className="px-2 py-0.5 rounded text-[11px] font-mono bg-slate-800 text-slate-500 border border-slate-700/50">
-                      N/A
-                    </span>
-                  ) : (
-                    <span className="text-slate-300 font-medium leading-relaxed line-clamp-3">
-                      {pt.entity_b_value}
-                    </span>
-                  )}
-                </div>
-              </div>
-            );
-          })
         ) : (
-          // 2. Metric Progress Bars View
-          filteredPoints.map((pt, idx) => {
-            const valA = parseNumericValue(pt.entity_a_value);
-            const valB = parseNumericValue(pt.entity_b_value);
-            const hasNumeric = valA !== null && valB !== null && (valA > 0 || valB > 0);
-
-            // Compute relative percentage for progress bar
-            let pctA = 50;
-            let pctB = 50;
-            if (hasNumeric && valA !== null && valB !== null) {
-              const sum = valA + valB;
-              pctA = sum > 0 ? Math.round((valA / sum) * 100) : 50;
-              pctB = 100 - pctA;
-            }
-
-            return (
-              <div
-                key={idx}
-                className="p-3 text-xs hover:bg-slate-800/40 rounded-lg transition-colors flex flex-col gap-1.5"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold text-slate-200">{pt.feature_name}</span>
-                  {hasNumeric && (
-                    <span className="text-[10px] text-slate-400 font-mono">
-                      {pctA}% vs {pctB}%
-                    </span>
-                  )}
-                </div>
-
-                {hasNumeric ? (
-                  <div className="space-y-1">
-                    {/* Comparative Dual Progress Bar */}
-                    <div className="w-full h-2.5 rounded-full bg-slate-800 overflow-hidden flex">
-                      <div
-                        style={{ width: `${pctA}%` }}
-                        className={`${categoryMeta.barA} transition-all duration-500`}
-                        title={`${entityA}: ${pt.entity_a_value}`}
-                      />
-                      <div
-                        style={{ width: `${pctB}%` }}
-                        className={`${categoryMeta.barB} transition-all duration-500`}
-                        title={`${entityB}: ${pt.entity_b_value}`}
-                      />
-                    </div>
-                    <div className="flex items-center justify-between text-[11px] pt-0.5">
-                      <span className="text-sky-300 font-medium truncate max-w-[48%]">
-                        {pt.entity_a_value}
-                      </span>
-                      <span className="text-indigo-300 font-medium truncate max-w-[48%] text-right">
-                        {pt.entity_b_value}
-                      </span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-2 pt-1">
-                    <div className="p-2 rounded bg-slate-900/80 border border-slate-800 text-[11px] text-slate-300">
-                      <span className="block text-[10px] text-sky-400 font-medium mb-0.5">{entityA}:</span>
-                      {pt.entity_a_value}
-                    </div>
-                    <div className="p-2 rounded bg-slate-900/80 border border-slate-800 text-[11px] text-slate-300">
-                      <span className="block text-[10px] text-indigo-400 font-medium mb-0.5">{entityB}:</span>
-                      {pt.entity_b_value}
-                    </div>
-                  </div>
-                )}
+          Object.entries(filteredCategories).map(([categoryName, metrics]) => (
+            <div key={categoryName} className="rounded-lg bg-slate-900/60 border border-slate-800/60 overflow-hidden">
+              <div className="px-3 py-1.5 bg-slate-950/70 border-b border-slate-800/60 text-[11px] font-bold text-slate-300 flex items-center justify-between">
+                <span>{categoryName}</span>
+                <span className="text-[10px] font-mono text-slate-500">({metrics.length})</span>
               </div>
-            );
-          })
+
+              <div className="divide-y divide-slate-800/40">
+                {viewMode === 'table'
+                  ? metrics.map((m, idx) => (
+                      <div
+                        key={idx}
+                        className="grid grid-cols-12 gap-2 p-2.5 text-xs hover:bg-slate-800/40 transition-colors items-center"
+                      >
+                        <div className="col-span-4 font-medium text-slate-200 pr-1 flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-slate-600 shrink-0" />
+                          <span className="line-clamp-2">{m.metric}</span>
+                        </div>
+                        <div className="col-span-4 pr-1 text-slate-300 font-medium leading-relaxed line-clamp-3">
+                          {m.entity_a}
+                        </div>
+                        <div className="col-span-4 text-slate-300 font-medium leading-relaxed line-clamp-3">
+                          {m.entity_b}
+                        </div>
+                      </div>
+                    ))
+                  : metrics.map((m, idx) => {
+                      const valA = parseNumericValue(m.entity_a);
+                      const valB = parseNumericValue(m.entity_b);
+                      const hasNumeric = valA !== null && valB !== null && (valA > 0 || valB > 0);
+
+                      let pctA = 50;
+                      let pctB = 50;
+                      if (hasNumeric && valA !== null && valB !== null) {
+                        const sum = valA + valB;
+                        pctA = sum > 0 ? Math.round((valA / sum) * 100) : 50;
+                        pctB = 100 - pctA;
+                      }
+
+                      return (
+                        <div
+                          key={idx}
+                          className="p-3 text-xs hover:bg-slate-800/40 transition-colors flex flex-col gap-1.5"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-semibold text-slate-200">{m.metric}</span>
+                            {hasNumeric && (
+                              <span className="text-[10px] text-slate-400 font-mono">
+                                {pctA}% vs {pctB}%
+                              </span>
+                            )}
+                          </div>
+
+                          {hasNumeric ? (
+                            <div className="space-y-1">
+                              <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden flex">
+                                <div
+                                  style={{ width: `${pctA}%` }}
+                                  className={`${categoryMeta.barA} transition-all duration-500`}
+                                />
+                                <div
+                                  style={{ width: `${pctB}%` }}
+                                  className={`${categoryMeta.barB} transition-all duration-500`}
+                                />
+                              </div>
+                              <div className="flex items-center justify-between text-[11px]">
+                                <span className="text-sky-300 font-medium truncate max-w-[48%]">
+                                  {m.entity_a}
+                                </span>
+                                <span className="text-indigo-300 font-medium truncate max-w-[48%] text-right">
+                                  {m.entity_b}
+                                </span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-2 gap-2 pt-1">
+                              <div className="p-2 rounded bg-slate-900/80 border border-slate-800 text-[11px] text-slate-300">
+                                <span className="block text-[10px] text-sky-400 font-medium mb-0.5">{entityAName}:</span>
+                                {m.entity_a}
+                              </div>
+                              <div className="p-2 rounded bg-slate-900/80 border border-slate-800 text-[11px] text-slate-300">
+                                <span className="block text-[10px] text-indigo-400 font-medium mb-0.5">{entityBName}:</span>
+                                {m.entity_b}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+              </div>
+            </div>
+          ))
         )}
       </div>
 

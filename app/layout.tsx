@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "MorphUI - Dynamic Spatial Canvas System",
-  description: "0% hardcoded dynamic spatial canvas system powered by real-time Google Search grounding and Gemini 2.5 Flash.",
+  title: "MorphUI - Intelligent Product & Entity Comparison Engine",
+  description: "Production-grade side-by-side entity and product comparison with real-time web retrieval and verified specifications.",
 };
 
 export default function RootLayout({
@@ -13,7 +13,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className="w-screen h-screen overflow-hidden bg-[#070b14] text-slate-100 antialiased">
+      <body className="min-h-screen bg-slate-950 text-slate-100 antialiased selection:bg-slate-800 selection:text-white">
         {children}
       </body>
     </html>
