@@ -1,9 +1,16 @@
-export type WidgetType = 'comparison_table' | 'timeline_calendar' | 'budget_tracker' | 'admission_predictor';
+﻿export type WidgetType = 'comparison_table' | 'timeline_calendar' | 'budget_tracker' | 'admission_predictor';
+
+export interface WidgetImage {
+  url: string;
+  name?: string;
+  label?: string;
+}
 
 export interface ComparisonTableData {
   headers: string[];
   rows: Record<string, string>[];
   summary?: string;
+  images?: WidgetImage[];
 }
 
 export interface TimelineCalendarData {
@@ -40,9 +47,16 @@ export interface MorphWidget {
   data: ComparisonTableData | TimelineCalendarData | BudgetTrackerData | AdmissionPredictorData;
 }
 
+export interface ImageInput {
+  data: string; // base64 string or data URL
+  mimeType: string;
+  name?: string;
+}
+
 export interface AgentApiResponse {
   widgets: MorphWidget[];
   raw_query?: string;
   grounded?: boolean;
   model_used?: string;
+  visual_comparison?: boolean;
 }

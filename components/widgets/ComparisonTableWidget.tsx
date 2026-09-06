@@ -1,8 +1,9 @@
-'use client';
+﻿'use client';
 
 import React, { memo } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Table, Info } from 'lucide-react';
+import { WidgetImage } from '@/types/morphui';
 
 interface ComparisonTableWidgetProps {
   data: {
@@ -10,6 +11,7 @@ interface ComparisonTableWidgetProps {
     headers?: string[];
     rows?: Record<string, string>[];
     summary?: string;
+    images?: WidgetImage[];
   };
 }
 
@@ -18,14 +20,15 @@ export const ComparisonTableWidget = memo(function ComparisonTableWidget({ data 
   const headers = Array.isArray(data?.headers) ? data.headers : [];
   const rows = Array.isArray(data?.rows) ? data.rows : [];
   const summary = data?.summary;
+  const images = Array.isArray(data?.images) ? data.images : [];
 
   return (
-    <div className="w-[480px] min-h-[460px] bg-slate-900/95 border border-slate-800 rounded-xl p-5 shadow-2xl flex flex-col text-slate-100 backdrop-blur">
+    <div className="w-[520px] min-h-[460px] bg-slate-900/95 border border-slate-800 rounded-xl p-5 shadow-2xl flex flex-col text-slate-100 backdrop-blur">
       <Handle type="target" position={Position.Left} className="!bg-sky-500 !w-3 !h-3" />
       <Handle type="source" position={Position.Right} className="!bg-indigo-500 !w-3 !h-3" />
 
       {/* Header */}
-      <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-800/80">
+      <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-800/80">
         <div className="flex items-center gap-2.5">
           <div className="p-2 rounded-lg bg-sky-500/10 text-sky-400 border border-sky-500/20">
             <Table className="w-5 h-5" />
@@ -41,6 +44,32 @@ export const ComparisonTableWidget = memo(function ComparisonTableWidget({ data 
           </span>
         )}
       </div>
+
+      {/* Visual Image Comparison Cards (if images provided) */}
+      {images.length > 0 && (
+        <div className="mb-3.5 p-2.5 rounded-lg bg-slate-950/60 border border-slate-800/80 flex items-center justify-around gap-2">
+          {images.map((img, i) => (
+            <div key={i} className="flex flex-col items-center gap-1.5 flex-1 max-w-[200px]">
+              <div className="w-full h-24 rounded-md overflow-hidden border border-slate-700/80 bg-slate-900 flex items-center justify-center relative shadow-inner">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={img.url}
+                  alt={img.label || `Subject ${i + 1}`}
+                  className="w-full h-full object-cover"
+                />
+                <span className="absolute top-1 left-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-900/80 text-sky-300 border border-sky-500/30">
+                  {img.label || `Item ${i + 1}`}
+                </span>
+              </div>
+              {img.name && (
+                <span className="text-[11px] font-medium text-slate-300 truncate max-w-[180px]">
+                  {img.name}
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Table Area */}
       <div className="flex-1 overflow-auto max-h-[300px] rounded-lg border border-slate-800/80 bg-slate-950/40">
