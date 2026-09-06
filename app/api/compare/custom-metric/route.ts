@@ -77,7 +77,7 @@ Return strictly valid JSON:
       try {
         const ai = new GoogleGenAI({ apiKey });
         const geminiCall = ai.models.generateContent({
-          model: 'gemini-2.5-flash',
+          model: 'gemini-3.6-flash',
           contents: [{ role: 'user', parts: [{ text: prompt }] }],
           config: { responseMimeType: 'application/json', temperature: 0.1 },
         });
@@ -97,7 +97,7 @@ Return strictly valid JSON:
           method: 'POST',
           headers: { Authorization: `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            model: 'llama-3.3-70b-versatile',
+            model: 'openai/gpt-oss-120b',
             messages: [{ role: 'user', content: prompt }],
             response_format: { type: 'json_object' },
             temperature: 0.1,

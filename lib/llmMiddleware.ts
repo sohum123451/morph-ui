@@ -258,25 +258,25 @@ function generateConcreteFallback(
     };
 
     categories['Academic Ranking & Admissions'] = [
-      { metric: 'NIRF Engineering Standing (2025-26)', entity_a: 'Rank 13-18 Category', entity_b: 'Rank #11 National Premier', source_type: 'official' },
-      { metric: 'Entrance Exam & Merit Cutoff', entity_a: 'SRMJEEE (Phase 1-3 Merit Counseling)', entity_b: 'VITEEE (Category 1-5 Rank Brackets)', source_type: 'official' },
+      { metric: 'NIRF Engineering Standing (2025-26)', entity_a: `${entityA} Standing / Category`, entity_b: `${entityB} Standing / Category`, source_type: 'official' },
+      { metric: 'Entrance Exam & Merit Cutoff', entity_a: `${entityA} Merit / Entrance Exam`, entity_b: `${entityB} Merit / Entrance Exam`, source_type: 'official' },
     ];
 
     categories['Tuition Fees & Financial Yield'] = [
-      { metric: 'Annual B.Tech Tuition Fee', entity_a: 'INR 2.50 - 4.50 Lakhs/yr', entity_b: 'INR 1.98 - 4.95 Lakhs/yr', source_type: 'official' },
-      { metric: 'Median CSE Placement CTC', entity_a: 'INR 10.50 - 14.20 LPA', entity_b: 'INR 11.50 - 15.80 LPA', source_type: 'official' },
-      { metric: 'Highest Domestic Placement Offer', entity_a: 'INR 1.02 Crore / yr', entity_b: 'INR 1.02 Crore / yr', source_type: 'official' },
+      { metric: 'Annual B.Tech Tuition Fee', entity_a: 'Standard Institutional Fee Structure', entity_b: 'Standard Institutional Fee Structure', source_type: 'official' },
+      { metric: 'Median CSE Placement CTC', entity_a: 'Verified Placement Average Range', entity_b: 'Verified Placement Average Range', source_type: 'official' },
+      { metric: 'Highest Domestic Placement Offer', entity_a: 'Tier-1 Recruiter Marquee Package', entity_b: 'Tier-1 Recruiter Marquee Package', source_type: 'official' },
     ];
 
     categories['Campus Life & Infrastructure'] = [
-      { metric: 'Campus Acreage & Land Size', entity_a: '250+ Acres (Main Campus)', entity_b: '372 Acres (Main Campus)', source_type: 'official' },
-      { metric: 'Recruiter Density & Visiting Companies', entity_a: '850+ Companies', entity_b: '900+ Companies', source_type: 'official' },
+      { metric: 'Campus Acreage & Land Size', entity_a: 'Central Campus Facilities', entity_b: 'Central Campus Facilities', source_type: 'official' },
+      { metric: 'Recruiter Density & Visiting Companies', entity_a: 'Active Recruiter Roster', entity_b: 'Active Recruiter Roster', source_type: 'official' },
     ];
 
     community_sentiment.push(
-      { topic: 'Campus Freedom & Outing Curfew', entity_a_consensus: 'Flexible weekend outing permissions and high personal autonomy', entity_b_consensus: 'Strict bio-metric attendance with 7:00 PM hostel curfews reported on r/vit', sentiment: 'Mixed' },
-      { topic: 'Hostel WiFi & Living Infrastructure', entity_a_consensus: 'Apartment-style AC hostels with steady internet access', entity_b_consensus: 'Gigabit LAN available across blocks with competitive registration for AC rooms', sentiment: 'Positive' },
-      { topic: 'Developer & Coding Club Culture', entity_a_consensus: 'Active student clubs (SRMKZILLA, Team Rudra) with frequent hackathons', entity_b_consensus: 'Intensely competitive ACM-ICPC coding culture and high placement drill volume', sentiment: 'Positive' }
+      { topic: 'Campus Freedom & Outing Curfew', entity_a_consensus: `Students at ${entityA} highlight academic flexibility and supportive campus culture.`, entity_b_consensus: `Students at ${entityB} emphasize structured academic rigor and active student clubs.`, sentiment: 'Mixed' },
+      { topic: 'Hostel WiFi & Living Infrastructure', entity_a_consensus: `Residential hostels with internet and campus amenities for ${entityA}.`, entity_b_consensus: `Student accommodation blocks with campus network access for ${entityB}.`, sentiment: 'Positive' },
+      { topic: 'Developer & Coding Club Culture', entity_a_consensus: `Active student technical societies and hackathon teams at ${entityA}.`, entity_b_consensus: `Competitive coding chapters and placement preparation cells at ${entityB}.`, sentiment: 'Positive' }
     );
 
     suggested_metrics = [
@@ -440,7 +440,7 @@ Execute precision data extraction. Identify the domain, group metrics into dynam
     try {
       const ai = new GoogleGenAI({ apiKey: geminiKey });
       const geminiCall = ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3.6-flash',
         contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
         config: {
           systemInstruction: PRECISION_EXTRACTION_SYSTEM_PROMPT,
@@ -466,7 +466,7 @@ Execute precision data extraction. Identify the domain, group metrics into dynam
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
+          model: 'openai/gpt-oss-120b',
           messages: [
             { role: 'system', content: PRECISION_EXTRACTION_SYSTEM_PROMPT },
             { role: 'user', content: userPrompt },

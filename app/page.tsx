@@ -1415,7 +1415,7 @@ export default function ComparisonApp() {
           {/* TAB 1: 100% Dynamic Verified Facts & Official Specs Table (Full Text Wrapping) */}
           {activeTab === 'verified' && (
             <section className="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden print-clean">
-              <div className="sticky top-16 z-20 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-6 py-3.5 grid grid-cols-12 gap-4 items-center text-xs font-bold uppercase tracking-wider text-slate-400 shadow-sm">
+              <div className="bg-slate-900 border-b border-slate-800 px-6 py-3.5 grid grid-cols-12 gap-4 items-center text-xs font-bold uppercase tracking-wider text-slate-400 shadow-sm">
                 <div className="col-span-4 flex items-center gap-1.5">
                   <FileSpreadsheet className="w-4 h-4 text-slate-500" />
                   <span>Dynamic Metric / Attribute</span>
@@ -1558,7 +1558,7 @@ export default function ComparisonApp() {
                 </div>
               </div>
 
-              <div className="sticky top-16 z-20 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-6 py-3.5 grid grid-cols-12 gap-4 items-center text-xs font-bold uppercase tracking-wider text-slate-400 shadow-sm">
+              <div className="bg-slate-900 border-b border-slate-800 px-6 py-3.5 grid grid-cols-12 gap-4 items-center text-xs font-bold uppercase tracking-wider text-slate-400 shadow-sm">
                 <div className="col-span-4 flex items-center gap-1.5">
                   <MessageSquare className="w-4 h-4 text-slate-500" />
                   <span>Community Theme / Topic</span>

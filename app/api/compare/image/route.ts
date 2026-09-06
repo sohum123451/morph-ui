@@ -46,7 +46,7 @@ Return strictly valid JSON:
         });
 
         const geminiCall = ai.models.generateContent({
-          model: 'gemini-2.5-flash',
+          model: 'gemini-3.6-flash',
           contents: [{ role: 'user', parts }],
           config: { responseMimeType: 'application/json', temperature: 0.1 },
         });
