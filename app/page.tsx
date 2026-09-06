@@ -686,7 +686,7 @@ function MorphUIContent() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // History state
-  const [chatHistory, setChatHistory] = useState<Array<{ id: string; title: string; created_at: string }>>([]);
+  const [chatHistory, setChatHistory] = useState<Array<{ id: string; title: string; query?: string; created_at: string }>>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
@@ -870,7 +870,22 @@ function MorphUIContent() {
     fetchChatHistory();
   }, []);
 
-  const handleSelectChat = async (id: string) => {
+  const handleSelectChat = async (chatOrId: string | { id: string; title: string; query?: string }, explicitTitle?: string) => {
+    const id = typeof chatOrId === 'string' ? chatOrId : chatOrId.id;
+    const title = explicitTitle || (typeof chatOrId === 'object' ? (chatOrId.title || chatOrId.query) : '');
+    
+    // a. Set search input state to exact history title string
+    if (title) {
+      setPrompt(title);
+    } else {
+      const found = chatHistory.find((c) => c.id === id);
+      if (found) {
+        setPrompt(found.title || found.query || '');
+      }
+    }
+
+    setIsSidebarOpen(false);
+
     if (authStatus === 'unauthenticated') {
       signIn('google');
       return;
@@ -878,15 +893,32 @@ function MorphUIContent() {
 
     setLoading(true);
     setError(null);
+    setActiveChatId(id);
+
     try {
+      // b. Load the cached comparison payload or trigger backend comparison
       const res = await fetch(`/api/history?id=${id}`);
-      if (!res.ok) throw new Error('Failed to load past comparison');
-      const data = await res.json();
-      setComparisonData(data);
-      setActiveChatId(id);
-      setIsSidebarOpen(false);
+      if (res.ok) {
+        const data = await res.json();
+        const matrixData = data?.data ? data.data : data;
+        setComparisonData(matrixData);
+        if (matrixData.model_used) {
+          setActiveModel(matrixData.model_used);
+        }
+      } else {
+        const targetQuery = title || prompt;
+        if (targetQuery) {
+          await handleRunComparison(undefined, targetQuery);
+        }
+      }
     } catch (err: any) {
-      setError(err.message || 'Could not load saved comparison.');
+      console.warn('Direct history load failed, triggering compare query:', err);
+      const targetQuery = title || prompt;
+      if (targetQuery) {
+        await handleRunComparison(undefined, targetQuery);
+      } else {
+        setError(err.message || 'Could not load saved comparison.');
+      }
     } finally {
       setLoading(false);
     }
@@ -1253,7 +1285,7 @@ function MorphUIContent() {
                   chatHistory.map((chat) => (
                     <div
                       key={chat.id}
-                      onClick={() => handleSelectChat(chat.id)}
+                      onClick={() => handleSelectChat(chat, chat.title)}
                       className={`group flex items-center justify-between p-2.5 rounded-xl border transition-all cursor-pointer ${
                         activeChatId === chat.id
                           ? 'bg-sky-500/10 border-sky-500/30 text-sky-400'
@@ -1658,7 +1690,7 @@ function MorphUIContent() {
                 chatHistory.map((chat) => (
                   <div
                     key={chat.id}
-                    onClick={() => handleSelectChat(chat.id)}
+                    onClick={() => handleSelectChat(chat, chat.title)}
                     className={`group flex items-center justify-between p-2.5 rounded-xl border transition-all cursor-pointer ${
                       activeChatId === chat.id
                         ? 'bg-sky-500/10 border-sky-500/30 text-sky-400'
