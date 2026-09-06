@@ -170,7 +170,11 @@ export async function POST(req: NextRequest) {
           3500
         );
 
-        // 2. LLM Extraction
+        const isFallbackToInternal =
+          (!factsA.hasLiveResults && !factsB.hasLiveResults) ||
+          (!factsA.facts.trim() && !factsB.facts.trim());
+
+        // 2. LLM Extraction with Dual-Mode Support
         const matrix = await generateComparisonMatrix(
           entityA,
           entityB,
@@ -178,7 +182,8 @@ export async function POST(req: NextRequest) {
           factsB.facts,
           factsA.communityReviews,
           factsB.communityReviews,
-          contextTopic
+          contextTopic,
+          isFallbackToInternal
         );
 
         // 3. Write to Cache with 24h + Jitter
@@ -203,7 +208,8 @@ export async function POST(req: NextRequest) {
           '',
           '',
           '',
-          contextTopic
+          contextTopic,
+          true
         );
 
         // Cache Zero-Shot fallback with short TTL (1 Hour)

@@ -109,28 +109,34 @@ function cleanAndParseJson(
       ? parsed.category.trim()
       : 'Comparative Analysis';
 
+    const isInvalidPro = (p: any) => !p || typeof p !== 'string' || /^(n\/?a|not specified.*|none|null|-|unknown)$/i.test(String(p).trim());
+
     // Safe entity_a resolution
+    const rawProsA = (typeof parsed.entity_a === 'object' && Array.isArray(parsed.entity_a?.pros))
+      ? parsed.entity_a.pros.map(String).filter((p: string) => !isInvalidPro(p))
+      : [];
+
     const entity_a: EntityVerdict = {
       name: (typeof parsed.entity_a === 'object' && parsed.entity_a?.name)
         ? String(parsed.entity_a.name)
         : typeof parsed.entity_a === 'string'
         ? parsed.entity_a
         : fallbackEntityA,
-      pros: (typeof parsed.entity_a === 'object' && Array.isArray(parsed.entity_a?.pros))
-        ? parsed.entity_a.pros.map(String)
-        : [],
+      pros: rawProsA.length > 0 ? rawProsA : [`Established baseline specifications for ${fallbackEntityA}`],
     };
 
     // Safe entity_b resolution
+    const rawProsB = (typeof parsed.entity_b === 'object' && Array.isArray(parsed.entity_b?.pros))
+      ? parsed.entity_b.pros.map(String).filter((p: string) => !isInvalidPro(p))
+      : [];
+
     const entity_b: EntityVerdict = {
       name: (typeof parsed.entity_b === 'object' && parsed.entity_b?.name)
         ? String(parsed.entity_b.name)
         : typeof parsed.entity_b === 'string'
         ? parsed.entity_b
         : fallbackEntityB,
-      pros: (typeof parsed.entity_b === 'object' && Array.isArray(parsed.entity_b?.pros))
-        ? parsed.entity_b.pros.map(String)
-        : [],
+      pros: rawProsB.length > 0 ? rawProsB : [`Targeted performance advantages for ${fallbackEntityB}`],
     };
 
     // Dynamic categories resolution
@@ -448,28 +454,33 @@ export async function generateComparisonMatrix(
   factsB: string,
   reviewsA?: string,
   reviewsB?: string,
-  contextTopic?: string
+  contextTopic?: string,
+  isFallbackToInternal?: boolean
 ): Promise<GenerativeComparisonResponse> {
   const geminiKey = process.env.GEMINI_API_KEY;
   const groqKey = process.env.GROQ_API_KEY;
 
-  const userPrompt = `Entity A: "${entityA}"
+  const internalFallbackDirective = (isFallbackToInternal || (!factsA.trim() && !factsB.trim()))
+    ? `IMPORTANT DUAL-MODE DIRECTIVE: Live search snippets are currently unavailable. Rely on your established internal training knowledge base to provide accurate, high-confidence baseline metrics, rankings, and structural data for these two entities. Keep the anti-hallucination constraint reasonable: Only use "Not specified" if the entity itself is completely fictional, but for well-known institutions, products, and concepts (e.g., IIT Bombay vs IIT Delhi, Primary vs Secondary Cell, iPhone vs Samsung), generate their true historical baselines (e.g., standard NIRF ranks, approximate intake, campus size, operational mechanisms).\n\n`
+    : '';
+
+  const userPrompt = `${internalFallbackDirective}Entity A: "${entityA}"
 Entity B: "${entityB}"
 ${contextTopic ? `Specific Focus / Topic: "${contextTopic}"` : ''}
 
 RAW FACTS FOR ${entityA.toUpperCase()}:
-${factsA || 'No specific search snippets retrieved.'}
+${factsA || 'No specific search snippets retrieved. Rely on internal training knowledge base.'}
 
 RAW FACTS FOR ${entityB.toUpperCase()}:
-${factsB || 'No specific search snippets retrieved.'}
+${factsB || 'No specific search snippets retrieved. Rely on internal training knowledge base.'}
 
 REDDIT & COMMUNITY FORUM REVIEWS FOR ${entityA.toUpperCase()}:
-${reviewsA || 'No forum reviews found.'}
+${reviewsA || 'No forum reviews found. Normalize general domain consensus.'}
 
 REDDIT & COMMUNITY FORUM REVIEWS FOR ${entityB.toUpperCase()}:
-${reviewsB || 'No forum reviews found.'}
+${reviewsB || 'No forum reviews found. Normalize general domain consensus.'}
 
-Execute precision data extraction. Identify the domain, group metrics into dynamic category names in "categories", provide "entity_a" and "entity_b" objects with pros, and extract concrete facts strictly following the JSON schema.`;
+Execute adaptive generative comparison extraction. Identify the domain, group metrics into dynamic category names in "categories", provide "entity_a" and "entity_b" objects with concrete pros (filtering out any "N/A" or "Not specified" strings), and extract concrete facts strictly following the JSON schema.`;
 
   if (geminiKey) {
     try {

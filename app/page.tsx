@@ -68,6 +68,13 @@ function isMissingValue(val: any): boolean {
   return /^(n\/?a|not specified.*|none|null|-|unknown)$/i.test(str);
 }
 
+function isMissingVerdictBullet(text: any): boolean {
+  if (!text || typeof text !== 'string') return true;
+  const clean = text.trim();
+  if (!clean) return true;
+  return /^(n\/?a|not specified.*|none|null|-|unknown)$/i.test(clean);
+}
+
 function renderValueWithFallback(val: any, fallbackText = 'Not specified') {
   if (isMissingValue(val)) {
     return <span className="text-slate-500 italic text-xs sm:text-sm">{fallbackText}</span>;
@@ -257,6 +264,9 @@ const LedgerNode = memo(function LedgerNode({ data }: any) {
 
 const VerdictNode = memo(function VerdictNode({ data }: any) {
   const { entityA, entityB, verdictSummary, prosA = [], prosB = [] } = data;
+  const safeProsA = (Array.isArray(prosA) ? prosA : []).filter((p: any) => !isMissingVerdictBullet(p));
+  const safeProsB = (Array.isArray(prosB) ? prosB : []).filter((p: any) => !isMissingVerdictBullet(p));
+
   return (
     <div className="w-[320px] sm:w-[400px] min-h-min h-auto bg-slate-900/95 border border-slate-700/80 rounded-2xl p-4 sm:p-5 shadow-2xl text-slate-100 backdrop-blur-xl">
       <Handle type="target" position={Position.Left} className="!bg-amber-500 !w-3 !h-3 !border-2 !border-slate-900" />
@@ -282,11 +292,11 @@ const VerdictNode = memo(function VerdictNode({ data }: any) {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
         <div className="p-2.5 bg-slate-950/70 rounded-lg border border-slate-800 whitespace-normal break-words leading-relaxed">
           <span className="text-sky-400 font-semibold block mb-1">Pick {entityA}:</span>
-          <span className="text-slate-300">{prosA[0] || 'Established core specifications'}</span>
+          <span className="text-slate-300">{safeProsA[0] || 'Established core specifications'}</span>
         </div>
         <div className="p-2.5 bg-slate-950/70 rounded-lg border border-slate-800 whitespace-normal break-words leading-relaxed">
           <span className="text-indigo-400 font-semibold block mb-1">Pick {entityB}:</span>
-          <span className="text-slate-300">{prosB[0] || 'Targeted performance benchmarks'}</span>
+          <span className="text-slate-300">{safeProsB[0] || 'Targeted performance benchmarks'}</span>
         </div>
       </div>
     </div>
@@ -715,12 +725,16 @@ export default function ComparisonApp() {
 
   const displayProsA = useMemo(() => {
     const raw = isSwapped ? comparisonData?.entity_b?.pros : comparisonData?.entity_a?.pros;
-    return Array.isArray(raw) ? raw : [];
+    const arr = Array.isArray(raw) ? raw : [];
+    const filtered = arr.filter((item) => !isMissingVerdictBullet(item));
+    return filtered.length > 0 ? filtered : ['Established baseline specifications and capabilities'];
   }, [comparisonData, isSwapped]);
 
   const displayProsB = useMemo(() => {
     const raw = isSwapped ? comparisonData?.entity_a?.pros : comparisonData?.entity_b?.pros;
-    return Array.isArray(raw) ? raw : [];
+    const arr = Array.isArray(raw) ? raw : [];
+    const filtered = arr.filter((item) => !isMissingVerdictBullet(item));
+    return filtered.length > 0 ? filtered : ['Targeted performance benchmarks and advantages'];
   }, [comparisonData, isSwapped]);
 
   const category = comparisonData?.category || 'Comparative Analysis';
@@ -994,11 +1008,17 @@ export default function ComparisonApp() {
       }
 
       const flatM = Object.values(resolvedCategories).flat();
+      const validMetricsA = flatM.filter((m) => !isMissingValue(m.entity_a));
+      const validMetricsB = flatM.filter((m) => !isMissingValue(m.entity_b));
+
+      resolvedEntityA.pros = resolvedEntityA.pros.filter((p: any) => !isMissingVerdictBullet(p));
+      resolvedEntityB.pros = resolvedEntityB.pros.filter((p: any) => !isMissingVerdictBullet(p));
+
       if (resolvedEntityA.pros.length === 0) {
-        resolvedEntityA.pros = flatM.slice(0, 3).map((m) => `${m.metric}: ${m.entity_a}`);
+        resolvedEntityA.pros = validMetricsA.slice(0, 3).map((m) => `${m.metric}: ${m.entity_a}`);
       }
       if (resolvedEntityB.pros.length === 0) {
-        resolvedEntityB.pros = flatM.slice(0, 3).map((m) => `${m.metric}: ${m.entity_b}`);
+        resolvedEntityB.pros = validMetricsB.slice(0, 3).map((m) => `${m.metric}: ${m.entity_b}`);
       }
 
       setComparisonData({

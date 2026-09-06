@@ -1,8 +1,9 @@
 /**
  * Parallel Fact & Reddit Retrieval Utility
  * Executes independent, parallel search queries for Entity A and Entity B:
- * 1. Official/benchmark specifications
+ * 1. SerpApi / Serper / DuckDuckGo search
  * 2. Community reviews & Reddit discussions for sentiment analysis
+ * 3. Graceful fallback flag when search returns empty or key is absent
  */
 
 export interface EntityFactsResult {
@@ -10,7 +11,8 @@ export interface EntityFactsResult {
   queryUsed: string;
   facts: string;
   communityReviews?: string;
-  source: 'serp_api' | 'serper_api' | 'duckduckgo';
+  source: 'serp_api' | 'serper_api' | 'duckduckgo' | 'internal_knowledge';
+  hasLiveResults: boolean;
 }
 
 function sanitizeSnippet(text: string): string {
@@ -76,10 +78,38 @@ export async function fetchEntityFacts(
 
   let factsSnippets: string[] = [];
   let redditSnippets: string[] = [];
-  let source: 'serp_api' | 'serper_api' | 'duckduckgo' = 'duckduckgo';
+  let source: 'serp_api' | 'serper_api' | 'duckduckgo' | 'internal_knowledge' = 'internal_knowledge';
 
-  // 1. Serper API
-  if (serperApiKey) {
+  // 1. SerpApi
+  if (serpApiKey) {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      const serpUrl = `https://serpapi.com/search.json?engine=google&q=${encodeURIComponent(searchQuery)}&api_key=${serpApiKey}&num=6`;
+      const res = await fetch(serpUrl, { signal: controller.signal });
+      clearTimeout(timer);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.knowledge_graph?.description) {
+          factsSnippets.push(`Knowledge Graph: ${data.knowledge_graph.title || ''} - ${data.knowledge_graph.description}`);
+        }
+        if (data.answer_box?.snippet) {
+          factsSnippets.push(data.answer_box.snippet);
+        }
+        if (Array.isArray(data.organic_results)) {
+          for (const item of data.organic_results.slice(0, 5)) {
+            if (item.snippet) factsSnippets.push(item.snippet);
+          }
+        }
+        if (factsSnippets.length > 0) source = 'serp_api';
+      }
+    } catch {
+      // fallback
+    }
+  }
+
+  // 2. Serper API
+  if (factsSnippets.length === 0 && serperApiKey) {
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -100,20 +130,23 @@ export async function fetchEntityFacts(
             if (item.snippet) factsSnippets.push(item.snippet);
           }
         }
-        source = 'serper_api';
+        if (factsSnippets.length > 0) source = 'serper_api';
       }
     } catch {
       // fallback
     }
   }
 
-  // If facts not found via Serper, use DuckDuckGo
+  // 3. DuckDuckGo Fallback
   if (factsSnippets.length === 0) {
     factsSnippets = await searchDuckDuckGo(searchQuery, timeoutMs);
+    if (factsSnippets.length > 0) source = 'duckduckgo';
   }
 
   // Fetch Reddit / community discussions
   redditSnippets = await searchDuckDuckGo(redditQuery, timeoutMs);
+
+  const hasLiveResults = factsSnippets.length > 0;
 
   return {
     entity,
@@ -121,6 +154,7 @@ export async function fetchEntityFacts(
     facts: factsSnippets.map(sanitizeSnippet).join('\n- '),
     communityReviews: redditSnippets.map(sanitizeSnippet).join('\n- '),
     source,
+    hasLiveResults,
   };
 }
 
