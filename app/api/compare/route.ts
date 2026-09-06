@@ -66,17 +66,9 @@ function formatComparisonResponse(
 
 export async function POST(req: NextRequest) {
   try {
-    // 1. NextAuth Authentication & User Scoping Check
+    // 1. NextAuth Authentication & User Scoping Check (Seamless Guest Fallback)
     const session = await getServerSession(authOptions);
-    
-    if (!session || !session.user || !session.user.email) {
-      return NextResponse.json(
-        { error: 'Unauthorized. Please sign in with Google to perform comparisons and save history.' },
-        { status: 401 }
-      );
-    }
-
-    const userEmail = session.user.email;
+    const userEmail = session?.user?.email || 'guest@morphui.internal';
 
     const body = await req.json();
     const {

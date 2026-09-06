@@ -93,7 +93,7 @@ const THEME_STYLES: Record<MorphTheme, {
     card: 'bg-[#111827]/90 border border-slate-800/90 text-slate-100 shadow-xl shadow-black/20 backdrop-blur-md',
     cardInner: 'bg-[#0B0F17]/80 border border-slate-800/80 text-slate-300',
     nav: 'bg-[#0B0F17]/90 border-b border-slate-800/80 text-white backdrop-blur-xl shadow-sm',
-    input: 'bg-[#0B0F17] border border-slate-800 text-slate-100 focus:border-sky-500 placeholder-slate-500',
+    input: 'bg-[#0B0F17] border border-slate-700/80 text-slate-100 placeholder:text-slate-500 focus:border-sky-500 focus:ring-1 focus:ring-sky-500/40 focus:outline-none',
     tableHeader: 'bg-slate-900/95 text-slate-300 border-b border-slate-800',
     tableRow: 'hover:bg-slate-800/40 border-b border-slate-800/60',
     tableSection: 'bg-slate-950/70 hover:bg-slate-950/90 border-t border-slate-800',
@@ -115,7 +115,7 @@ const THEME_STYLES: Record<MorphTheme, {
     card: 'bg-white border border-slate-200/90 text-slate-900 shadow-xl shadow-slate-200/50 backdrop-blur-md',
     cardInner: 'bg-slate-50 border border-slate-200 text-slate-800',
     nav: 'bg-white/95 border-b border-slate-200/90 text-slate-900 backdrop-blur-xl shadow-sm',
-    input: 'bg-slate-50 border border-slate-300 text-slate-900 focus:border-sky-500 placeholder-slate-400 focus:bg-white',
+    input: 'bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-sky-500 focus:ring-1 focus:ring-sky-500/30 focus:bg-white focus:outline-none',
     tableHeader: 'bg-slate-100/90 text-slate-700 border-b border-slate-200',
     tableRow: 'hover:bg-slate-50/90 border-b border-slate-200/80',
     tableSection: 'bg-slate-100/80 hover:bg-slate-200/60 border-t border-slate-200',
@@ -137,7 +137,7 @@ const THEME_STYLES: Record<MorphTheme, {
     card: 'bg-[#0a2f23]/95 border border-emerald-800/70 text-emerald-100 shadow-xl shadow-emerald-950/60 backdrop-blur-md',
     cardInner: 'bg-[#062219]/90 border border-emerald-900/60 text-emerald-200',
     nav: 'bg-[#061e16]/95 border-b border-emerald-800/80 text-emerald-100 backdrop-blur-xl shadow-sm',
-    input: 'bg-[#062219] border border-emerald-800/60 text-emerald-100 focus:border-emerald-400 placeholder-emerald-400/40',
+    input: 'bg-[#062219] border border-emerald-800/60 text-emerald-100 placeholder:text-emerald-400/50 focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400/30 focus:outline-none',
     tableHeader: 'bg-[#08281e] text-emerald-200 border-b border-emerald-800/60',
     tableRow: 'hover:bg-[#0c382a]/50 border-b border-emerald-900/50',
     tableSection: 'bg-[#07251c] hover:bg-[#0a3327] border-t border-emerald-800/60',
@@ -159,7 +159,7 @@ const THEME_STYLES: Record<MorphTheme, {
     card: 'bg-[#1a0c24]/95 border border-pink-900/50 text-pink-50 shadow-xl shadow-pink-950/50 backdrop-blur-md',
     cardInner: 'bg-[#12071a]/90 border border-pink-950/60 text-pink-200',
     nav: 'bg-[#0f0714]/95 border-b border-pink-900/60 text-pink-50 backdrop-blur-xl shadow-sm',
-    input: 'bg-[#12071a] border border-pink-900/60 text-pink-50 focus:border-pink-500 placeholder-pink-400/40',
+    input: 'bg-[#12071a] border border-pink-900/60 text-pink-50 placeholder:text-pink-400/50 focus:border-pink-500 focus:ring-1 focus:ring-pink-500/30 focus:outline-none',
     tableHeader: 'bg-[#200f2d] text-pink-200 border-b border-pink-900/50',
     tableRow: 'hover:bg-[#281338]/50 border-b border-pink-950/50',
     tableSection: 'bg-[#1c0d27] hover:bg-[#251134] border-t border-pink-900/50',
@@ -1004,10 +1004,7 @@ function MorphUIContent() {
 
     setIsSidebarOpen(false);
 
-    if (authStatus === 'unauthenticated') {
-      signIn('google');
-      return;
-    }
+    // Guest execution supported seamlessly without blocking
 
     setLoading(true);
     setError(null);
@@ -1070,10 +1067,7 @@ function MorphUIContent() {
     const queryToRun = (overridePrompt ?? prompt).trim();
     if (!queryToRun && uploadedImages.length === 0) return;
 
-    if (authStatus === 'unauthenticated') {
-      signIn('google');
-      return;
-    }
+    // Guest execution supported seamlessly without blocking
 
     setLoading(true);
     setError(null);
