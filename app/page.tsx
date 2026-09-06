@@ -1694,7 +1694,7 @@ function MorphUIContent() {
         <footer className={`${t.footer} py-6 text-center text-xs w-full transition-colors duration-300`}>
           <div className="w-full max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
             <span>MorphUI • Real-Time Generative Comparisons</span>
-            <span>Zero-slop human-engineered runtime (2026)</span>
+            <span>© 2026 MorphUI</span>
           </div>
         </footer>
       </div>
@@ -2673,7 +2673,7 @@ function MorphUIContent() {
       <footer className={`${t.footer} py-6 mt-8 sm:mt-12 text-center text-xs w-full transition-colors duration-300`}>
         <div className="w-full max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
           <span>MorphUI • Persistent Dual-View Spec Sheet & Spatial Graph Runtime</span>
-          <span>Zero-slop human-engineered architecture (2026)</span>
+          <span>© 2026 MorphUI</span>
         </div>
       </footer>
     </div>
