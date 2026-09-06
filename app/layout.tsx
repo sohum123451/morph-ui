@@ -1,9 +1,13 @@
-import type { Metadata } from "next";
-import "./globals.css";
+import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
+import './globals.css';
+import AuthProvider from '@/components/AuthProvider';
+
+const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: "MorphUI - Intelligent Product & Entity Comparison Engine",
-  description: "Production-grade side-by-side entity and product comparison with real-time web retrieval and verified specifications.",
+  title: 'MorphUI - Intelligent Comparison Engine',
+  description: 'AI-powered real-time comparative analysis & spatial graph runtime.',
 };
 
 export default function RootLayout({
@@ -12,9 +16,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
-      <body className="min-h-screen bg-slate-950 text-slate-100 antialiased selection:bg-slate-800 selection:text-white">
-        {children}
+    <html lang="en">
+      <body className={inter.className}>
+        <AuthProvider>
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );

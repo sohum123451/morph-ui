@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef, useCallback, memo } from 'react';
+import { useSession, signIn, signOut } from 'next-auth/react';
 import {
   Search,
   Scale,
@@ -660,6 +661,7 @@ export default function MorphUIPage() {
 }
 
 function MorphUIContent() {
+  const { data: session, status: authStatus } = useSession();
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -838,12 +840,18 @@ function MorphUIContent() {
 
   // Fetch past chat history from Turso DB
   const fetchChatHistory = async () => {
+    if (authStatus !== 'authenticated') {
+      setChatHistory([]);
+      return;
+    }
     setLoadingHistory(true);
     try {
       const res = await fetch('/api/history');
       if (res.ok) {
         const data = await res.json();
         setChatHistory(data.history || []);
+      } else if (res.status === 401) {
+        setChatHistory([]);
       }
     } catch (e) {
       console.error('Failed to fetch chat history:', e);
@@ -853,10 +861,21 @@ function MorphUIContent() {
   };
 
   useEffect(() => {
+    if (authStatus === 'authenticated') {
+      fetchChatHistory();
+    }
+  }, [authStatus]);
+
+  useEffect(() => {
     fetchChatHistory();
   }, []);
 
   const handleSelectChat = async (id: string) => {
+    if (authStatus === 'unauthenticated') {
+      signIn('google');
+      return;
+    }
+
     setLoading(true);
     setError(null);
     try {
@@ -898,6 +917,11 @@ function MorphUIContent() {
     if (e) e.preventDefault();
     const queryToRun = (overridePrompt ?? prompt).trim();
     if (!queryToRun && uploadedImages.length === 0) return;
+
+    if (authStatus === 'unauthenticated') {
+      signIn('google');
+      return;
+    }
 
     setLoading(true);
     setError(null);
@@ -1343,6 +1367,41 @@ function MorphUIContent() {
                   </span>
                 )}
               </button>
+
+              {authStatus === 'authenticated' && session?.user ? (
+                <div className="flex items-center gap-2">
+                  <div className={`flex items-center gap-1.5 px-2 py-1 rounded-xl ${t.cardInner} text-xs`}>
+                    {session.user.image ? (
+                      <img src={session.user.image} alt={session.user.name || 'User'} className="w-4 h-4 rounded-full" />
+                    ) : (
+                      <div className="w-4 h-4 rounded-full bg-sky-500 text-white flex items-center justify-center text-[9px] font-bold">
+                        {(session.user.name || session.user.email || 'U').charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <span className="hidden sm:inline font-medium truncate max-w-[90px]">{session.user.name || session.user.email}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => signOut()}
+                    className={`px-2 py-1 rounded-xl ${t.btnSecondary} text-xs transition-all`}
+                    title="Sign Out"
+                  >
+                    Sign Out
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => signIn('google')}
+                  className="px-2.5 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm active:scale-95 transition-all shrink-0"
+                  title="Sign in with Google"
+                >
+                  <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                    <path d="M12.24 10.285V13.4h6.887C18.2 15.614 15.645 18 12.24 18c-3.315 0-6-2.685-6-6s2.685-6 6-6c1.463 0 2.8.533 3.84 1.413l2.36-2.36C16.96 3.667 14.73 3 12.24 3 7.27 3 3.24 7.03 3.24 12s4.03 9 9 9c5.2 0 8.655-3.655 8.655-8.81 0-.61-.06-1.2-.175-1.765H12.24z" />
+                  </svg>
+                  <span className="hidden sm:inline">Sign in</span>
+                </button>
+              )}
             </div>
           </div>
         </header>
@@ -1830,6 +1889,41 @@ function MorphUIContent() {
             <div className={`text-[10px] font-mono ${t.subtext} hidden lg:block`}>
               <kbd className="px-1.5 py-0.5 rounded bg-slate-500/20 border border-slate-500/30">V</kbd> toggle view
             </div>
+
+            {authStatus === 'authenticated' && session?.user ? (
+              <div className="flex items-center gap-2 shrink-0">
+                <div className={`flex items-center gap-1.5 px-2 py-1 rounded-xl ${t.cardInner} text-xs`}>
+                  {session.user.image ? (
+                    <img src={session.user.image} alt={session.user.name || 'User'} className="w-4 h-4 rounded-full" />
+                  ) : (
+                    <div className="w-4 h-4 rounded-full bg-sky-500 text-white flex items-center justify-center text-[9px] font-bold">
+                      {(session.user.name || session.user.email || 'U').charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <span className="hidden xl:inline font-medium truncate max-w-[80px]">{session.user.name || session.user.email}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => signOut()}
+                  className={`px-2 py-1 rounded-xl ${t.btnSecondary} text-xs transition-all`}
+                  title="Sign Out"
+                >
+                  Sign Out
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => signIn('google')}
+                className="px-2.5 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm active:scale-95 transition-all shrink-0"
+                title="Sign in with Google"
+              >
+                <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                  <path d="M12.24 10.285V13.4h6.887C18.2 15.614 15.645 18 12.24 18c-3.315 0-6-2.685-6-6s2.685-6 6-6c1.463 0 2.8.533 3.84 1.413l2.36-2.36C16.96 3.667 14.73 3 12.24 3 7.27 3 3.24 7.03 3.24 12s4.03 9 9 9c5.2 0 8.655-3.655 8.655-8.81 0-.61-.06-1.2-.175-1.765H12.24z" />
+                </svg>
+                <span className="hidden sm:inline">Sign in</span>
+              </button>
+            )}
           </div>
         </div>
 

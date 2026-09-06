@@ -1,338 +1,176 @@
-import { sanitizeQuery, sanitizeEntities } from '@/lib/security';
 import { NextRequest, NextResponse } from 'next/server';
-import crypto from 'crypto';
-import { MorphWidget, ImageInput, GenerativeComparisonResponse, EntityVerdict } from '@/types/morphui';
-import { splitMultiComparisonQuery, splitComparisonQuery } from '@/lib/entitySplitter';
-import { fetchMultiEntityFacts, fetchParallelEntityFacts } from '@/lib/factRetrieval';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { splitMultiComparisonQuery, splitComparisonQuery, extractEntitiesFromImages } from '@/lib/entitySplitter';
+import { fetchMultiEntityFacts } from '@/lib/factRetrieval';
 import { generateComparisonMatrix } from '@/lib/llmMiddleware';
 import {
-  normalizeCacheKey,
   getCachedComparison,
   setCachedComparison,
+  normalizeCacheKey,
   canMakeSerpRequest,
   recordSerpRequest,
-  performBackgroundRevalidation,
 } from '@/lib/swrCache';
-import { createChat, saveMessage } from '@/lib/db';
-import { encryptData } from '@/lib/crypto';
+import { saveUserComparison } from '@/lib/db';
+import { GenerativeComparisonResponse } from '@/types/morphui';
 
 function formatComparisonResponse(
   matrix: GenerativeComparisonResponse,
   rawQuery: string,
-  cacheHeader: 'HIT' | 'STALE' | 'MISS' | 'MISS-FALLBACK-LLM',
-  cacheStatus: 'FRESH' | 'REVALIDATING' | 'FRESH-LIVE' | 'RATE-LIMITED-FALLBACK',
-  ageSeconds = 0,
-  images: ImageInput[] = [],
+  cacheStatus: 'HIT' | 'MISS',
+  staleness: 'FRESH' | 'STALE-REVALIDATING' | 'FRESH-LIVE' | 'FALLBACK-ZERO-SHOT',
+  cacheAgeSeconds = 0,
+  images: string[] = [],
   chatId?: string
 ) {
-  const entityNames = matrix.entities?.map((e) => e.name) || [matrix.entity_a?.name || 'Option A', matrix.entity_b?.name || 'Option B'];
-  const title = `${entityNames.join(' vs ')}: ${matrix.category}`;
-
-  const primaryWidget: MorphWidget = {
-    widget_type: 'comparison_table',
-    title,
-    data: {
-      category: matrix.category,
-      entities: matrix.entities,
-      entity_a: matrix.entity_a,
-      entity_b: matrix.entity_b,
-      categories: matrix.categories,
-      verified_metrics: matrix.verified_metrics,
-      community_sentiment: matrix.community_sentiment,
-      suggested_metrics: matrix.suggested_metrics,
-      comparison_points: matrix.comparison_points,
-      verdict_summary: matrix.verdict_summary,
-      headers: ['Metric / Feature', ...entityNames],
-      rows: matrix.verified_metrics.map((vm) => {
-        const row: Record<string, string> = { 'Metric / Feature': vm.metric };
-        entityNames.forEach((name, idx) => {
-          row[name] = vm.values?.[idx] || (idx === 0 ? vm.entity_a || '' : vm.entity_b || '');
-        });
-        return row;
-      }),
-      summary: matrix.verdict_summary,
-      images:
-        images.length > 0
-          ? images.map((img, i) => ({
-              url: img.data.startsWith('data:') ? img.data : `data:${img.mimeType};base64,${img.data}`,
-              name: img.name || entityNames[i] || `Entity ${i + 1}`,
-              label: entityNames[i] || `Entity ${i + 1}`,
-            }))
-          : undefined,
-    },
-  };
-
-  const response = NextResponse.json({
-    widgets: [primaryWidget],
-    chat_id: chatId,
-    category: matrix.category,
-    entities: matrix.entities,
-    entity_a: matrix.entity_a || matrix.entities?.[0],
-    entity_b: matrix.entity_b || matrix.entities?.[1],
-    categories: matrix.categories,
-    verified_metrics: matrix.verified_metrics,
-    community_sentiment: matrix.community_sentiment,
-    suggested_metrics: matrix.suggested_metrics,
-    verdict_summary: matrix.verdict_summary,
-    comparison_points: matrix.comparison_points,
-    model_used:
-      matrix.model_used ||
-      (cacheHeader === 'HIT'
-        ? 'SWR Cache (Instant Hit)'
-        : cacheHeader === 'STALE'
-        ? 'SWR Cache (Stale Served, Background Revalidation Triggered)'
-        : cacheHeader === 'MISS-FALLBACK-LLM'
-        ? 'Zero-Shot LMM (Rate-Limit Circuit Breaker Engaged)'
-        : 'Live Precision Pipeline (SERP + Multi-Source)'),
-    grounded: cacheHeader !== 'MISS-FALLBACK-LLM',
-    raw_query: rawQuery,
-    cache_info: {
-      status: cacheHeader,
-      cache_status: cacheStatus,
-      age_seconds: ageSeconds,
-    },
-    visual_comparison: images.length > 0,
-  });
-
-  response.headers.set('X-Cache', cacheHeader);
-  response.headers.set('X-Cache-Status', cacheStatus);
-  response.headers.set('X-Cache-Age-Seconds', String(ageSeconds));
-  if (chatId) response.headers.set('X-Chat-ID', chatId);
-
-  return response;
-}
-
-
-async function persistComparisonToDb(chatId: string, query: string, matrix: GenerativeComparisonResponse) {
-  try {
-    const userEnc = encryptData({ prompt: query });
-    await saveMessage(
-      crypto.randomUUID(),
-      chatId,
-      userEnc.encryptedPayload,
-      userEnc.iv,
-      'user'
-    );
-
-    const assistantEnc = encryptData(matrix);
-    await saveMessage(
-      crypto.randomUUID(),
-      chatId,
-      assistantEnc.encryptedPayload,
-      assistantEnc.iv,
-      'assistant'
-    );
-  } catch (err) {
-    console.error('Error persisting encrypted comparison to Turso DB:', err);
+  const verifiedCount = matrix.verified_metrics ? matrix.verified_metrics.length : 0;
+  let totalMetrics = 0;
+  if (matrix.categories) {
+    Object.values(matrix.categories).forEach((cat) => {
+      if (Array.isArray(cat)) {
+        totalMetrics += cat.length;
+      }
+    });
   }
+
+  const confidenceScore =
+    verifiedCount > 0 && totalMetrics > 0
+      ? Math.min(1.0, Math.round((verifiedCount / totalMetrics + 0.3) * 100) / 100)
+      : 0.85;
+
+  return NextResponse.json(
+    {
+      success: true,
+      query: rawQuery,
+      chat_id: chatId || matrix.chat_id,
+      data: matrix,
+      meta: {
+        cache_status: cacheStatus,
+        staleness,
+        cache_age_seconds: cacheAgeSeconds,
+        grounded_sources: verifiedCount,
+        confidence_score: confidenceScore,
+        image_count: images.length,
+        timestamp: new Date().toISOString(),
+      },
+    },
+    {
+      headers: {
+        'X-Cache': cacheStatus,
+        'X-Staleness': staleness,
+        'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=72000',
+      },
+    }
+  );
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json().catch(() => ({}));
+    // 1. NextAuth Authentication & User Scoping Check
+    const session = await getServerSession(authOptions);
+    
+    if (!session || !session.user || !session.user.email) {
+      return NextResponse.json(
+        { error: 'Unauthorized. Please sign in with Google to perform comparisons and save history.' },
+        { status: 401 }
+      );
+    }
+
+    const userEmail = session.user.email;
+
+    const body = await req.json();
     const {
-      prompt: rawPrompt,
-      chat_id: rawChatId,
-      entities: directEntitiesRaw,
-      entityA: directARaw,
-      entityB: directBRaw,
-      contextTopic: directTopicRaw,
+      prompt,
+      query,
+      entityA,
+      entityB,
+      topic,
       images = [],
+      chat_id,
     } = body;
 
-    // Security Hardening: Sanitize all inputs against prompt injection and control characters
-    const prompt = sanitizeQuery(rawPrompt, 120);
-    const directA = sanitizeQuery(directARaw, 50);
-    const directB = sanitizeQuery(directBRaw, 50);
-    const directTopic = directTopicRaw ? sanitizeQuery(directTopicRaw, 60) : undefined;
-    const directEntities = Array.isArray(directEntitiesRaw) ? sanitizeEntities(directEntitiesRaw, 6, 50) : [];
-    const chat_id = rawChatId && typeof rawChatId === 'string' ? sanitizeQuery(rawChatId, 64) : undefined;
+    const rawQuery = (prompt || query || '').trim();
 
-    const rawQuery = (prompt || (directEntities.length > 0 ? directEntities.join(' vs ') : directA && directB ? `${directA} vs ${directB}` : '') || '').trim();
-
-    if (!rawQuery && images.length === 0) {
-      return NextResponse.json({ error: 'Missing prompt, entities, or image input' }, { status: 400 });
+    if (!rawQuery && (!entityA || !entityB) && images.length === 0) {
+      return NextResponse.json(
+        { error: 'Please provide a comparison prompt, entities, or images.' },
+        { status: 400 }
+      );
     }
 
     let entities: string[] = [];
-    let contextTopic: string | undefined = directTopic;
+    let contextTopic = topic || '';
 
-    if (Array.isArray(directEntities) && directEntities.length >= 2) {
-      entities = directEntities;
-    } else if (directA && directB) {
-      entities = [directA, directB];
+    if (entityA && entityB) {
+      entities = [entityA.trim(), entityB.trim()];
+    } else if (images.length > 0 && !rawQuery) {
+      entities = await extractEntitiesFromImages(images);
     } else {
       const parsed = splitMultiComparisonQuery(rawQuery);
-      if (parsed) {
+      if (parsed && parsed.entities.length >= 2) {
         entities = parsed.entities;
-        contextTopic = contextTopic || parsed.contextTopic;
-      }
-    }
-
-    const activeChatId = chat_id || crypto.randomUUID();
-    const chatTitle = entities.length >= 2 ? entities.join(' vs ') : rawQuery.slice(0, 50) || 'New Comparison';
-
-    await createChat(activeChatId, chatTitle);
-
-    if (entities.length >= 2) {
-      const cacheKey = normalizeCacheKey(entities, undefined, contextTopic);
-      const now = Date.now();
-
-      const cached = await getCachedComparison(cacheKey);
-
-      if (cached && cached.data) {
-        const ageSeconds = Math.floor((now - cached.createdAt) / 1000);
-
-        persistComparisonToDb(activeChatId, rawQuery, cached.data);
-
-        if (now < cached.staleAt) {
-          return formatComparisonResponse(
-            cached.data,
-            rawQuery,
-            'HIT',
-            'FRESH',
-            ageSeconds,
-            images,
-            activeChatId
-          );
-        }
-
-        if (now < cached.expiresAt) {
-          const backgroundTask = performBackgroundRevalidation(
-            cacheKey,
-            entities[0],
-            entities[1],
-            contextTopic,
-            cached
-          );
-
-          if ((req as any).waitUntil) {
-            (req as any).waitUntil(backgroundTask);
-          } else {
-            backgroundTask.catch((err) =>
-              console.warn('[SWR Background Revalidation Detached Error]:', err)
-            );
-          }
-
-          return formatComparisonResponse(
-            cached.data,
-            rawQuery,
-            'STALE',
-            'REVALIDATING',
-            ageSeconds,
-            images,
-            activeChatId
-          );
-        }
-      }
-
-      if (canMakeSerpRequest()) {
-        recordSerpRequest();
-
-        const factsList = await fetchMultiEntityFacts(
-          entities,
-          contextTopic,
-          3500
-        );
-
-        const isFallbackToInternal = factsList.every((f) => !f.facts?.trim());
-
-        const matrix = await generateComparisonMatrix(
-          entities,
-          factsList,
-          undefined,
-          undefined,
-          undefined,
-          undefined,
-          contextTopic,
-          isFallbackToInternal
-        );
-
-        await setCachedComparison(cacheKey, matrix, rawQuery, 'serp_grounded');
-        await persistComparisonToDb(activeChatId, rawQuery, matrix);
-
-        return formatComparisonResponse(
-          matrix,
-          rawQuery,
-          'MISS',
-          'FRESH-LIVE',
-          0,
-          images,
-          activeChatId
-        );
+        contextTopic = contextTopic || (parsed.contextTopic || '');
       } else {
-        console.warn(`[Circuit Breaker] SERP rate-limit active. Executing Zero-Shot LLM fallback for "${entities.join(' vs ')}".`);
-
-        const emptyFacts = entities.map((e) => ({
-          entity: e,
-          queryUsed: e,
-          facts: '',
-          communityReviews: '',
-          source: 'internal_knowledge' as const,
-          hasLiveResults: false,
-        }));
-
-        const matrix = await generateComparisonMatrix(
-          entities,
-          emptyFacts,
-          undefined,
-          undefined,
-          undefined,
-          undefined,
-          contextTopic,
-          true
-        );
-
-        await setCachedComparison(cacheKey, matrix, rawQuery, 'llm_zero_shot');
-        await persistComparisonToDb(activeChatId, rawQuery, matrix);
-
-        return formatComparisonResponse(
-          matrix,
-          rawQuery,
-          'MISS-FALLBACK-LLM',
-          'RATE-LIMITED-FALLBACK',
-          0,
-          images,
-          activeChatId
-        );
+        const parsed2 = splitComparisonQuery(rawQuery);
+        if (parsed2) {
+          entities = [parsed2.entityA, parsed2.entityB];
+          contextTopic = contextTopic || (parsed2.contextTopic || '');
+        }
       }
     }
 
-    const singleEntityFacts = await fetchMultiEntityFacts([rawQuery], undefined, 3000);
+    if (entities.length < 2 && images.length === 0) {
+      return NextResponse.json(
+        { error: 'Could not extract at least two entities to compare. Please specify "A vs B".' },
+        { status: 400 }
+      );
+    }
+
+    const chatId = chat_id || crypto.randomUUID();
+
+    // Check SWR Cache
+    const cacheKey = normalizeCacheKey(entities, undefined, contextTopic);
+    const cached = await getCachedComparison(cacheKey);
+
+    if (cached && cached.data) {
+      const responseData = { ...cached.data, chat_id: chatId };
+      const ageSeconds = Math.floor((Date.now() - cached.createdAt) / 1000);
+      await saveUserComparison(chatId, userEmail, rawQuery, entities.join(' vs '), JSON.stringify(responseData));
+      return formatComparisonResponse(responseData, rawQuery, 'HIT', 'FRESH', ageSeconds, images, chatId);
+    }
+
+    // Live Fact Retrieval
+    const canQuerySerp = canMakeSerpRequest();
+    let factsArray: any[] = [];
+    if (canQuerySerp) {
+      recordSerpRequest();
+      factsArray = await fetchMultiEntityFacts(entities, contextTopic, 3000);
+    }
+
+    // LLM Synthesis
     const matrix = await generateComparisonMatrix(
-      [rawQuery, 'Baseline Standard'],
-      singleEntityFacts,
+      entities,
+      factsArray,
       undefined,
       undefined,
       undefined,
       undefined,
       contextTopic,
-      true
+      !canQuerySerp
     );
 
-    await persistComparisonToDb(activeChatId, rawQuery, matrix);
+    matrix.chat_id = chatId;
 
-    return formatComparisonResponse(
-      matrix,
-      rawQuery,
-      'MISS',
-      'FRESH-LIVE',
-      0,
-      images,
-      activeChatId
-     );
+    // Cache matrix
+    await setCachedComparison(cacheKey, matrix, rawQuery, canQuerySerp ? 'serp_grounded' : 'llm_zero_shot');
+
+    // Save user-scoped comparison to Database
+    const entityTitle = entities.join(' vs ');
+    await saveUserComparison(chatId, userEmail, rawQuery, entityTitle, JSON.stringify(matrix));
+
+    return formatComparisonResponse(matrix, rawQuery, 'MISS', 'FRESH-LIVE', 0, images, chatId);
   } catch (err: any) {
-    console.error('Error in /api/compare:', err);
-    return NextResponse.json(
-      {
-        error: err?.message || 'Failed to generate comparison matrix',
-        fallback: true,
-      },
-      { status: 500 }
-    );
+    console.error('Comparison API error:', err);
+    return NextResponse.json({ error: err?.message || 'Internal error processing comparison' }, { status: 500 });
   }
-}
-
-export async function GET() {
-  return NextResponse.json({ status: 'ok', service: 'MorphUI Dual-Engine Comparison API' });
 }
