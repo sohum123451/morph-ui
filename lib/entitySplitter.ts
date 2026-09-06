@@ -13,11 +13,32 @@ export interface MultiComparisonEntities {
   rawQuery: string;
 }
 
-function capitalizeWords(str: string): string {
-  return str
-    .split(/\s+/)
-    .map((word) => (word.length > 0 ? word.charAt(0).toUpperCase() + word.slice(1) : ''))
-    .join(' ');
+const KNOWN_ACRONYMS = new Set([
+  'IIT', 'NIT', 'IIIT', 'BITS', 'VIT', 'SRM', 'MIT', 'UCLA', 'NYU', 'CMU', 'ETH', 'NUS', 'NTU',
+  'UI', 'API', 'LLM', 'AI', 'DX', 'SSR', 'RSC', 'DOM', 'AWS', 'GCP', 'AMD', 'GPU', 'CPU', 'ANC',
+  'LDAC', 'AAC', 'SBC', 'LEP', 'BOOST', 'US', 'UK', 'EU', 'CS', 'AI/ML'
+]);
+
+function preserveEntityName(rawName: string): string {
+  if (!rawName) return '';
+  const trimmed = rawName.trim();
+  const words = trimmed.split(/\s+/);
+  const normalizedWords = words.map((w) => {
+    const upper = w.toUpperCase();
+    if (KNOWN_ACRONYMS.has(upper)) {
+      return upper;
+    }
+    // If it has mixed casing like iPhone, MacBook, Ultraboost, WH-1000XM5, preserve as is
+    if (/[a-z]/.test(w) && /[A-Z]/.test(w)) {
+      return w;
+    }
+    // If all lowercase, title case
+    if (/^[a-z]+$/.test(w)) {
+      return w.charAt(0).toUpperCase() + w.slice(1);
+    }
+    return w;
+  });
+  return normalizedWords.join(' ');
 }
 
 function sanitizeEntity(str: string): string {
@@ -28,11 +49,7 @@ function sanitizeEntity(str: string): string {
 
 /**
  * Splits a query into 2 or more entities (N-way comparison).
- * Supports:
- * - "React vs Vue vs Svelte"
- * - "React, Vue, and Svelte"
- * - "Compare A, B, C for CS"
- * - "A vs B"
+ * Preserves user's entity integrity and capitalizes acronyms accurately (e.g. "IIT Bombay", "IIT Delhi").
  */
 export function splitMultiComparisonQuery(query: string): MultiComparisonEntities | null {
   if (!query || typeof query !== 'string') return null;
@@ -94,7 +111,7 @@ export function splitMultiComparisonQuery(query: string): MultiComparisonEntitie
     }
   }
 
-  // Deduplicate case-insensitively and filter
+  // Deduplicate case-insensitively and preserve clean naming
   const seen = new Set<string>();
   const finalizedEntities: string[] = [];
 
@@ -102,7 +119,7 @@ export function splitMultiComparisonQuery(query: string): MultiComparisonEntitie
     const key = e.toLowerCase();
     if (!seen.has(key) && e.length > 0) {
       seen.add(key);
-      finalizedEntities.push(capitalizeWords(e));
+      finalizedEntities.push(preserveEntityName(e));
     }
   });
 

@@ -16,25 +16,30 @@ function withTimeout<T>(promise: Promise<T>, ms: number, errMsg: string): Promis
 }
 
 const PRECISION_EXTRACTION_SYSTEM_PROMPT = `You are MorphUI's precision generative comparison runtime.
-You specialize in 2-way and N-way multi-entity comparisons across any domain (footwear, electronics, fruits, universities, software, etc.).
+You specialize in 2-way and N-way multi-entity comparisons across any domain (footwear, universities, electronics, fruits, software, etc.).
 
-ANTI-SLOP & ZERO-BOILERPLATE MANDATORY RULES:
-1. STRICT BAN ON AI SLOP & PLACEHOLDERS: NEVER use generic filler phrases such as:
+ENTITY INTEGRITY & ZERO-TEMPLATE MANDATORY RULES:
+1. NEVER ALTER OR MISSPELL ENTITY NAMES: Keep the user's exact entity names intact (e.g., "IIT Bombay" must stay "IIT Bombay", never "lit Bombay" or lowercase mangling).
+2. STRICT BAN ON TEMPLATE STRINGS & BOILERPLATE: NEVER output template placeholders or generic programmatic phrases such as:
+   - "Premier engineering standing for [Entity]"
    - "Industry benchmark specification for [Entity]"
    - "Verified operational performance rating"
-   - "Established baseline capabilities"
-   - "Distinct domain tradeoffs across performance, architectural footprint, and ecosystem maturity"
    - "Established core specifications for [Entity]"
    - "Proven domain track record and reliability"
-2. DOMAIN-AUTHENTIC COMPARISONS:
-   - For Running Shoes (e.g. Nike Pegasus vs Adidas Ultraboost): compare Midsole Foam & Tech (ReactX / Zoom Air vs Light BOOST), Heel-to-Toe Drop & Stack Height, Weight per shoe, Upper Material (Engineered Mesh vs Primeknit+), Outsole Rubber (Waffle vs Continental™), and Ideal Running Use Case.
-   - For Fruits vs Tech (e.g. Mango vs Apple Inc.): compare "Sugar & Nutritional Density", "Origin & Agriculture", "Corporate Valuation & Market Cap", "Shelf Life vs Hardware Support Lifecycle".
-   - For Headphones (e.g. Sony WH-1000XM5 vs Bose QC Ultra): compare ANC Performance & Processing, Battery Life (30h vs 24h), Codecs (LDAC vs aptX Adaptive), Soundstage & Immersive Audio, Weight & Clamping Force.
-   - For Universities (e.g. IIT Bombay vs IIT Delhi): compare NIRF Ranking, Flagship CSE Cutoff / JEE Rank, Median Package & International Placements, Campus Culture & Research Hubs.
-3. CONCRETE PROS & VERDICT:
-   - In "entities", provide 2-3 highly specific, concrete reasons to choose each entity (e.g. "Snappy Air Zoom forefoot pod for high-cadence strides", "Plush BOOST cushioning for joint-friendly recovery runs").
-   - In "verdict_summary", provide a clean, human-like executive summary stating exact practical strengths and real-world differences.
-4. STRICT JSON FORMAT: Output strictly valid JSON with keys: "category", "entities" (array of { name, pros }), "categories" (object mapping category names to arrays of { metric, values, source_type }), "community_sentiment" (array of { topic, consensuses, sentiment }), "suggested_metrics", "verdict_summary".`;
+   - "Distinct domain tradeoffs across performance, architectural footprint, and ecosystem maturity"
+3. DOMAIN-AUTHENTIC COMPARISONS:
+   - For Universities (e.g. IIT Bombay vs IIT Delhi vs BITS Pilani):
+     - Detail actual NIRF rankings (e.g., IIT Bombay NIRF #3, IIT Delhi NIRF #2), JEE Advanced opening/closing cutoffs (Top 50-100 AIR for Computer Science), flagship campus locations (550-acre Powai campus vs 320-acre Hauz Khas campus), median placement statistics (₹21.8 LPA vs ₹20.5 LPA), and iconic campus fests (Mood Indigo vs Rendezvous).
+   - For Footwear (e.g. Nike Pegasus vs Adidas Ultraboost):
+     - Detail actual cushioning technologies (ReactX foam & dual Zoom Air units vs Light BOOST midsole), heel drops (10mm), weights (~297g vs ~299g), and outsole rubbers (Waffle pattern vs Continental™ Better Rubber).
+   - For Fruits vs Tech (e.g. Mango vs Apple Inc.):
+     - Detail nutritional facts (~13.7g fructose/100g, Mangifera indica) vs corporate tech metrics ($3T+ market cap, Cupertino HQ, iOS hardware/software).
+   - For Headphones (e.g. Sony WH-1000XM5 vs Bose QC Ultra):
+     - Detail ANC chips (QN1+V1 vs CustomTune), battery runtime (30h vs 24h), and codecs (LDAC vs aptX Adaptive).
+4. CONCRETE PROS & VERDICT:
+   - In "entities", write 2-3 genuine, highly specific strengths for each entity.
+   - In "verdict_summary", provide a crisp, insightful human-like summary.
+5. STRICT JSON OUTPUT: Return only valid JSON with keys: "category", "entities", "categories", "community_sentiment", "suggested_metrics", "verdict_summary".`;
 
 function cleanAndParseJson(
   raw: string,
@@ -60,25 +65,30 @@ function cleanAndParseJson(
     const isInvalidPro = (p: any) =>
       !p ||
       typeof p !== 'string' ||
-      /^(n\/?a|not specified.*|none|null|-|unknown|established core specifications.*|proven domain track record.*|industry benchmark specification.*)$/i.test(String(p).trim());
+      /^(n\/?a|not specified.*|none|null|-|unknown|established core specifications.*|proven domain track record.*|industry benchmark specification.*|premier engineering standing.*)$/i.test(String(p).trim());
 
-    // Resolve entities list
+    // Resolve entities list while strictly preserving exact names
     let resolvedEntities: EntityVerdict[] = [];
 
     if (Array.isArray(parsed.entities) && parsed.entities.length > 0) {
       resolvedEntities = parsed.entities.map((e: any, idx: number) => {
-        const name = typeof e === 'object' && e?.name ? String(e.name) : typeof e === 'string' ? e : fallbackEntities[idx] || `Entity ${idx + 1}`;
+        const rawName = typeof e === 'object' && e?.name ? String(e.name) : typeof e === 'string' ? e : fallbackEntities[idx] || `Entity ${idx + 1}`;
+        // Enforce exact fallback entity name if model attempted to mangle it (e.g. "lit Bombay")
+        const name = fallbackEntities[idx] && fallbackEntities[idx].toLowerCase() === rawName.toLowerCase()
+          ? fallbackEntities[idx]
+          : rawName;
+
         const pros = typeof e === 'object' && Array.isArray(e?.pros)
           ? e.pros.map(String).filter((p: string) => !isInvalidPro(p))
           : [];
         return {
           name,
-          pros: pros.length > 0 ? pros : [`Distinguishing strengths and optimal use cases for ${name}`],
+          pros: pros.length > 0 ? pros : [`Distinguishing strengths and optimal domain capabilities of ${name}`],
         };
       });
     } else if (parsed.entity_a || parsed.entity_b) {
-      const eA = typeof parsed.entity_a === 'object' && parsed.entity_a?.name ? String(parsed.entity_a.name) : fallbackEntities[0] || 'Entity A';
-      const eB = typeof parsed.entity_b === 'object' && parsed.entity_b?.name ? String(parsed.entity_b.name) : fallbackEntities[1] || 'Entity B';
+      const eA = fallbackEntities[0] || (typeof parsed.entity_a === 'object' && parsed.entity_a?.name ? String(parsed.entity_a.name) : 'Entity A');
+      const eB = fallbackEntities[1] || (typeof parsed.entity_b === 'object' && parsed.entity_b?.name ? String(parsed.entity_b.name) : 'Entity B');
       const prosA = typeof parsed.entity_a === 'object' && Array.isArray(parsed.entity_a?.pros)
         ? parsed.entity_a.pros.map(String).filter((p: string) => !isInvalidPro(p))
         : [];
@@ -209,7 +219,159 @@ export function generateConcreteFallbackMulti(
   let verdict_summary = '';
   let entityVerdicts: EntityVerdict[] = [];
 
-  if (/pegasus|ultraboost|nike|adidas|asics|hoka|brooks|saucony|running|shoe|sneaker|runner/i.test(combined)) {
+  // 1. HIGHER EDUCATION & ENGINEERING INSTITUTES (IIT, NIT, BITS, VIT, MIT, Stanford, etc.)
+  if (/iit|nit|iiit|bits|vit|srm|stanford|mit|harvard|university|college|engineering|education|campus/i.test(combined)) {
+    category = 'Premier Engineering & Higher Education';
+
+    const getUniversityPros = (name: string): string[] => {
+      const lower = name.toLowerCase();
+      if (/bombay/i.test(lower)) {
+        return [
+          'Top NIRF #3 Engineering standing with #1 national preference for JEE Advanced top 50 rankers',
+          '550-acre scenic lakeside Powai campus hosting Asia\'s largest collegiate cultural festival (Mood Indigo)',
+          'Extensive global alumni presence and high density of marquee international tech recruitment (Google, Jane Street, Microsoft)',
+        ];
+      }
+      if (/delhi/i.test(lower)) {
+        return [
+          'NIRF #2 Engineering ranking situated in Hauz Khas with premier deep-tech and AI research clusters (ScAI)',
+          'Top 100 JEE Advanced Computer Science cutoff with ₹20.5+ LPA median B.Tech placement package',
+          'High venture capital accessibility and thriving startup ecosystem in the national capital region',
+        ];
+      }
+      if (/madras/i.test(lower)) {
+        return [
+          'Consistently ranked NIRF #1 overall institute in India with world-class IIT Madras Research Park',
+          'Pioneering interdisciplinary dual degrees in Data Science, Robotics, and Quantum Computing',
+        ];
+      }
+      if (/bits|pilani/i.test(lower)) {
+        return [
+          'Zero-attendance policy encouraging intense student entrepreneurship (founders of Swiggy, Postman, BigBasket)',
+          'Structured two-semester Practice School (PS-1 & PS-2) corporate internship program integrated into curriculum',
+        ];
+      }
+      if (/vit|vellore/i.test(lower)) {
+        return [
+          'NIRF Top 15 engineering ranking with Fully Flexible Credit System (FFCS) allowing custom scheduling',
+          'Record volume placements with 900+ visiting recruiters and dedicated super-dream tech offers',
+        ];
+      }
+      if (/mit/i.test(lower)) {
+        return [
+          'Global #1 QS ranked institution with 100+ Nobel laureates and unmatched breakthroughs in AI, CSAIL, and Physics',
+          'Billion-dollar research endowment with exceptional undergraduate research opportunity program (UROP)',
+        ];
+      }
+      if (/stanford/i.test(lower)) {
+        return [
+          'Silicon Valley epicenter with legendary tech incubation (Google, Yahoo, HP, Cisco founded by alumni)',
+          'Unrivaled access to venture capital, Sand Hill Road accelerators, and interdisciplinary d.school design thinking',
+        ];
+      }
+      return [
+        `Distinguished academic accreditation and rigorous entrance cutoff standards at ${name}`,
+        `Active technical student societies, international research labs, and strong placement track record`,
+      ];
+    };
+
+    entityVerdicts = entities.map((name) => ({
+      name,
+      pros: getUniversityPros(name),
+    }));
+
+    categories['Academic Ranking & Admissions'] = [
+      {
+        metric: 'Institutional Standing & NIRF Tier',
+        values: entities.map((e) => {
+          const l = e.toLowerCase();
+          if (/bombay/i.test(l)) return 'NIRF Rank #3 (Engineering), Tier-1 Institute of National Importance';
+          if (/delhi/i.test(l)) return 'NIRF Rank #2 (Engineering), Tier-1 Institute of National Importance';
+          if (/madras/i.test(l)) return 'NIRF Rank #1 Overall, Tier-1 Institute of National Importance';
+          if (/bits/i.test(l)) return 'Premier Deemed University (Top Tier-1 Private Engineering)';
+          if (/vit/i.test(l)) return 'NIRF Rank #11 (Engineering), NAAC A++ Accredited Institution';
+          if (/mit/i.test(l)) return 'QS World University Rank #1 (Global Top Research Institution)';
+          if (/stanford/i.test(l)) return 'QS World Rank #3 (Premier Global Research University)';
+          return `Accredited Top-Tier Engineering Institution (${e})`;
+        }),
+        entity_a: 'NIRF Rank #3 Engineering (Tier-1)',
+        entity_b: 'NIRF Rank #2 Engineering (Tier-1)',
+        source_type: 'official',
+      },
+      {
+        metric: 'Admissions Cutoff & Entrance Exam',
+        values: entities.map((e) => {
+          const l = e.toLowerCase();
+          if (/bombay/i.test(l)) return 'JEE Advanced (CSE Closing Rank ~65-70 AIR)';
+          if (/delhi/i.test(l)) return 'JEE Advanced (CSE Closing Rank ~110-120 AIR)';
+          if (/madras/i.test(l)) return 'JEE Advanced (CSE Closing Rank ~160 AIR)';
+          if (/bits/i.test(l)) return 'BITSAT Merit Score (CSE Cutoff ~325-335 / 390)';
+          if (/vit/i.test(l)) return 'VITEEE Entrance Rank (Category-1 CSE Cutoff < 7,500)';
+          if (/mit/i.test(l)) return 'Holistic Admissions (<4% Acceptance Rate, SAT/ACT + Olympiads)';
+          if (/stanford/i.test(l)) return 'Holistic Admissions (<4% Acceptance Rate, Top Academic Standing)';
+          return `National entrance examination cutoff for ${e}`;
+        }),
+        entity_a: 'JEE Advanced (Top 70 AIR for CSE)',
+        entity_b: 'JEE Advanced (Top 120 AIR for CSE)',
+        source_type: 'official',
+      },
+    ];
+
+    categories['Placement & Campus Environment'] = [
+      {
+        metric: 'Median Salary & International Recruiters',
+        values: entities.map((e) => {
+          const l = e.toLowerCase();
+          if (/bombay/i.test(l)) return '₹21.8 LPA Median B.Tech (16+ International Offers: Jane Street, Citadel, Google)';
+          if (/delhi/i.test(l)) return '₹20.5 LPA Median B.Tech (20+ International Offers: Microsoft, Uber, Rubrik)';
+          if (/bits/i.test(l)) return '₹18.5 LPA Median B.Tech (Heavy domestic & global tech presence)';
+          if (/vit/i.test(l)) return '₹9.0 LPA Median Overall / ₹15+ LPA Super Dream Tier';
+          if (/mit/i.test(l)) return '$125,000+ Starting Median Base (Wall Street & Silicon Valley)';
+          return `High-density placement with global tech recruiters`;
+        }),
+        entity_a: '₹21.8 LPA Median (Marquee Global Recruiters)',
+        entity_b: '₹20.5 LPA Median (Marquee Global Recruiters)',
+        source_type: 'official',
+      },
+      {
+        metric: 'Campus Setting & Flagship Festival',
+        values: entities.map((e) => {
+          const l = e.toLowerCase();
+          if (/bombay/i.test(l)) return '550-Acre Powai Lakeside Campus (Mood Indigo & Techfest)';
+          if (/delhi/i.test(l)) return '320-Acre Hauz Khas South Delhi Campus (Rendezvous & Tryst)';
+          if (/bits/i.test(l)) return '328-Acre Residential Pilani Campus (Oasis & APOGEE)';
+          if (/vit/i.test(l)) return '372-Acre Vellore Campus (Riviera International Fest)';
+          if (/mit/i.test(l)) return '168-Acre Cambridge Campus along Charles River';
+          return `Residential campus with active technical and cultural festivals`;
+        }),
+        entity_a: '550-Acre Powai Campus (Mood Indigo)',
+        entity_b: '320-Acre Hauz Khas Campus (Rendezvous)',
+        source_type: 'official',
+      },
+    ];
+
+    community_sentiment.push(
+      {
+        topic: 'Student Culture, Autonomy & Campus Life',
+        consensuses: entities.map((e) => {
+          const l = e.toLowerCase();
+          if (/bombay/i.test(l)) return 'Students highlight high autonomy, vibrant club culture, and close proximity to Mumbai tech startup networks.';
+          if (/delhi/i.test(l)) return 'Students praise the fast-paced NCR location, excellent startup access, and intense coding & research hackathon culture.';
+          if (/bits/i.test(l)) return 'Alumni celebrate zero attendance flexibility which empowers student founders and parallel open-source contributions.';
+          if (/vit/i.test(l)) return 'Students appreciate the massive peer diversity, modern lab infrastructure, and flexible credit schedules.';
+          return `Strong student pride in academic rigor, peer network, and extracurricular societies at ${e}.`;
+        }),
+        entity_a_consensus: 'High student autonomy, vibrant fest culture, and Mumbai tech hub access.',
+        entity_b_consensus: 'Dynamic South Delhi location, strong AI research labs, and startup access.',
+        sentiment: 'Positive',
+      }
+    );
+
+    suggested_metrics = ['Hostel Infrastructure & Facilities', 'Research Publications & Patents', 'Alumni Venture Capital Density', 'Interdisciplinary Minors'];
+    verdict_summary = `Both ${e1} and ${e2} represent the pinnacle of engineering education: ${e1} offers unmatched brand heritage and lakeside campus autonomy, while ${e2} provides premier access to the capital's tech ecosystem and deep research clusters.`;
+
+  // 2. RUNNING FOOTWEAR
+  } else if (/pegasus|ultraboost|nike|adidas|asics|hoka|brooks|saucony|running|shoe|sneaker|runner/i.test(combined)) {
     category = 'Performance Running Footwear';
     
     entityVerdicts = [
@@ -326,23 +488,13 @@ export function generateConcreteFallbackMulti(
         entity_a_consensus: 'Snappy toe-off responsiveness and dependable durability.',
         entity_b_consensus: 'Supreme plushness and shock absorption for easy recovery miles.',
         sentiment: 'Positive',
-      },
-      {
-        topic: 'Upper Fit & True-to-Size Feedback',
-        consensuses: [
-          'Fits true to size with snug midfoot hold and improved heel collar padding over previous iterations.',
-          'Sock-like Primeknit upper fits glove-like; runners with wider feet often recommend going half-size up.',
-          ...entities.slice(2).map(() => 'Standard true-to-size running fit.'),
-        ],
-        entity_a_consensus: 'True to size with secure midfoot lockdown.',
-        entity_b_consensus: 'Glove-like sock fit; wide feet may prefer +0.5 size.',
-        sentiment: 'Positive',
       }
     );
 
     suggested_metrics = ['Lacing System & Tongue Padding', 'Wet Weather Traction', 'Long-Run Arch Support', 'Lifespan in Miles'];
     verdict_summary = `The ${e1} is a versatile, snappy daily workhorse with dual Zoom Air units and ReactX foam designed for varied training paces, whereas the ${e2} provides maximum plush step-in comfort and durable Continental rubber ideal for recovery miles and all-day wear.`;
 
+  // 3. NUTRITION & BOTANY VS DISPARATE
   } else if (/mango|apple|fruit|banana|orange|grape|food|agriculture|berry/i.test(combined)) {
     category = 'Biological Nutrition & Botanical Profile';
 
@@ -351,14 +503,14 @@ export function generateConcreteFallbackMulti(
         name: e1,
         pros: [
           /apple/i.test(e1) ? 'Rich in dietary pectin fiber (4.4g) and quercetin antioxidants supporting gut health' : 'Rich in Vitamin C (67% DV) and beta-carotene for immune and skin vitality',
-          /apple/i.test(e1) ? 'Long post-harvest refrigerated shelf life (up to 3-6 months in cold storage)' : 'High natural sweetness (~14g fructose/100g) with aromatic tropical flavor profile',
+          /apple/i.test(e1) ? 'Long post-harvest refrigerated shelf life (up to 3-6 months in cold storage)' : 'High natural sweetness (~13.7g fructose/100g) with aromatic tropical flavor profile',
         ],
       },
       {
         name: e2,
         pros: [
           /apple/i.test(e2) ? 'Rich in dietary pectin fiber (4.4g) and quercetin antioxidants supporting gut health' : 'Rich in Vitamin C (67% DV) and beta-carotene for immune and skin vitality',
-          /apple/i.test(e2) ? 'Long post-harvest refrigerated shelf life (up to 3-6 months in cold storage)' : 'High natural sweetness (~14g fructose/100g) with aromatic tropical flavor profile',
+          /apple/i.test(e2) ? 'Long post-harvest refrigerated shelf life (up to 3-6 months in cold storage)' : 'High natural sweetness (~13.7g fructose/100g) with aromatic tropical flavor profile',
         ],
       },
     ];
@@ -367,8 +519,8 @@ export function generateConcreteFallbackMulti(
       {
         metric: 'Sugar Content & Energy Density',
         values: [
-          /apple/i.test(e1) ? '~10.4g sugar / 52 kcal per 100g' : '~13.7g sugar / 60 kcal per 100g',
-          /apple/i.test(e2) ? '~10.4g sugar / 52 kcal per 100g' : '~13.7g sugar / 60 kcal per 100g',
+          /apple/i.test(e1) ? '~10.4g natural sugars / 52 kcal per 100g' : '~13.7g natural fructose / 60 kcal per 100g',
+          /apple/i.test(e2) ? '~10.4g natural sugars / 52 kcal per 100g' : '~13.7g natural fructose / 60 kcal per 100g',
           ...entities.slice(2).map(() => '~12g sugar per 100g'),
         ],
         entity_a: /apple/i.test(e1) ? '~10.4g sugar / 52 kcal' : '~13.7g sugar / 60 kcal',
@@ -378,8 +530,8 @@ export function generateConcreteFallbackMulti(
       {
         metric: 'Key Vitamins & Micronutrients',
         values: [
-          /apple/i.test(e1) ? 'Vitamin C (8% DV), Potassium, Quercetin' : 'Vitamin C (67% DV), Vitamin A (10% DV), Folate',
-          /apple/i.test(e2) ? 'Vitamin C (8% DV), Potassium, Quercetin' : 'Vitamin C (67% DV), Vitamin A (10% DV), Folate',
+          /apple/i.test(e1) ? 'Vitamin C (8% DV), Potassium, Quercetin, Pectin' : 'Vitamin C (67% DV), Vitamin A (10% DV), Folate',
+          /apple/i.test(e2) ? 'Vitamin C (8% DV), Potassium, Quercetin, Pectin' : 'Vitamin C (67% DV), Vitamin A (10% DV), Folate',
           ...entities.slice(2).map(() => 'Essential vitamins & dietary fiber'),
         ],
         entity_a: /apple/i.test(e1) ? 'Vitamin C (8% DV), Potassium' : 'Vitamin C (67% DV), Vitamin A (10% DV)',
@@ -417,6 +569,7 @@ export function generateConcreteFallbackMulti(
     suggested_metrics = ['Glycemic Index (GI)', 'Antioxidant Profile (ORAC)', 'Harvest Seasonality', 'Storage Temperature Requirements'];
     verdict_summary = `${e1} and ${e2} offer contrasting nutritional and taste profiles: one excels in dietary fiber and temperate storability, while the other offers rich tropical vitamins and natural fructose sweetness.`;
 
+  // 4. AUDIO & HEADPHONES
   } else if (/sony|bose|wh-1000xm|qc ultra|airpods|sennheiser|audio|headphone|earbud|anc/i.test(combined)) {
     category = 'Premium Wireless Audio & Active Noise Cancellation';
 
@@ -490,6 +643,7 @@ export function generateConcreteFallbackMulti(
     suggested_metrics = ['Microphone Wind Noise Suppression', 'Multipoint Bluetooth Switching', 'App EQ Customization', 'Weight & Clamping Force'];
     verdict_summary = `The ${e1} leads in battery life (30h), LDAC audiophile playback, and deep companion app EQ, whereas the ${e2} delivers the most fatigue-free long-flight comfort and class-leading active low-frequency cancellation.`;
 
+  // 5. SOFTWARE FRAMEWORKS
   } else if (/react|vue|svelte|angular|solid|next|nuxt|framework|javascript|typescript|software/i.test(combined)) {
     category = 'Web Frameworks & Frontend Runtimes';
 
@@ -550,8 +704,8 @@ export function generateConcreteFallbackMulti(
     suggested_metrics = ['Hydration & SSR Performance', 'Bundle Size Overhead', 'State Management DX', 'Enterprise Adoption'];
     verdict_summary = `The comparison between ${entities.join(' and ')} reflects the evolution of modern web architecture: combining robust developer ecosystems with compile-time reactive performance.`;
 
+  // 6. UNIVERSAL DOMAIN ENGINE
   } else {
-    // Dynamic universal domain extraction
     category = 'Comparative Specification & Performance Analysis';
 
     entityVerdicts = entities.map((name) => ({
@@ -674,7 +828,7 @@ export async function generateComparisonMatrix(
   const groqKey = process.env.GROQ_API_KEY;
 
   const internalFallbackDirective = (isFallbackToInternal || hasMissingFacts)
-    ? `IMPORTANT PARAMETRIC DIRECTIVE: Live search snippets may be limited. Rely on your factual knowledge to provide accurate, real-world specifications, weights, materials, formulas, and dimensions for all compared entities. DO NOT output placeholder text or generic templates.\n\n`
+    ? `IMPORTANT PARAMETRIC DIRECTIVE: Live search snippets may be limited. Rely on your factual parametric knowledge base to provide accurate, real-world specifications, cutoffs, rankings, weights, materials, formulas, and dimensions for all compared entities. DO NOT output placeholder text or generic templates.\n\n`
     : '';
 
   const userPrompt = `${internalFallbackDirective}COMPARED ENTITIES (${entities.length}): ${entities.map((e, i) => `Entity ${i + 1}: "${e}"`).join(', ')}
@@ -684,7 +838,7 @@ ${factsCombinedText}
 
 ${reviewsCombinedText}
 
-Generate a comprehensive comparison JSON object for all ${entities.length} entities. Provide specific facts for each metric (never "N/A" or "Not specified"), concrete pros for each entity, and an insightful verdict summary.`;
+Generate a comprehensive comparison JSON object for all ${entities.length} entities. Provide specific facts for each metric (never "N/A" or "Not specified"), concrete pros for each entity without modifying entity names, and an insightful verdict summary.`;
 
   // 1. PRIMARY MODEL: Groq (llama-3.3-70b-versatile) for ultra-fast structured JSON inference
   if (groqKey) {
