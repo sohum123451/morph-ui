@@ -1,3 +1,4 @@
+import { sanitizeQuery } from '@/lib/security';
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
 
@@ -39,10 +40,15 @@ async function searchMetricSnippets(query: string): Promise<string> {
 
 export async function POST(req: NextRequest) {
   try {
-    const { entityA, entityB, customMetric, category } = await req.json();
+    const body = await req.json().catch(() => ({}));
+    const rawMetric = body.metric || body.customMetric;
+    const entityA = sanitizeQuery(body.entityA, 50);
+    const entityB = sanitizeQuery(body.entityB, 50);
+    const customMetric = sanitizeQuery(rawMetric, 60);
+    const category = sanitizeQuery(body.category || 'General', 40);
 
     if (!entityA || !entityB || !customMetric) {
-      return NextResponse.json({ error: 'Missing entityA, entityB, or customMetric' }, { status: 400 });
+      return NextResponse.json({ error: 'Missing entityA, entityB, or metric' }, { status: 400 });
     }
 
     const [snipA, snipB] = await Promise.all([

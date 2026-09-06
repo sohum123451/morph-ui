@@ -24,7 +24,8 @@ ADAPTIVE METRIC RULES:
    - If Academic (e.g., SRM vs VIT vs Manipal): Compare rankings, cutoffs, placements, tuition fees, campus acreage.
    - If Software/Tech (e.g., React vs Vue vs Svelte): Compare runtime model, bundle footprint, state management, learning curve, ecosystem maturity.
 2. NO FALSE "N/A": If a conceptual comparison doesn't use a specific number, describe the behavior textually (e.g., "Virtual DOM diffing" vs "Fine-grained reactivity" vs "Compile-time vanishing") rather than falling back to "N/A".
-3. STRICT JSON SCHEMA OUTPUT: Return only valid JSON with "entities", "categories", "comparison_points", "community_sentiment", and "verdict_summary" matching the dynamic list of entities.
+3. DISPARATE DOMAIN & ABSTRACT COMPARISONS: If the two or more entities belong to entirely different or orthogonal domains (e.g., Photosynthesis vs Cloud Computing, Quantum Mechanics vs Coffee Brewing), create a high-level abstract comparison framework (e.g., comparing fundamental systemic inputs, operational/processing mechanics, throughput/efficiency, transformative output utility, and architectural resilience) rather than failing, returning empty fields, or outputting "N/A".
+4. STRICT JSON SCHEMA OUTPUT: Return only valid JSON with "entities", "categories", "comparison_points", "community_sentiment", and "verdict_summary" matching the dynamic list of entities.
 
 OUTPUT JSON SCHEMA:
 {
@@ -96,16 +97,12 @@ function cleanAndParseJson(
 ): GenerativeComparisonResponse | null {
   if (!raw) return null;
   let cleaned = raw.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+  cleaned = cleaned.replace(/```json/gi, '').replace(/```/g, '').trim();
 
   const firstBrace = cleaned.indexOf('{');
   const lastBrace = cleaned.lastIndexOf('}');
   if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
     cleaned = cleaned.substring(firstBrace, lastBrace + 1);
-  } else {
-    if (cleaned.startsWith('```json')) cleaned = cleaned.slice(7);
-    else if (cleaned.startsWith('```')) cleaned = cleaned.slice(3);
-    if (cleaned.endsWith('```')) cleaned = cleaned.slice(0, -3);
-    cleaned = cleaned.trim();
   }
 
   try {

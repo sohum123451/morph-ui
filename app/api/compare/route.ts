@@ -1,3 +1,4 @@
+import { sanitizeQuery, sanitizeEntities } from '@/lib/security';
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { MorphWidget, ImageInput, GenerativeComparisonResponse, EntityVerdict } from '@/types/morphui';
@@ -130,16 +131,24 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
     const {
-      prompt,
-      chat_id,
-      entities: directEntities,
-      entityA: directA,
-      entityB: directB,
-      contextTopic: directTopic,
+      prompt: rawPrompt,
+      chat_id: rawChatId,
+      entities: directEntitiesRaw,
+      entityA: directARaw,
+      entityB: directBRaw,
+      contextTopic: directTopicRaw,
       images = [],
     } = body;
 
-    const rawQuery = (prompt || (Array.isArray(directEntities) ? directEntities.join(' vs ') : directA && directB ? `${directA} vs ${directB}` : '') || '').trim();
+    // Security Hardening: Sanitize all inputs against prompt injection and control characters
+    const prompt = sanitizeQuery(rawPrompt, 120);
+    const directA = sanitizeQuery(directARaw, 50);
+    const directB = sanitizeQuery(directBRaw, 50);
+    const directTopic = directTopicRaw ? sanitizeQuery(directTopicRaw, 60) : undefined;
+    const directEntities = Array.isArray(directEntitiesRaw) ? sanitizeEntities(directEntitiesRaw, 6, 50) : [];
+    const chat_id = rawChatId && typeof rawChatId === 'string' ? sanitizeQuery(rawChatId, 64) : undefined;
+
+    const rawQuery = (prompt || (directEntities.length > 0 ? directEntities.join(' vs ') : directA && directB ? `${directA} vs ${directB}` : '') || '').trim();
 
     if (!rawQuery && images.length === 0) {
       return NextResponse.json({ error: 'Missing prompt, entities, or image input' }, { status: 400 });
