@@ -746,7 +746,7 @@ export default function ComparisonApp() {
           }),
         });
       } else {
-        res = await fetch('/api/generate', {
+        res = await fetch('/api/compare', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ prompt: query }),
