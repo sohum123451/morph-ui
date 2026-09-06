@@ -697,7 +697,7 @@ function MorphUIContent() {
         return saved;
       }
     }
-    return 'dark';
+    return 'light';
   });
 
   useEffect(() => {
@@ -1400,8 +1400,8 @@ function MorphUIContent() {
                 type="text"
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                placeholder="Compare any two entities (e.g., Nike Pegasus 41 vs Adidas Ultraboost, Apple vs Mango)..."
-                className={`w-full ${t.input} rounded-2xl pl-10 sm:pl-12 pr-24 sm:pr-28 py-3.5 sm:py-4 text-xs sm:text-base outline-none transition-all shadow-inner`}
+                placeholder="Compare entities (e.g. Nike Pegasus vs Ultraboost, IIT Bombay vs IIT Delhi)..."
+                className={`w-full ${t.input} rounded-2xl pl-10 sm:pl-12 pr-28 sm:pr-36 md:pr-40 py-3.5 sm:py-4 text-xs sm:text-base outline-none transition-all shadow-inner`}
               />
 
               <div className="absolute right-1.5 sm:right-2.5 flex items-center gap-1 sm:gap-1.5">
@@ -1717,9 +1717,9 @@ function MorphUIContent() {
                 type="text"
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                placeholder="Compare any two entities (e.g., Nike Pegasus vs Ultraboost, Apple vs Mango)..."
+                placeholder="Compare entities (e.g. Nike Pegasus vs Ultraboost, IIT vs VIT)..."
                 disabled={loading}
-                className={`w-full ${t.input} rounded-xl pl-9 pr-24 py-2 text-xs sm:text-sm outline-none transition-all shadow-inner`}
+                className={`w-full ${t.input} rounded-xl pl-9 pr-24 sm:pr-28 py-2 text-xs sm:text-sm outline-none transition-all shadow-inner`}
               />
 
               <div className="absolute right-1.5 flex items-center gap-1">
