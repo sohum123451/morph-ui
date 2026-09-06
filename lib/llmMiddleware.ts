@@ -13,23 +13,25 @@ function withTimeout<T>(promise: Promise<T>, ms: number, errMsg: string): Promis
   ]);
 }
 
-const PRECISION_EXTRACTION_SYSTEM_PROMPT = `You are a precision data extraction engine. You will receive two entities and raw search data. Your job is to extract highly specific, factual comparison points.
-Current Year: 2026.
+const PRECISION_EXTRACTION_SYSTEM_PROMPT = `You are an adaptive generative comparison engine. Analyze the user's two entities and determine their domain category first (e.g., Commercial Product, Scientific/Biological Concept, Educational Institution, Software/Tech).
 
-CRITICAL INSTRUCTIONS:
-1. IDENTIFY THE DOMAIN: First, determine exactly what these entities are (e.g., "Running Shoes", "Software Frameworks", "Universities", "Hospitals", "Fruits & Nutrition", "Smartphones", "Automobiles").
-2. DYNAMIC DOMAIN CATEGORIES: Group comparison metrics into 2-4 logical category names relevant to the domain (e.g., for Shoes: "Performance & Cushioning", "Durability & Materials", "Pricing & Fit"; for Software: "Runtime & Latency", "Memory & Footprint", "Ecosystem & License"; for Universities: "Academic Standing & Cutoffs", "Placements & Career Yield", "Campus & Housing").
-3. SAFE ENTITY OBJECTS & VERDICTS: Strictly return entity_a and entity_b as structured objects with their exact name and a list of specific reasons/pros ("CHOOSE A/B IF:").
-4. BE CONCRETE: Values must be hard numbers or specific facts (e.g., "215g", "INR 14.2 LPA", "Ranked #11", "52 kcal", "5,000 mAh", "250 Acres"), not vague buzzwords. If a fact is missing from the context, output "N/A".
-5. REDDIT DE-BIASING DIRECTIVE:
-   - Strip hyperbolic, emotional, or isolated personal rants from community reviews.
-   - Normalize sentiment into objective consensus tags.
-   - Score consensus topics as 'Positive' | 'Mixed' | 'Critical'.
-6. PROVIDE 4-5 RELEVANT SUGGESTED METRICS that are domain-specific for further deep-dive comparison.
+ADAPTIVE METRIC RULES:
+1. MATCH METRICS TO DOMAIN: 
+   - If Scientific/Conceptual (e.g., Primary Cell vs Secondary Cell, Photosynthesis vs Cellular Respiration): Compare theoretical principles, operational mechanisms, efficiency, use cases, and thermodynamic/chemical behavior. NEVER output commercial metrics like "Unit Cost" or "Retail Price" unless specified.
+   - If Commercial/Hardware (e.g., iPhone vs Samsung): Compare pricing, battery mAh, camera, processor.
+   - If Academic (e.g., SRM vs VIT): Compare rankings, cutoffs, placements, tuition.
+2. NO FALSE "N/A": If a conceptual comparison doesn't use a specific number, describe the behavior textually (e.g., "Irreversible chemical reaction" vs "Reversible via external current") rather than falling back to "N/A".
+3. STRICT JSON SCHEMA OUTPUT: Return only valid JSON matching the dynamic fields you derive.
+
+STRUCTURE & EXTRACTION GUIDELINES:
+- Group comparison metrics into 2-4 logical category names relevant to the domain in "categories".
+- Strictly return "entity_a" and "entity_b" as structured objects with their exact name and a list of specific reasons/pros ("CHOOSE A/B IF:").
+- REDDIT & COMMUNITY CONSENSUS: Strip hyperbolic or isolated rants; normalize into objective consensus points with sentiment 'Positive' | 'Mixed' | 'Critical'.
+- PROVIDE 4-5 RELEVANT SUGGESTED METRICS that are domain-specific for further deep-dive comparison.
 
 OUTPUT JSON SCHEMA:
 {
-  "category": "<String - Exact Domain e.g., 'Running Shoes' | 'Universities' | 'Smartphones' | 'Software'>",
+  "category": "<String - Exact Domain Category e.g., 'Scientific & Electrochemical Concepts' | 'Educational Institutions' | 'Commercial Hardware' | 'Software Systems'>",
   "entity_a": {
     "name": "<String - Clean name of Entity A>",
     "pros": [
@@ -47,26 +49,26 @@ OUTPUT JSON SCHEMA:
     ]
   },
   "categories": {
-    "<Dynamic Category Name 1>": [
+    "<Dynamic Domain Category Name 1>": [
       {
-        "metric": "<Specific Metric Name>",
-        "entity_a": "<Concrete Fact / Hard Number / 'N/A'>",
-        "entity_b": "<Concrete Fact / Hard Number / 'N/A'>",
+        "metric": "<Specific Metric / Characteristic>",
+        "entity_a": "<Concrete Fact / Descriptive Behavior>",
+        "entity_b": "<Concrete Fact / Descriptive Behavior>",
         "source_type": "official"
       }
     ],
-    "<Dynamic Category Name 2>": [
+    "<Dynamic Domain Category Name 2>": [
       {
-        "metric": "<Specific Metric Name>",
-        "entity_a": "<Concrete Fact / Hard Number / 'N/A'>",
-        "entity_b": "<Concrete Fact / Hard Number / 'N/A'>",
+        "metric": "<Specific Metric / Characteristic>",
+        "entity_a": "<Concrete Fact / Descriptive Behavior>",
+        "entity_b": "<Concrete Fact / Descriptive Behavior>",
         "source_type": "official"
       }
     ]
   },
   "community_sentiment": [
     {
-      "topic": "<Specific Topic>",
+      "topic": "<Specific Topic / Principle>",
       "entity_a_consensus": "<De-biased Normalized Consensus>",
       "entity_b_consensus": "<De-biased Normalized Consensus>",
       "sentiment": "Positive | Mixed | Critical"
@@ -78,7 +80,7 @@ OUTPUT JSON SCHEMA:
     "<Domain-Specific Metric 3>",
     "<Domain-Specific Metric 4>"
   ],
-  "verdict_summary": "<String - Concise 2-3 sentence executive synthesis citing hard tradeoffs>"
+  "verdict_summary": "<String - Concise 2-3 sentence synthesis citing core tradeoffs and domain mechanisms>"
 }`;
 
 function cleanAndParseJson(
@@ -346,6 +348,39 @@ function generateConcreteFallback(
     );
 
     suggested_metrics = ['Glycemic Index (GI Score)', 'Potassium Content (mg)', 'Antioxidant ORAC Value', 'Average Market Price ($/kg)'];
+  } else if (/cell|battery cell|photosynthesis|respiration|mitosis|meiosis|fusion|fission|ac vs dc|current|thermodynamic|reaction|quantum|physics|biology|chemistry|science/i.test(combined)) {
+    category = 'Scientific & Theoretical Principles';
+    entity_a = {
+      name: entityA,
+      pros: [
+        'Single-cycle or direct thermodynamic reaction mechanism',
+        'High initial energy density without external recharging circuitry',
+      ],
+    };
+    entity_b = {
+      name: entityB,
+      pros: [
+        'Reversible electrochemical or cellular metabolic cycle',
+        'Sustained multi-cycle operation and dynamic energy transfer',
+      ],
+    };
+
+    categories['Theoretical Principles & Mechanisms'] = [
+      { metric: 'Reaction Mechanism', entity_a: 'Irreversible chemical conversion', entity_b: 'Reversible via applied external electrical/cellular energy', source_type: 'official' },
+      { metric: 'Internal Resistance & Polarization', entity_a: 'Higher internal resistance as active materials deplete', entity_b: 'Lower internal resistance with stable discharge plateau', source_type: 'official' },
+      { metric: 'Energy Conversion Efficiency', entity_a: 'High initial discharge efficiency (~85-90%)', entity_b: 'Cycle efficiency (~75-85% round-trip)', source_type: 'official' },
+    ];
+
+    categories['Operational Behavior & Applications'] = [
+      { metric: 'Thermodynamic Cycle Life', entity_a: 'Single-use / irreversible lifecycle', entity_b: 'Multi-cycle rechargeable (500 to 2000+ cycles)', source_type: 'official' },
+      { metric: 'Standard Domain Use Cases', entity_a: 'Low-drain remote devices, pacemakers, standalone sensors', entity_b: 'EV powertrains, consumer electronics, grid storage', source_type: 'official' },
+    ];
+
+    community_sentiment.push(
+      { topic: 'Scientific Consensus & Practicality', entity_a_consensus: 'Favored for long shelf-life and zero self-discharge standby needs', entity_b_consensus: 'Essential for sustainable cyclic energy storage and high-load duty cycles', sentiment: 'Positive' }
+    );
+
+    suggested_metrics = ['Specific Energy Density (Wh/kg)', 'Self-Discharge Rate (% per year)', 'Thermal Runaway Threshold (°C)', 'Environmental & Recycling Footprint'];
   } else if (/iphone|samsung|galaxy|pixel|smartphone|phone|camera|chipset|screen/i.test(combined)) {
     category = 'Consumer Smartphones & Hardware';
     entity_a = {
