@@ -61,9 +61,23 @@ interface UploadedVisual {
   previewUrl: string;
 }
 
+function isMissingValue(val: any): boolean {
+  if (val === null || val === undefined) return true;
+  const str = String(val).trim();
+  if (!str) return true;
+  return /^(n\/?a|not specified.*|none|null|-|unknown)$/i.test(str);
+}
+
+function renderValueWithFallback(val: any, fallbackText = 'Not specified') {
+  if (isMissingValue(val)) {
+    return <span className="text-slate-500 italic text-xs sm:text-sm">{fallbackText}</span>;
+  }
+  return val;
+}
+
 function parseNumericValue(val: string): number | null {
-  if (!val || val === 'N/A' || val === '-') return null;
-  const clean = val.replace(/,/g, '');
+  if (isMissingValue(val)) return null;
+  const clean = String(val).replace(/,/g, '');
   const match = clean.match(/[-+]?\d*\.?\d+/);
   if (!match) return null;
   const num = parseFloat(match[0]);
@@ -108,10 +122,10 @@ const SpecMatrixNode = memo(function SpecMatrixNode({ data }: any) {
               {m.metric}
             </div>
             <div className="col-span-3 text-slate-100 text-[11px] whitespace-normal break-words">
-              {m.entity_a}
+              {renderValueWithFallback(m.entity_a)}
             </div>
             <div className="col-span-4 text-slate-100 text-[11px] whitespace-normal break-words">
-              {m.entity_b}
+              {renderValueWithFallback(m.entity_b)}
             </div>
           </div>
         ))}
@@ -161,11 +175,11 @@ const SentimentBreakdownNode = memo(function SentimentBreakdownNode({ data }: an
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-300 pt-1">
               <div className="bg-slate-900/90 p-2 rounded-lg border border-slate-800 whitespace-normal break-words leading-relaxed">
                 <span className="text-[10px] text-sky-400 font-semibold block mb-0.5">{entityA}:</span>
-                {s.entity_a_consensus}
+                {renderValueWithFallback(s.entity_a_consensus)}
               </div>
               <div className="bg-slate-900/90 p-2 rounded-lg border border-slate-800 whitespace-normal break-words leading-relaxed">
                 <span className="text-[10px] text-indigo-400 font-semibold block mb-0.5">{entityB}:</span>
-                {s.entity_b_consensus}
+                {renderValueWithFallback(s.entity_b_consensus)}
               </div>
             </div>
           </div>
@@ -452,6 +466,190 @@ function SpatialCanvasWorkspace({
 // ============================================================================
 // MAIN COMPARISON APP COMPONENT
 // ============================================================================
+
+// ============================================================================
+// GENERATIVE SKELETON UI (Mimics Spec Sheet & Spatial Canvas with Dynamic Tech Pulse)
+// ============================================================================
+
+function ComparisonSkeleton({ prompt, viewMode }: { prompt: string; viewMode: 'spec' | 'canvas' }) {
+  const loadingSteps = [
+    'Synthesizing live web data...',
+    'Running multi-source extraction...',
+    'De-biasing community sentiment...',
+    'Normalizing dynamic metric matrices...',
+    'Generating dual-view spatial graphs...',
+  ];
+
+  const [stepIndex, setStepIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setStepIndex((prev) => (prev + 1) % loadingSteps.length);
+    }, 1200);
+    return () => clearInterval(interval);
+  }, [loadingSteps.length]);
+
+  return (
+    <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8 space-y-6">
+      {/* Tech-Focused Pulsing Loading Header */}
+      <div className="relative p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-sky-950/50 via-indigo-950/50 to-slate-900/80 border border-sky-500/40 shadow-2xl backdrop-blur-xl overflow-hidden animate-pulse">
+        <div className="absolute inset-0 bg-gradient-to-r from-sky-500/10 via-indigo-500/10 to-transparent animate-pulse" />
+        <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-sky-500/20 border border-sky-500/40 flex items-center justify-center text-sky-400 shrink-0">
+              <Loader2 className="w-5 h-5 animate-spin text-sky-400" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 justify-center sm:justify-start">
+                <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                <span className="text-[10px] sm:text-xs font-mono font-bold uppercase tracking-wider text-sky-300">
+                  Live Extraction Pipeline Active
+                </span>
+              </div>
+              <h2 className="text-sm sm:text-base font-bold text-white tracking-tight flex items-center gap-2 justify-center sm:justify-start">
+                <span>{loadingSteps[stepIndex]}</span>
+              </h2>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 text-xs font-mono text-slate-300 bg-slate-950/80 px-3 py-1.5 rounded-xl border border-slate-800/80 max-w-sm truncate shadow-inner">
+            <Sparkles className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+            <span className="truncate">{prompt ? `"${prompt}"` : 'Generative Multi-Source Comparison'}</span>
+          </div>
+        </div>
+      </div>
+
+      {viewMode === 'canvas' ? (
+        /* Spatial Canvas Skeleton */
+        <div className="relative w-full h-[60vh] sm:h-[70vh] md:h-[calc(100vh-180px)] min-h-[480px] bg-[#030712] rounded-2xl border border-slate-800/90 p-6 flex flex-col md:flex-row items-center justify-around gap-6 overflow-hidden animate-pulse">
+          <div className="w-full sm:w-72 h-80 bg-slate-900/80 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-xl">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+              <div className="h-4 bg-slate-800 rounded w-1/2" />
+              <div className="h-3 bg-slate-800/60 rounded w-12" />
+            </div>
+            <div className="h-3 bg-slate-800/60 rounded w-3/4" />
+            <div className="space-y-3 pt-4">
+              <div className="h-3.5 bg-slate-800/60 rounded" />
+              <div className="h-3.5 bg-slate-800/50 rounded" />
+              <div className="h-3.5 bg-slate-800/40 rounded" />
+              <div className="h-3.5 bg-slate-800/30 rounded" />
+            </div>
+          </div>
+          <div className="w-full sm:w-72 h-80 bg-slate-900/80 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-xl">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+              <div className="h-4 bg-slate-800 rounded w-1/2" />
+              <div className="h-3 bg-slate-800/60 rounded w-12" />
+            </div>
+            <div className="h-3 bg-slate-800/60 rounded w-3/4" />
+            <div className="space-y-3 pt-4">
+              <div className="h-3.5 bg-slate-800/60 rounded" />
+              <div className="h-3.5 bg-slate-800/50 rounded" />
+              <div className="h-3.5 bg-slate-800/40 rounded" />
+              <div className="h-3.5 bg-slate-800/30 rounded" />
+            </div>
+          </div>
+          <div className="w-full sm:w-72 h-80 bg-slate-900/80 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-xl">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+              <div className="h-4 bg-slate-800 rounded w-1/2" />
+              <div className="h-3 bg-slate-800/60 rounded w-12" />
+            </div>
+            <div className="h-3 bg-slate-800/60 rounded w-3/4" />
+            <div className="space-y-3 pt-4">
+              <div className="h-3.5 bg-slate-800/60 rounded" />
+              <div className="h-3.5 bg-slate-800/50 rounded" />
+              <div className="h-3.5 bg-slate-800/40 rounded" />
+              <div className="h-3.5 bg-slate-800/30 rounded" />
+            </div>
+          </div>
+        </div>
+      ) : (
+        /* Spec Sheet Skeleton */
+        <div className="space-y-6 animate-pulse">
+          {/* Skeleton Entity Hero Card */}
+          <div className="w-full bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-6 lg:p-8 space-y-6 shadow-xl">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 pb-6 border-b border-slate-800">
+              <div className="flex-1 space-y-3">
+                <div className="h-5 w-24 bg-slate-800 rounded-md" />
+                <div className="h-8 w-48 sm:w-64 bg-slate-800 rounded-lg" />
+                <div className="h-6 w-32 bg-slate-800/60 rounded-full" />
+              </div>
+              <div className="w-12 h-12 rounded-full bg-slate-800/80 mx-auto md:mx-0 flex items-center justify-center">
+                <span className="font-mono text-xs text-slate-600 font-bold">VS</span>
+              </div>
+              <div className="flex-1 space-y-3 md:text-right flex flex-col md:items-end">
+                <div className="h-5 w-24 bg-slate-800 rounded-md" />
+                <div className="h-8 w-48 sm:w-64 bg-slate-800 rounded-lg" />
+                <div className="h-6 w-32 bg-slate-800/60 rounded-full" />
+              </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="h-4 w-40 bg-slate-800/60 rounded" />
+              <div className="h-4 w-32 bg-slate-800/60 rounded" />
+            </div>
+          </div>
+
+          {/* Skeleton Executive Verdict Card */}
+          <div className="w-full bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-6 space-y-4 shadow-xl">
+            <div className="h-6 w-48 bg-slate-800 rounded" />
+            <div className="space-y-2 bg-slate-950/60 p-4 rounded-xl border border-slate-800/80">
+              <div className="h-4 w-full bg-slate-800/60 rounded" />
+              <div className="h-4 w-5/6 bg-slate-800/60 rounded" />
+              <div className="h-4 w-4/6 bg-slate-800/60 rounded" />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="h-24 bg-slate-950/80 border border-slate-800 rounded-xl p-4 space-y-2">
+                <div className="h-4 w-32 bg-slate-800 rounded" />
+                <div className="h-3 w-48 bg-slate-800/60 rounded" />
+              </div>
+              <div className="h-24 bg-slate-950/80 border border-slate-800 rounded-xl p-4 space-y-2">
+                <div className="h-4 w-32 bg-slate-800 rounded" />
+                <div className="h-3 w-48 bg-slate-800/60 rounded" />
+              </div>
+            </div>
+          </div>
+
+          {/* Skeleton Table Section */}
+          <div className="w-full bg-slate-900/90 border border-slate-800 rounded-2xl shadow-xl overflow-hidden">
+            <div className="w-full overflow-x-auto whitespace-nowrap md:whitespace-normal">
+              <div className="min-w-[650px] md:min-w-full">
+                <div className="bg-slate-900 border-b border-slate-800 px-4 sm:px-6 py-4 grid grid-cols-12 gap-4">
+                  <div className="col-span-4 min-w-[150px]"><div className="h-4 w-28 bg-slate-800 rounded" /></div>
+                  <div className="col-span-4 min-w-[150px]"><div className="h-4 w-36 bg-slate-800 rounded" /></div>
+                  <div className="col-span-4 min-w-[150px]"><div className="h-4 w-36 bg-slate-800 rounded" /></div>
+                </div>
+
+                <div className="px-4 sm:px-6 py-3 bg-slate-950/60 border-b border-slate-800 flex items-center justify-between">
+                  <div className="h-4 w-40 bg-slate-800 rounded" />
+                  <div className="h-4 w-6 bg-slate-800 rounded" />
+                </div>
+
+                <div className="divide-y divide-slate-800/60">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} className="grid grid-cols-12 gap-4 px-4 sm:px-6 py-4 items-center">
+                      <div className="col-span-4 min-w-[150px] space-y-1.5">
+                        <div className="h-4 bg-slate-800 rounded" style={{ width: `${60 + (i * 7) % 35}%` }} />
+                        <div className="h-3 w-16 bg-slate-800/50 rounded" />
+                      </div>
+                      <div className="col-span-4 min-w-[150px] space-y-1.5">
+                        <div className="h-4 bg-slate-800/80 rounded" style={{ width: `${70 + (i * 11) % 25}%` }} />
+                        <div className="h-1.5 w-full bg-slate-800/40 rounded-full" />
+                      </div>
+                      <div className="col-span-4 min-w-[150px] space-y-1.5">
+                        <div className="h-4 bg-slate-800/80 rounded" style={{ width: `${65 + (i * 13) % 30}%` }} />
+                        <div className="h-1.5 w-full bg-slate-800/40 rounded-full" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 
 export default function ComparisonApp() {
   const [viewMode, setViewMode] = useState<'spec' | 'canvas'>('spec');
@@ -1020,26 +1218,57 @@ export default function ComparisonApp() {
     );
   }
 
-  // 2. LOADING STATE
-  if (loading && !comparisonData) {
+  // 2. GENERATIVE LOADING STATE WITH SKELETON UI
+  const isLoading = loading;
+  if (isLoading && !comparisonData) {
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center p-4 sm:p-6 space-y-6 w-full">
-        <div className="w-16 h-16 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-sky-400 shadow-2xl relative">
-          <Loader2 className="w-8 h-8 animate-spin" />
-          <div className="absolute inset-0 rounded-2xl border-2 border-sky-500/40 animate-ping opacity-25" />
-        </div>
+      <div className="min-h-screen bg-slate-950 text-slate-100 selection:bg-slate-800 selection:text-white pb-16 w-full">
+        <header className="border-b border-slate-800/80 bg-slate-900/90 backdrop-blur-xl sticky top-0 z-40 w-full">
+          <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-col md:flex-row items-center justify-between gap-3 md:gap-4">
+            <div className="flex items-center justify-between w-full md:w-auto gap-3 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-sky-400 shadow-sm shrink-0">
+                  <Scale className="w-4 h-4 sm:w-5 sm:h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-sm sm:text-base tracking-tight text-white">MorphUI</span>
+                    <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-slate-800 text-sky-300 border border-slate-700">
+                      Dual-Engine
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 hidden sm:block">Spec Sheet & Spatial Graph Runtime</p>
+                </div>
+              </div>
+            </div>
 
-        <div className="text-center space-y-2 max-w-md px-4">
-          <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight">Generating Precision Comparison</h2>
-          <p className="text-xs text-slate-400 leading-relaxed">
-            Executing parallel web retrieval, stripping forum bias, and synthesizing dynamic domain metrics...
-          </p>
-        </div>
+            <div className="w-full md:w-auto md:flex-1 max-w-2xl">
+              <div className="relative w-full flex items-center">
+                <Search className="w-4 h-4 text-slate-500 absolute left-3 pointer-events-none" />
+                <input
+                  type="text"
+                  value={prompt}
+                  readOnly
+                  disabled
+                  placeholder="Synthesizing comparison..."
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-12 py-2 text-xs sm:text-sm text-slate-300 placeholder-slate-500 outline-none shadow-inner"
+                />
+                <div className="absolute right-2 flex items-center">
+                  <Loader2 className="w-4 h-4 animate-spin text-sky-400" />
+                </div>
+              </div>
+            </div>
 
-        <div className="flex items-center gap-2 text-[11px] font-mono text-sky-400 bg-slate-900/80 px-3 py-1.5 rounded-full border border-slate-800 max-w-md truncate">
-          <Sparkles className="w-3.5 h-3.5 shrink-0" />
-          <span className="truncate">Active Query: &quot;{prompt || 'Visual Comparison'}&quot;</span>
-        </div>
+            <div className="hidden md:flex items-center gap-2 text-xs text-slate-400 font-mono">
+              <Sparkles className="w-3.5 h-3.5 text-sky-400" />
+              <span>Multi-Source Engine</span>
+            </div>
+          </div>
+        </header>
+
+        <main>
+          <ComparisonSkeleton prompt={prompt} viewMode={viewMode} />
+        </main>
       </div>
     );
   }
@@ -1484,22 +1713,22 @@ export default function ComparisonApp() {
             </div>
           </section>
 
-          {/* TAB 1: Verified Facts & Official Specs Table (Horizontal scroll wrapper: overflow-x-auto & min-w-[120px]) */}
+          {/* TAB 1: Verified Facts & Official Specs Table (Responsive Wrapper: w-full overflow-x-auto whitespace-nowrap md:whitespace-normal & min-w-[150px]) */}
           {activeTab === 'verified' && (
             <section className="w-full bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden print-clean">
-              <div className="w-full overflow-x-auto">
-                <div className="min-w-[620px] md:min-w-full">
+              <div className="w-full overflow-x-auto whitespace-nowrap md:whitespace-normal">
+                <div className="min-w-[650px] md:min-w-full">
                   {/* Table Header */}
                   <div className="bg-slate-900 border-b border-slate-800 px-4 sm:px-6 py-3.5 grid grid-cols-12 gap-4 items-center text-xs font-bold uppercase tracking-wider text-slate-400 shadow-sm">
-                    <div className="col-span-4 min-w-[120px] flex items-center gap-1.5">
+                    <div className="col-span-4 min-w-[150px] flex items-center gap-1.5">
                       <FileSpreadsheet className="w-4 h-4 text-slate-500 shrink-0" />
                       <span className="truncate">Metric / Attribute</span>
                     </div>
-                    <div className="col-span-4 min-w-[120px] text-sky-400 flex items-center gap-1.5 whitespace-normal break-words">
+                    <div className="col-span-4 min-w-[150px] text-sky-400 flex items-center gap-1.5 whitespace-normal break-words">
                       <span className="w-2 h-2 rounded-full bg-sky-400 shrink-0" />
                       <span>{displayEntityA}</span>
                     </div>
-                    <div className="col-span-4 min-w-[120px] text-indigo-400 flex items-center gap-1.5 whitespace-normal break-words">
+                    <div className="col-span-4 min-w-[150px] text-indigo-400 flex items-center gap-1.5 whitespace-normal break-words">
                       <span className="w-2 h-2 rounded-full bg-indigo-400 shrink-0" />
                       <span>{displayEntityB}</span>
                     </div>
@@ -1565,7 +1794,7 @@ export default function ComparisonApp() {
                                           : 'hover:bg-slate-800/40'
                                       }`}
                                     >
-                                      <div className="col-span-4 min-w-[120px] pr-2 align-top whitespace-normal break-words">
+                                      <div className="col-span-4 min-w-[150px] pr-2 align-top whitespace-normal break-words">
                                         <div className="font-semibold text-slate-200 leading-relaxed whitespace-normal break-words">
                                           {m.metric}
                                         </div>
@@ -1581,8 +1810,8 @@ export default function ComparisonApp() {
                                         </div>
                                       </div>
 
-                                      <div className="col-span-4 min-w-[120px] text-slate-300 leading-relaxed pr-2 space-y-1.5 align-top whitespace-normal break-words">
-                                        <div className="whitespace-normal break-words">{m.entity_a}</div>
+                                      <div className="col-span-4 min-w-[150px] text-slate-300 leading-relaxed pr-2 space-y-1.5 align-top whitespace-normal break-words">
+                                        <div className="whitespace-normal break-words">{renderValueWithFallback(m.entity_a)}</div>
                                         {hasNumeric && (
                                           <div className="pt-1">
                                             <div className="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
@@ -1595,8 +1824,8 @@ export default function ComparisonApp() {
                                         )}
                                       </div>
 
-                                      <div className="col-span-4 min-w-[120px] text-slate-300 leading-relaxed space-y-1.5 align-top whitespace-normal break-words">
-                                        <div className="whitespace-normal break-words">{m.entity_b}</div>
+                                      <div className="col-span-4 min-w-[150px] text-slate-300 leading-relaxed space-y-1.5 align-top whitespace-normal break-words">
+                                        <div className="whitespace-normal break-words">{renderValueWithFallback(m.entity_b)}</div>
                                         {hasNumeric && (
                                           <div className="pt-1">
                                             <div className="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
@@ -1623,7 +1852,7 @@ export default function ComparisonApp() {
             </section>
           )}
 
-          {/* TAB 2: Community & Reddit Sentiment Table (Horizontal scroll wrapper: overflow-x-auto & min-w-[120px]) */}
+          {/* TAB 2: Community & Reddit Sentiment Table (Responsive Wrapper: w-full overflow-x-auto whitespace-nowrap md:whitespace-normal & min-w-[150px]) */}
           {activeTab === 'community' && (
             <section className="w-full bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden print-clean">
               <div className="p-3 sm:p-4 bg-slate-950/80 border-b border-slate-800 flex items-center justify-between text-xs text-slate-400">
@@ -1635,19 +1864,19 @@ export default function ComparisonApp() {
                 </div>
               </div>
 
-              <div className="w-full overflow-x-auto">
-                <div className="min-w-[620px] md:min-w-full">
+              <div className="w-full overflow-x-auto whitespace-nowrap md:whitespace-normal">
+                <div className="min-w-[650px] md:min-w-full">
                   {/* Sentiment Header */}
                   <div className="bg-slate-900 border-b border-slate-800 px-4 sm:px-6 py-3.5 grid grid-cols-12 gap-4 items-center text-xs font-bold uppercase tracking-wider text-slate-400 shadow-sm">
-                    <div className="col-span-4 min-w-[120px] flex items-center gap-1.5">
+                    <div className="col-span-4 min-w-[150px] flex items-center gap-1.5">
                       <MessageSquare className="w-4 h-4 text-slate-500 shrink-0" />
                       <span className="truncate">Theme / Topic</span>
                     </div>
-                    <div className="col-span-4 min-w-[120px] text-sky-400 flex items-center gap-1.5 whitespace-normal break-words">
+                    <div className="col-span-4 min-w-[150px] text-sky-400 flex items-center gap-1.5 whitespace-normal break-words">
                       <span className="w-2 h-2 rounded-full bg-sky-400 shrink-0" />
                       <span>{displayEntityA} Consensus</span>
                     </div>
-                    <div className="col-span-4 min-w-[120px] text-indigo-400 flex items-center gap-1.5 whitespace-normal break-words">
+                    <div className="col-span-4 min-w-[150px] text-indigo-400 flex items-center gap-1.5 whitespace-normal break-words">
                       <span className="w-2 h-2 rounded-full bg-indigo-400 shrink-0" />
                       <span>{displayEntityB} Consensus</span>
                     </div>
@@ -1665,7 +1894,7 @@ export default function ComparisonApp() {
                           key={idx}
                           className="grid grid-cols-12 gap-4 px-4 sm:px-6 py-3.5 sm:py-4 items-start text-xs sm:text-sm hover:bg-slate-800/40 transition-colors"
                         >
-                          <div className="col-span-4 min-w-[120px] pr-2 space-y-1.5 align-top whitespace-normal break-words">
+                          <div className="col-span-4 min-w-[150px] pr-2 space-y-1.5 align-top whitespace-normal break-words">
                             <div className="font-semibold text-slate-200 leading-snug whitespace-normal break-words">{s.topic}</div>
                             <div>
                               <span
@@ -1683,12 +1912,12 @@ export default function ComparisonApp() {
                             </div>
                           </div>
 
-                          <div className="col-span-4 min-w-[120px] text-slate-300 leading-relaxed pr-2 bg-slate-950/50 p-2.5 sm:p-3 rounded-xl border border-slate-800/60 align-top whitespace-normal break-words">
-                            {s.entity_a_consensus}
+                          <div className="col-span-4 min-w-[150px] text-slate-300 leading-relaxed pr-2 bg-slate-950/50 p-2.5 sm:p-3 rounded-xl border border-slate-800/60 align-top whitespace-normal break-words">
+                            {renderValueWithFallback(s.entity_a_consensus)}
                           </div>
 
-                          <div className="col-span-4 min-w-[120px] text-slate-300 leading-relaxed bg-slate-950/50 p-2.5 sm:p-3 rounded-xl border border-slate-800/60 align-top whitespace-normal break-words">
-                            {s.entity_b_consensus}
+                          <div className="col-span-4 min-w-[150px] text-slate-300 leading-relaxed bg-slate-950/50 p-2.5 sm:p-3 rounded-xl border border-slate-800/60 align-top whitespace-normal break-words">
+                            {renderValueWithFallback(s.entity_b_consensus)}
                           </div>
                         </div>
                       ))

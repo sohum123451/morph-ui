@@ -37,9 +37,23 @@ interface ComparisonTableWidgetProps {
   };
 }
 
+function isMissingValue(val: any): boolean {
+  if (val === null || val === undefined) return true;
+  const str = String(val).trim();
+  if (!str) return true;
+  return /^(n\/?a|not specified.*|none|null|-|unknown)$/i.test(str);
+}
+
+function renderValueWithFallback(val: any, fallbackText = 'Not specified') {
+  if (isMissingValue(val)) {
+    return <span className="text-slate-500 italic text-xs sm:text-sm">{fallbackText}</span>;
+  }
+  return val;
+}
+
 function parseNumericValue(val: string): number | null {
-  if (!val || val === 'N/A' || val === '-') return null;
-  const clean = val.replace(/,/g, '');
+  if (isMissingValue(val)) return null;
+  const clean = String(val).replace(/,/g, '');
   const match = clean.match(/[-+]?\d*\.?\d+/);
   if (!match) return null;
   const num = parseFloat(match[0]);
@@ -354,10 +368,10 @@ export const ComparisonTableWidget = memo(function ComparisonTableWidget({
                           <span>{m.metric}</span>
                         </div>
                         <div className="col-span-4 pr-1 text-slate-300 font-medium leading-relaxed whitespace-normal break-words">
-                          {m.entity_a}
+                          {renderValueWithFallback(m.entity_a)}
                         </div>
                         <div className="col-span-4 text-slate-300 font-medium leading-relaxed whitespace-normal break-words">
-                          {m.entity_b}
+                          {renderValueWithFallback(m.entity_b)}
                         </div>
                       </div>
                     ))
@@ -413,11 +427,11 @@ export const ComparisonTableWidget = memo(function ComparisonTableWidget({
                             <div className="grid grid-cols-2 gap-2 pt-1">
                               <div className="p-2 rounded bg-slate-900/80 border border-slate-800 text-[11px] text-slate-300 whitespace-normal break-words leading-relaxed">
                                 <span className="block text-[10px] text-sky-400 font-medium mb-0.5">{entityAName}:</span>
-                                {m.entity_a}
+                                {renderValueWithFallback(m.entity_a)}
                               </div>
                               <div className="p-2 rounded bg-slate-900/80 border border-slate-800 text-[11px] text-slate-300 whitespace-normal break-words leading-relaxed">
                                 <span className="block text-[10px] text-indigo-400 font-medium mb-0.5">{entityBName}:</span>
-                                {m.entity_b}
+                                {renderValueWithFallback(m.entity_b)}
                               </div>
                             </div>
                           )}
