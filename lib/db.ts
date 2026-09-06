@@ -3,10 +3,28 @@ import { createClient } from "@libsql/client";
 const url = process.env.TURSO_DATABASE_URL || "";
 const authToken = process.env.TURSO_AUTH_TOKEN || "";
 
-export const db = createClient({
-  url,
-  authToken,
-});
+let client: any = null;
+function getClient() {
+  if (!client && url && (url.startsWith("libsql://") || url.startsWith("https://") || url.startsWith("http://") || url.startsWith("file:"))) {
+    try {
+      client = createClient({ url, authToken });
+    } catch (err) {
+      console.warn("Could not create Libsql client:", err);
+    }
+  }
+  return client;
+}
+
+export const db = {
+  execute: async (...args: any[]) => {
+    const c = getClient();
+    if (!c) {
+      console.warn("Turso DB not configured or URL invalid, skipping query.");
+      return { rows: [] };
+    }
+    return c.execute(...args);
+  }
+};
 
 export async function saveSession(id: string, prompt: string, widgetsJson: string) {
   try {

@@ -1,4 +1,4 @@
-﻿export type WidgetType = 'comparison_table' | 'timeline_calendar' | 'budget_tracker' | 'admission_predictor';
+export type WidgetType = 'comparison_table' | 'timeline_calendar' | 'budget_tracker' | 'admission_predictor';
 
 export interface WidgetImage {
   url: string;
@@ -6,11 +6,29 @@ export interface WidgetImage {
   label?: string;
 }
 
+export interface ComparisonPoint {
+  feature_name: string;
+  entity_a_value: string;
+  entity_b_value: string;
+}
+
+export interface GenerativeComparisonResponse {
+  category: string;
+  comparison_points: ComparisonPoint[];
+  verdict_summary: string;
+}
+
 export interface ComparisonTableData {
-  headers: string[];
-  rows: Record<string, string>[];
+  headers?: string[];
+  rows?: Record<string, string>[];
   summary?: string;
   images?: WidgetImage[];
+  // Generative UI comparison additions
+  category?: string;
+  entity_a?: string;
+  entity_b?: string;
+  comparison_points?: ComparisonPoint[];
+  verdict_summary?: string;
 }
 
 export interface TimelineCalendarData {

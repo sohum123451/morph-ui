@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import '@xyflow/react/dist/style.css';
 import React, { useState, useMemo, useCallback, useRef } from 'react';
@@ -22,11 +22,11 @@ import { AdmissionPredictorWidget } from '@/components/widgets/AdmissionPredicto
 import { AgentApiResponse, MorphWidget, ImageInput } from '@/types/morphui';
 
 const SAMPLE_PROMPTS = [
-  "🍎 Apple vs 🍊 Orange: Nutrition, Taste & Shelf Life",
-  "iit bombay vs iit delhi",
-  "Top Master's in CS programs in Germany: requirements, deadlines, living budget",
-  "Trip to Tokyo for 7 days: flight/hotel comparison & budget",
-  "iPhone 16 Pro vs Samsung Galaxy S25 Ultra: camera, battery & performance",
+  "SRM Chennai vs VIT Vellore",
+  "🍎 Apple vs 🥭 Mango: Nutrition & Shelf Life",
+  "IIT Bombay vs IIT Delhi for Computer Science",
+  "iPhone 16 Pro vs Samsung Galaxy S25 Ultra",
+  "React vs Vue: performance & developer experience",
 ];
 
 function CanvasWorkspace() {
@@ -159,8 +159,8 @@ function CanvasWorkspace() {
       }
 
       const START_X = 80;
-      const CARD_WIDTH = 540;
-      const GAP = 52;
+      const CARD_WIDTH = 600;
+      const GAP = 50;
       const START_Y = 120;
 
       const newNodes: Node[] = generatedWidgets.map((widget, index) => {
