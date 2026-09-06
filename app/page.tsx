@@ -93,7 +93,7 @@ const THEME_STYLES: Record<MorphTheme, {
     card: 'bg-[#111827]/90 border border-slate-800/90 text-slate-100 shadow-xl shadow-black/20 backdrop-blur-md',
     cardInner: 'bg-[#0B0F17]/80 border border-slate-800/80 text-slate-300',
     nav: 'bg-[#0B0F17]/90 border-b border-slate-800/80 text-white backdrop-blur-xl shadow-sm',
-    input: 'bg-[#0B0F17] border border-slate-700/80 text-slate-100 placeholder:text-slate-500 focus:border-sky-500 focus:ring-1 focus:ring-sky-500/40 focus:outline-none',
+    input: 'bg-[#0B0F17] border border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-sky-500 focus:ring-1 focus:ring-sky-500/40 focus:outline-none caret-sky-400',
     tableHeader: 'bg-slate-900/95 text-slate-300 border-b border-slate-800',
     tableRow: 'hover:bg-slate-800/40 border-b border-slate-800/60',
     tableSection: 'bg-slate-950/70 hover:bg-slate-950/90 border-t border-slate-800',
@@ -115,7 +115,7 @@ const THEME_STYLES: Record<MorphTheme, {
     card: 'bg-white border border-slate-200/90 text-slate-900 shadow-xl shadow-slate-200/50 backdrop-blur-md',
     cardInner: 'bg-slate-50 border border-slate-200 text-slate-800',
     nav: 'bg-white/95 border-b border-slate-200/90 text-slate-900 backdrop-blur-xl shadow-sm',
-    input: 'bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-sky-500 focus:ring-1 focus:ring-sky-500/30 focus:bg-white focus:outline-none',
+    input: 'bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-sky-500 focus:ring-1 focus:ring-sky-500/30 focus:bg-white focus:outline-none caret-sky-600',
     tableHeader: 'bg-slate-100/90 text-slate-700 border-b border-slate-200',
     tableRow: 'hover:bg-slate-50/90 border-b border-slate-200/80',
     tableSection: 'bg-slate-100/80 hover:bg-slate-200/60 border-t border-slate-200',
@@ -1934,17 +1934,17 @@ function MorphUIContent() {
             </div>
           </div>
 
-          {/* Central Search Input */}
-          <div className="w-full md:w-auto md:flex-1 max-w-2xl">
+          {/* Central Search Input with Guaranteed Width & Crisp Visibility */}
+          <div className="w-full md:flex-1 min-w-[260px] sm:min-w-[320px] max-w-2xl">
             <form onSubmit={handleRunComparison} className="relative w-full flex items-center">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none" />
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none z-10" />
               <input
                 type="text"
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder="Compare entities (e.g. Nike Pegasus vs Ultraboost, IIT vs VIT)..."
                 disabled={loading}
-                className={`w-full ${t.input} rounded-xl pl-9 pr-24 sm:pr-28 py-2 text-xs sm:text-sm outline-none transition-all shadow-inner`}
+                className={`w-full h-10 ${t.input} rounded-xl pl-9 pr-24 sm:pr-28 py-2 text-xs sm:text-sm font-medium outline-none transition-all shadow-inner relative z-0`}
               />
 
               <div className="absolute right-1.5 flex items-center gap-1">
@@ -1988,67 +1988,69 @@ function MorphUIContent() {
           </div>
 
           {/* Desktop-only View Switcher & Theme Switcher */}
-          <div className="hidden md:flex items-center gap-3 shrink-0">
+          <div className="hidden md:flex items-center gap-2 lg:gap-3 shrink-0">
             {/* Functional Theme Switcher */}
             <div className={`flex items-center p-1 rounded-xl ${t.cardInner} shadow-inner shrink-0`}>
               <button
                 type="button"
                 onClick={() => setTheme('dark')}
                 title="Dark Mode"
-                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${
+                className={`px-2 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${
                   theme === 'dark' ? t.pillActive : t.pillInactive
                 }`}
               >
                 <span>🌙</span>
-                <span className="hidden sm:inline text-[11px]">Dark</span>
+                <span className="hidden xl:inline text-[11px]">Dark</span>
               </button>
               <button
                 type="button"
                 onClick={() => setTheme('light')}
                 title="Clean White Light Mode"
-                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${
+                className={`px-2 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${
                   theme === 'light' ? t.pillActive : t.pillInactive
                 }`}
               >
                 <span>☀️</span>
-                <span className="hidden sm:inline text-[11px]">Light</span>
+                <span className="hidden xl:inline text-[11px]">Light</span>
               </button>
               <button
                 type="button"
                 onClick={() => setTheme('botanical')}
                 title="Botanical Forest Mode"
-                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${
+                className={`px-2 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${
                   theme === 'botanical' ? t.pillActive : t.pillInactive
                 }`}
               >
                 <span>🌸</span>
-                <span className="hidden sm:inline text-[11px]">Botanical</span>
+                <span className="hidden xl:inline text-[11px]">Botanical</span>
               </button>
             </div>
 
-            <div className={`flex items-center p-1 rounded-xl ${t.cardInner} shadow-inner`}>
+            <div className={`flex items-center p-1 rounded-xl ${t.cardInner} shadow-inner shrink-0`}>
               <button
                 type="button"
                 onClick={() => setViewMode('spec')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
                   viewMode === 'spec' ? t.pillActive : t.pillInactive
                 }`}
                 title="Spec Sheet View (Press 'V' to flip)"
               >
                 <FileText className="w-3.5 h-3.5 text-sky-400" />
-                <span>Spec Sheet</span>
+                <span className="hidden lg:inline">Spec Sheet</span>
+                <span className="lg:hidden">Spec</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setViewMode('canvas')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
                   viewMode === 'canvas' ? t.pillActive : t.pillInactive
                 }`}
                 title="Spatial Canvas Graph View (Press 'V' to flip)"
               >
                 <Network className="w-3.5 h-3.5 text-indigo-400" />
-                <span>Spatial Canvas</span>
+                <span className="hidden lg:inline">Spatial Canvas</span>
+                <span className="lg:hidden">Canvas</span>
               </button>
             </div>
 
