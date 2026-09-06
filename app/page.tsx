@@ -888,7 +888,7 @@ export default function ComparisonApp() {
   const [theme, setTheme] = useState<MorphTheme>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('morph-theme');
-      if (saved === 'light' || saved === 'pink' || saved === 'dark') return saved;
+      if (saved === 'light' || saved === 'botanical' || saved === 'dark' || saved === 'pink') return saved;
     }
     return 'dark';
   });
@@ -1811,59 +1811,46 @@ export default function ComparisonApp() {
 
           {/* Desktop-only View Switcher & Keyboard Shortcut */}
           <div className="hidden md:flex items-center gap-3 shrink-0">
-                        {/* Functional Theme Switcher */}
+                                    {/* 3-Tier Functional Theme Switcher */}
             <div className="flex items-center p-1 rounded-xl bg-slate-900/90 dark:bg-slate-950/90 border border-slate-700/80 shadow-inner shrink-0">
               <button
                 type="button"
                 onClick={() => setTheme('dark')}
                 title="Dark Mode"
-                className={`px-2 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${
                   theme === 'dark'
                     ? 'bg-slate-800 text-sky-400 shadow-sm border border-slate-700'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
                 <span>🌙</span>
-                <span className="hidden lg:inline text-[11px]">Dark</span>
+                <span className="hidden sm:inline text-[11px]">Dark</span>
               </button>
               <button
                 type="button"
                 onClick={() => setTheme('light')}
                 title="Clean White Mode"
-                className={`px-2 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${
                   theme === 'light'
                     ? 'bg-white text-slate-900 shadow-sm border border-slate-200'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
                 <span>☀️</span>
-                <span className="hidden lg:inline text-[11px]">Light</span>
+                <span className="hidden sm:inline text-[11px]">Light</span>
               </button>
               <button
                 type="button"
                 onClick={() => setTheme('botanical')}
-                title="Botanical Emerald Mode"
-                className={`px-2 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${
+                title="Cherry Blossom Botanical Mode"
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${
                   theme === 'botanical'
                     ? 'bg-emerald-700 text-white shadow-sm border border-emerald-600'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
-                <span>🌿</span>
-                <span className="hidden lg:inline text-[11px]">Botanical</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setTheme('pink')}
-                title="C2C Pink Theme"
-                className={`px-2 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${
-                  theme === 'pink'
-                    ? 'bg-pink-600 text-white shadow-sm border border-pink-500'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
                 <span>🌸</span>
-                <span className="hidden lg:inline text-[11px]">Pink</span>
+                <span className="hidden sm:inline text-[11px]">Botanical</span>
               </button>
             </div>
             <div className="flex items-center p-1 rounded-xl bg-slate-950/80 border border-slate-800 shadow-inner">

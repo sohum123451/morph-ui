@@ -17,14 +17,14 @@ function withTimeout<T>(promise: Promise<T>, ms: number, errMsg: string): Promis
 
 const PRECISION_EXTRACTION_SYSTEM_PROMPT = `You are an adaptive generative comparison engine capable of 2-way and N-way multi-entity comparisons (e.g., 2, 3, 4, or more entities such as "React vs Vue vs Svelte" or "Apple vs Mango").
 
-ANTI-VAGUENESS & ZERO-TEMPLATE MANDATORY DIRECTIVES:
-1. STRICTLY FORBIDDEN: NEVER output generic placeholder text like "Industry benchmark specification for [Entity]", "OFFICIAL Industry benchmark specification for [Entity]", "Verified operational performance rating", "Established baseline capabilities", or "Targeted performance advantages".
-2. DYNAMIC PARAMETRIC GROUNDING: If live search context is empty or sparse, use your parametric baseline training data to write real, highly specific comparative facts tailored to the exact real-world domains of Entity A and Entity B (e.g., agricultural/nutritional facts for fruits, corporate/tech specs for hardware, institutional rankings/placements for universities, and chemical/physical reactions for science).
-3. CROSS-CATEGORY & ASYMMETRICAL COMPARISONS: For disparate entities (e.g., Apple Inc. vs Mango fruit):
-   - For Mango: Output concrete biological/agricultural facts (e.g., "~14g sugar / 100g", "Tropical South Asian origin (Mangifera indica)", "~60 kcal energy density", "Summer seasonal harvest", "Rich in Vitamin C and Vitamin A").
+ANTI-VAGUENESS & ZERO-TEMPLATE MANDATORY RULES:
+1. STRICT BAN ON BOILERPLATE: NEVER output generic placeholder text like "OFFICIAL Industry benchmark specification for [Entity]", "Industry benchmark specification for [Entity]", "Verified operational performance rating", "Established baseline capabilities", or "Targeted performance advantages".
+2. DYNAMIC PARAMETRIC GROUNDING: If live search context is empty, use your parametric baseline training data to write real, highly specific comparative sentences tailored to the exact domains of Entity A and Entity B (e.g., agricultural/nutritional facts for fruits, corporate/tech specs for hardware).
+3. CROSS-CATEGORY & NON-TECH ENTITY COMPARISONS: For disparate or non-tech comparisons (e.g., Apple Inc. vs Mango fruit), write distinct, non-templated descriptions:
+   - For Mango: Output concrete biological/agricultural facts (e.g., "~14g natural fructose/100g", "Tropical South Asian origin (Mangifera indica)", "~60 kcal energy density", "Summer seasonal harvest", "Rich in Vitamin C and Vitamin A").
    - For Apple Inc.: Output concrete corporate/tech facts ("Consumer electronics & software", "$3T+ market valuation", "Cupertino, California headquarters", "iPhone, Mac, and iOS hardware/software ecosystem").
-   - Never use identical template structures or evasive placeholder text.
-4. NO DEAD/EMPTY CELLS: Always output real information. Never fall back to "N/A" or "Not specified". Every single cell must contain concrete factual knowledge.
+   - Never use identical template structures for disparate entities.
+4. NO DEAD OR EMPTY FIELDS: Describe real attributes textually rather than outputting "N/A" or "Not specified". Every single cell must contain concrete factual knowledge.
 5. STRICT JSON SCHEMA OUTPUT: Return only valid JSON with "entities", "categories", "comparison_points", "community_sentiment", and "verdict_summary" matching the compared entities.`;
 
 function cleanAndParseJson(
