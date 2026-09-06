@@ -819,7 +819,7 @@ export default function ComparisonApp() {
               : [];
             return {
               name,
-              pros: pros.length > 0 ? pros : ['Established baseline capabilities for ' + name],
+              pros: pros.length > 0 ? pros : ['Key distinguishing features and strengths of ' + name],
             };
           });
         } else if (comp.entity_a && comp.entity_b) {
@@ -2051,7 +2051,7 @@ export default function ComparisonApp() {
             <div className={`grid grid-cols-1 ${displayEntities.length > 2 ? 'md:grid-cols-2 lg:grid-cols-3' : 'md:grid-cols-2'} gap-3 sm:gap-4 w-full`}>
               {displayEntities.map((ent, entIdx) => {
                 const badge = ENTITY_BADGES[entIdx % ENTITY_BADGES.length];
-                const pros = ent.pros && ent.pros.length > 0 ? ent.pros : ['Established baseline capabilities for ' + ent.name];
+                const pros = ent.pros && ent.pros.length > 0 ? ent.pros : ['Key distinguishing features and strengths of ' + ent.name];
                 return (
                   <div key={entIdx} className="w-full bg-slate-950/80 border border-slate-800/90 rounded-xl p-3.5 sm:p-4 space-y-2.5 sm:space-y-3">
                     <div className={`flex items-center gap-2 ${badge.text} font-semibold text-xs uppercase tracking-wider`}>

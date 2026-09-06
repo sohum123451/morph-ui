@@ -15,17 +15,19 @@ function withTimeout<T>(promise: Promise<T>, ms: number, errMsg: string): Promis
   ]);
 }
 
-const PRECISION_EXTRACTION_SYSTEM_PROMPT = `You are an adaptive generative comparison engine capable of 2-way and N-way multi-entity comparisons (e.g., 2, 3, 4, or more entities such as "React vs Vue vs Svelte").
+const PRECISION_EXTRACTION_SYSTEM_PROMPT = `You are an adaptive generative comparison engine capable of 2-way and N-way multi-entity comparisons (e.g., 2, 3, 4, or more entities such as "React vs Vue vs Svelte" or "Apple vs Mango").
 
-ADAPTIVE METRIC RULES:
-1. MATCH METRICS TO DOMAIN: 
-   - If Scientific/Conceptual (e.g., Primary Cell vs Secondary Cell vs Fuel Cell, Photosynthesis vs Respiration): Compare theoretical principles, operational mechanisms, efficiency, use cases, and thermodynamic/chemical behavior. NEVER output commercial metrics like "Unit Cost" or "Retail Price" unless specified.
-   - If Commercial/Hardware (e.g., iPhone vs Samsung vs Pixel): Compare pricing, battery mAh, camera, processor, display.
-   - If Academic (e.g., SRM vs VIT vs Manipal): Compare rankings, cutoffs, placements, tuition fees, campus acreage.
-   - If Software/Tech (e.g., React vs Vue vs Svelte): Compare runtime model, bundle footprint, state management, learning curve, ecosystem maturity.
-2. NO FALSE "N/A": If a conceptual comparison doesn't use a specific number, describe the behavior textually (e.g., "Virtual DOM diffing" vs "Fine-grained reactivity" vs "Compile-time vanishing") rather than falling back to "N/A".
-3. DISPARATE DOMAIN & ABSTRACT COMPARISONS: If the two or more entities belong to entirely different or orthogonal domains (e.g., Photosynthesis vs Cloud Computing, Quantum Mechanics vs Coffee Brewing), create a high-level abstract comparison framework (e.g., comparing fundamental systemic inputs, operational/processing mechanics, throughput/efficiency, transformative output utility, and architectural resilience) rather than failing, returning empty fields, or outputting "N/A".
-4. STRICT JSON SCHEMA OUTPUT: Return only valid JSON with "entities", "categories", "comparison_points", "community_sentiment", and "verdict_summary" matching the dynamic list of entities.
+ANTI-VAGUENESS & ZERO-TEMPLATE MANDATORY RULES:
+1. NO GENERIC BOILERPLATE: NEVER output vague phrases like "Industry benchmark specification for [Entity]", "Verified operational performance rating", "Established baseline capabilities", "Targeted performance advantages", or "General utility metric". Every single metric value and pro point MUST state concrete, real-world factual information, actual numbers, specifications, prices, chemical/physical behaviors, or exact architecture.
+2. MATCH METRICS TO DOMAIN:
+   - If Scientific/Conceptual (e.g., Primary Cell vs Secondary Cell vs Fuel Cell, Photosynthesis vs Cellular Respiration): Compare real chemical/physical principles (e.g., irreversible redox reaction vs external electric current reversal), energy conversion efficiency, thermodynamic cycles, real-world applications, and chemical reactants. NEVER output commercial retail pricing unless specifically requested.
+   - If Commercial/Hardware (e.g., iPhone vs Samsung vs Pixel): Compare actual battery mAh/Wh, camera MP/sensors, processor chipsets, retail pricing ($/INR), RAM, and display specs.
+   - If Academic (e.g., SRM vs VIT vs Manipal): Compare actual NIRF rankings, highest/average placement packages, cutoff ranks, tuition fees, and accreditations.
+   - If Software/Tech (e.g., React vs Vue vs Svelte): Compare real runtime execution models (VDOM vs Fine-grained Signals vs Compile-time), bundle sizes in KB, state primitives, and DX.
+3. CROSS-CATEGORY & ASYMMETRICAL COMPARISONS: If comparing distinct categories (e.g., a fruit like Mango vs a tech company like Apple, or a biological process vs a computer), tailor metrics to actual real-world traits. For Apple vs Mango, compare "Sugar Content / Calories", "Origin / Agriculture vs Corporate HQ", "Market Valuation vs Global Agricultural Trade", "Primary Utility / Function", and "Shelf Life / Lifecycle".
+4. PARAMETRIC KNOWLEDGE GROUNDING: If live search snippets are missing or sparse, use your deep parametric knowledge to output actual factual details (e.g., "Mango: ~14g sugar/100g, native to South Asia, ~60 kcal" vs "Apple Inc.: Consumer electronics & software, $3T+ market cap, Cupertino CA") instead of evasive placeholder text.
+5. NO FALSE "N/A": Describe behaviors and facts textually rather than outputting "N/A" or "Not specified".
+6. STRICT JSON SCHEMA OUTPUT: Return only valid JSON with "entities", "categories", "comparison_points", "community_sentiment", and "verdict_summary" matching the dynamic list of entities.
 
 OUTPUT JSON SCHEMA:
 {
@@ -126,7 +128,7 @@ function cleanAndParseJson(
           : [];
         return {
           name,
-          pros: pros.length > 0 ? pros : [`Established baseline specifications for ${name}`],
+          pros: pros.length > 0 ? pros : [`Key distinguishing features and concrete capabilities of ${name}`],
         };
       });
     } else if (parsed.entity_a || parsed.entity_b) {
@@ -139,13 +141,13 @@ function cleanAndParseJson(
         ? parsed.entity_b.pros.map(String).filter((p: string) => !isInvalidPro(p))
         : [];
       resolvedEntities = [
-        { name: eA, pros: prosA.length > 0 ? prosA : [`Established baseline specifications for ${eA}`] },
-        { name: eB, pros: prosB.length > 0 ? prosB : [`Targeted performance advantages for ${eB}`] },
+        { name: eA, pros: prosA.length > 0 ? prosA : [`Key distinguishing features and concrete capabilities of ${eA}`] },
+        { name: eB, pros: prosB.length > 0 ? prosB : [`Targeted advantages and distinct strengths of ${eB}`] },
       ];
     } else {
       resolvedEntities = fallbackEntities.map((name) => ({
         name,
-        pros: [`Established baseline capabilities for ${name}`],
+        pros: [`Key distinguishing features and concrete capabilities of ${name}`],
       }));
     }
 
