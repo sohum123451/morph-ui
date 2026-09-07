@@ -26,19 +26,33 @@ function EntityObject3D({
   isSelected,
 }: EntityObject3DProps) {
   const meshRef = useRef<THREE.Mesh>(null);
-  const pillarHeight = Math.max(1, (score / 100) * 4);
+  const pillarRef = useRef<THREE.Mesh>(null);
+  const targetPillarHeight = Math.max(1, (score / 100) * 4);
+  const currentHeight = useRef(targetPillarHeight);
 
-  useFrame((state) => {
+  useFrame((state, delta) => {
+    // Smooth frame lerp for pillar elevation
+    currentHeight.current = THREE.MathUtils.lerp(
+      currentHeight.current,
+      targetPillarHeight,
+      delta * 4.0
+    );
+
+    if (pillarRef.current) {
+      pillarRef.current.scale.y = currentHeight.current;
+      pillarRef.current.position.y = currentHeight.current / 2;
+    }
+
     if (meshRef.current && isLeader) {
-      meshRef.current.rotation.y += 0.01;
+      meshRef.current.rotation.y += 0.015;
     }
   });
 
   return (
     <group position={position}>
-      {/* Base Foundation Pillar */}
-      <mesh position={[0, pillarHeight / 2, 0]}>
-        <cylinderGeometry args={[0.9, 1.1, pillarHeight, 32]} />
+      {/* Smoothly Animated Foundation Pillar */}
+      <mesh ref={pillarRef} position={[0, targetPillarHeight / 2, 0]}>
+        <cylinderGeometry args={[0.9, 1.1, 1, 32]} />
         <meshStandardMaterial
           color={isLeader ? '#355E58' : '#053229'}
           roughness={0.4}
@@ -50,9 +64,9 @@ function EntityObject3D({
       <Float speed={2} rotationIntensity={0.2} floatIntensity={0.4}>
         <mesh
           ref={meshRef}
-          position={[0, pillarHeight + 0.8, 0]}
+          position={[0, targetPillarHeight + 0.8, 0]}
           onClick={onSelect}
-          scale={isSelected ? [1.2, 1.2, 1.2] : [1, 1, 1]}
+          scale={isSelected ? [1.25, 1.25, 1.25] : [1, 1, 1]}
         >
           <octahedronGeometry args={[0.7, 0]} />
           <meshStandardMaterial
@@ -65,10 +79,10 @@ function EntityObject3D({
       </Float>
 
       {/* 3D Label & Telemetry Badge */}
-      <Html position={[0, pillarHeight + 2.0, 0]} center distanceFactor={14}>
+      <Html position={[0, targetPillarHeight + 2.0, 0]} center distanceFactor={14}>
         <div
           onClick={onSelect}
-          className={`px-3 py-2 rounded-xl border text-xs font-sans whitespace-nowrap cursor-pointer transition-all shadow-xl ${
+          className={`px-3 py-2 rounded-xl border text-xs font-sans whitespace-nowrap cursor-pointer transition-all duration-300 shadow-xl ${
             isLeader
               ? 'bg-[#355E58] border-[#FE9179] text-[#FFEDD1]'
               : 'bg-[#053229] border-[#355E58] text-[#FFEDD1]'
@@ -98,24 +112,35 @@ interface MetricOrbProps {
 
 function MetricOrb({ metric, weight, position, summary }: MetricOrbProps) {
   const [hovered, setHovered] = useState(false);
-  const size = Math.max(0.25, Math.min(0.6, weight * 0.35));
+  const groupRef = useRef<THREE.Group>(null);
+  const targetSize = Math.max(0.25, Math.min(0.6, weight * 0.35));
+  const currentSize = useRef(targetSize);
+
+  useFrame((state, delta) => {
+    currentSize.current = THREE.MathUtils.lerp(currentSize.current, targetSize, delta * 5.0);
+    if (groupRef.current) {
+      groupRef.current.scale.setScalar(currentSize.current);
+    }
+  });
 
   return (
     <group position={position}>
-      <mesh
-        onPointerOver={() => setHovered(true)}
-        onPointerOut={() => setHovered(false)}
-      >
-        <sphereGeometry args={[size, 24, 24]} />
-        <meshStandardMaterial
-          color={weight > 1.2 ? '#FE9179' : '#BCDDDC'}
-          roughness={0.3}
-          metalness={0.7}
-        />
-      </mesh>
+      <group ref={groupRef}>
+        <mesh
+          onPointerOver={() => setHovered(true)}
+          onPointerOut={() => setHovered(false)}
+        >
+          <sphereGeometry args={[1, 24, 24]} />
+          <meshStandardMaterial
+            color={weight > 1.2 ? '#FE9179' : '#BCDDDC'}
+            roughness={0.3}
+            metalness={0.7}
+          />
+        </mesh>
+      </group>
 
       {hovered && (
-        <Html position={[0, 0.8, 0]} center distanceFactor={12}>
+        <Html position={[0, 0.9, 0]} center distanceFactor={12}>
           <div className="p-2 rounded-lg bg-[#355E58] border border-[#72B0AB] text-[11px] text-[#FFEDD1] shadow-2xl font-sans min-w-[120px]">
             <div className="font-bold text-[#FFEDD1]">{metric}</div>
             <div className="text-[10px] text-[#FE9179] font-mono">Weight: {weight}x</div>
@@ -195,7 +220,7 @@ export function Playable3DCanvas({
     <div className="w-full h-[650px] rounded-xl border border-[#355E58] bg-[#053229] overflow-hidden relative shadow-2xl">
       <div className="absolute top-3 left-3 z-10 p-2.5 rounded-lg bg-[#355E58]/90 border border-[#355E58] text-xs text-[#FFEDD1] backdrop-blur-md pointer-events-none">
         <div className="font-bold uppercase tracking-wider text-[#FE9179]">Playable 3D Spatial Canvas</div>
-        <div className="text-[11px] text-[#BCDDDC]">Orbit, pan, and click nodes • Pillar elevation encodes real weighted scores</div>
+        <div className="text-[11px] text-[#BCDDDC]">Orbit, pan, and click nodes • Elevation eases smoothly with live weights</div>
       </div>
 
       <Canvas
@@ -209,7 +234,7 @@ export function Playable3DCanvas({
         {/* Spatial Coordinate Ground Grid */}
         <gridHelper args={[30, 30, '#355E58', '#053229']} position={[0, 0, 0]} />
 
-        {/* Entity Objects */}
+        {/* Entity Objects with Frame Easing */}
         {entityData.map((ent, idx) => (
           <EntityObject3D
             key={idx}
@@ -236,7 +261,7 @@ export function Playable3DCanvas({
 
         <OrbitControls
           enableDamping
-          dampingFactor={0.05}
+          dampingFactor={0.08}
           minDistance={4}
           maxDistance={25}
           maxPolarAngle={Math.PI / 2 - 0.05}

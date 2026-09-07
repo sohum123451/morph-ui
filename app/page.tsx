@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import {
@@ -468,33 +469,43 @@ export default function MorphUIWorkbench() {
         {/* Live Multi-Lens Visual Workspace */}
         {!loading && comparisonData && (
           <div className="space-y-6">
-            {/* 1. Active Interactive Lens */}
-            {activeLens === 'priority' && (
-              <PriorityLens
-                entities={entities}
-                metrics={orderedMetrics}
-                weights={metricWeights}
-                onWeightChange={handleWeightChange}
-                onMoveMetric={handleMoveMetric}
-                onResetWeights={handleResetWeights}
-              />
-            )}
+            {/* 1. Active Interactive Lens with Continuous Data Handoff */}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeLens}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.22, ease: 'easeOut' }}
+              >
+                {activeLens === 'priority' && (
+                  <PriorityLens
+                    entities={entities}
+                    metrics={orderedMetrics}
+                    weights={metricWeights}
+                    onWeightChange={handleWeightChange}
+                    onMoveMetric={handleMoveMetric}
+                    onResetWeights={handleResetWeights}
+                  />
+                )}
 
-            {activeLens === 'divergence' && (
-              <DivergenceField
-                entities={entities}
-                metrics={orderedMetrics}
-                weights={metricWeights}
-              />
-            )}
+                {activeLens === 'divergence' && (
+                  <DivergenceField
+                    entities={entities}
+                    metrics={orderedMetrics}
+                    weights={metricWeights}
+                  />
+                )}
 
-            {activeLens === 'spatial3d' && (
-              <Playable3DCanvas
-                entities={entities}
-                metrics={orderedMetrics}
-                weights={metricWeights}
-              />
-            )}
+                {activeLens === 'spatial3d' && (
+                  <Playable3DCanvas
+                    entities={entities}
+                    metrics={orderedMetrics}
+                    weights={metricWeights}
+                  />
+                )}
+              </motion.div>
+            </AnimatePresence>
 
             {/* 2. Executive Synthesis & Nuanced Verdict */}
             {comparisonData.verdict_summary && (

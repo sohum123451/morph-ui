@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { VerifiedMetric, EntityVerdict } from '@/types/morphui';
-import { DragHandleIcon, ChevronUpIcon, ChevronDownIcon, SlidersIcon } from '@/components/icons/CustomIcons';
+import { ChevronUpIcon, ChevronDownIcon, SlidersIcon } from '@/components/icons/CustomIcons';
 
 export interface PriorityLensProps {
   entities: EntityVerdict[];
@@ -19,7 +20,6 @@ export interface PriorityLensProps {
 function scoreEntityValue(val: string | undefined, allValues: string[]): number {
   if (!val) return 50;
   
-  // Extract number if present
   const numMatch = val.match(/(\d+(\.\d+)?)/);
   if (numMatch) {
     const num = parseFloat(numMatch[1]);
@@ -32,7 +32,6 @@ function scoreEntityValue(val: string | undefined, allValues: string[]): number 
       const min = Math.min(...allNums);
       const max = Math.max(...allNums);
       if (max > min) {
-        // Higher is generally better for battery, RAM, resolution; lower is better for price/weight
         const isLowerBetter = /(price|cost|weight|thickness|latency|ms|usd|\$|inr|₹)/i.test(val);
         if (isLowerBetter) {
           return Math.round(100 - ((num - min) / (max - min)) * 60 + 20);
@@ -42,7 +41,6 @@ function scoreEntityValue(val: string | undefined, allValues: string[]): number 
     }
   }
 
-  // Qualitative baseline
   if (/pro|ultra|titanium|flagship|oled|amoled|superior|fastest|high/i.test(val)) return 85;
   if (/standard|good|average|decent/i.test(val)) return 70;
   if (/base|limited|slow|basic/i.test(val)) return 55;
@@ -102,7 +100,7 @@ export function PriorityLens({
 
   return (
     <div className="w-full space-y-6 text-[#FFEDD1]">
-      {/* Live Priority Leaderboard Banner */}
+      {/* Live Priority Leaderboard Banner with Framer Motion Layout Reordering */}
       <div className="p-4 sm:p-5 rounded-xl bg-[#355E58] border border-[#355E58] space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-[#053229]/40 pb-3">
           <div className="flex items-center gap-2">
@@ -125,12 +123,17 @@ export function PriorityLens({
           </div>
         </div>
 
-        {/* Live Score Bars */}
+        {/* Live Score Bars with Layout Animation */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-1">
           {compositeScores.map((ent, rankIdx) => {
             const isFirst = rankIdx === 0;
             return (
-              <div key={ent.index} className="p-3 rounded-lg bg-[#053229] border border-[#355E58] space-y-1.5">
+              <motion.div
+                key={ent.name}
+                layout
+                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                className="p-3 rounded-lg bg-[#053229] border border-[#355E58] space-y-1.5"
+              >
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-bold text-[#FFEDD1] truncate">{ent.name}</span>
                   <span className={`font-mono font-semibold px-2 py-0.5 rounded text-[11px] ${isFirst ? 'bg-[#FE9179]/20 text-[#FE9179]' : 'bg-[#355E58] text-[#BCDDDC]'}`}>
@@ -138,18 +141,20 @@ export function PriorityLens({
                   </span>
                 </div>
                 <div className="w-full h-1.5 rounded-full bg-[#355E58] overflow-hidden">
-                  <div
-                    className={`h-full transition-all duration-300 ${isFirst ? 'bg-[#FE9179]' : 'bg-[#72B0AB]'}`}
-                    style={{ width: `${Math.min(100, Math.max(5, ent.score))}%` }}
+                  <motion.div
+                    className={`h-full ${isFirst ? 'bg-[#FE9179]' : 'bg-[#72B0AB]'}`}
+                    initial={false}
+                    animate={{ width: `${Math.min(100, Math.max(5, ent.score))}%` }}
+                    transition={{ type: 'spring', damping: 20, stiffness: 200 }}
                   />
                 </div>
-              </div>
+              </motion.div>
             );
           })}
         </div>
       </div>
 
-      {/* Weighted Rows Table */}
+      {/* Weighted Rows Table with Smooth Row Transitions */}
       <div className="rounded-xl bg-[#355E58] border border-[#355E58] overflow-hidden">
         <div className="grid grid-cols-12 gap-3 px-4 py-3 bg-[#053229] border-b border-[#355E58] text-xs font-bold uppercase tracking-wider text-[#BCDDDC]">
           <div className="col-span-5 sm:col-span-4">Metric Dimension & Priority Weight</div>
@@ -161,87 +166,91 @@ export function PriorityLens({
         </div>
 
         <div className="divide-y divide-[#053229]/40">
-          {metrics.map((m, idx) => {
-            const metricName = m.metric || `Metric ${idx + 1}`;
-            const weight = weights[metricName] !== undefined ? weights[metricName] : 1.0;
-            const isSynthesized = m.source_type === 'ai_consensus' || m.source_type === 'unverified';
+          <AnimatePresence initial={false}>
+            {metrics.map((m, idx) => {
+              const metricName = m.metric || `Metric ${idx + 1}`;
+              const weight = weights[metricName] !== undefined ? weights[metricName] : 1.0;
+              const isSynthesized = m.source_type === 'ai_consensus' || m.source_type === 'unverified';
 
-            return (
-              <div
-                key={idx}
-                className="grid grid-cols-12 gap-3 p-3.5 items-center hover:bg-[#053229]/30 transition-colors text-xs"
-              >
-                {/* Metric & Weight Slider Column */}
-                <div className="col-span-12 sm:col-span-4 space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1.5">
-                      <div className="flex flex-col gap-0.5">
-                        <button
-                          type="button"
-                          disabled={idx === 0}
-                          onClick={() => onMoveMetric(idx, idx - 1)}
-                          className="text-[#BCDDDC] hover:text-[#FFEDD1] disabled:opacity-20"
-                          title="Move priority up"
-                        >
-                          <ChevronUpIcon className="w-3 h-3" />
-                        </button>
-                        <button
-                          type="button"
-                          disabled={idx === metrics.length - 1}
-                          onClick={() => onMoveMetric(idx, idx + 1)}
-                          className="text-[#BCDDDC] hover:text-[#FFEDD1] disabled:opacity-20"
-                          title="Move priority down"
-                        >
-                          <ChevronDownIcon className="w-3 h-3" />
-                        </button>
+              return (
+                <motion.div
+                  key={metricName}
+                  layout
+                  transition={{ type: 'spring', damping: 28, stiffness: 350 }}
+                  className="grid grid-cols-12 gap-3 p-3.5 items-center hover:bg-[#053229]/30 transition-colors text-xs"
+                >
+                  {/* Metric & Weight Slider Column */}
+                  <div className="col-span-12 sm:col-span-4 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5">
+                        <div className="flex flex-col gap-0.5">
+                          <button
+                            type="button"
+                            disabled={idx === 0}
+                            onClick={() => onMoveMetric(idx, idx - 1)}
+                            className="text-[#BCDDDC] hover:text-[#FFEDD1] disabled:opacity-20"
+                            title="Move priority up"
+                          >
+                            <ChevronUpIcon className="w-3 h-3" />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={idx === metrics.length - 1}
+                            onClick={() => onMoveMetric(idx, idx + 1)}
+                            className="text-[#BCDDDC] hover:text-[#FFEDD1] disabled:opacity-20"
+                            title="Move priority down"
+                          >
+                            <ChevronDownIcon className="w-3 h-3" />
+                          </button>
+                        </div>
+                        <span className="font-bold text-[#FFEDD1] leading-tight">
+                          {metricName}
+                          {isSynthesized && (
+                            <span className="text-[#FE9179] font-mono ml-0.5 select-none" title="AI-synthesized estimate">*</span>
+                          )}
+                        </span>
                       </div>
-                      <span className="font-bold text-[#FFEDD1] leading-tight">
-                        {metricName}
-                        {isSynthesized && (
-                          <span className="text-[#FE9179] font-mono ml-0.5 select-none" title="AI-synthesized estimate">*</span>
-                        )}
+
+                      <span className="font-mono text-[11px] text-[#FE9179] font-semibold">
+                        {weight.toFixed(1)}x
                       </span>
                     </div>
 
-                    <span className="font-mono text-[11px] text-[#FE9179] font-semibold">
-                      {weight.toFixed(1)}x
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="range"
-                      min="0.0"
-                      max="2.0"
-                      step="0.1"
-                      value={weight}
-                      onChange={(e) => onWeightChange(metricName, parseFloat(e.target.value))}
-                      className="w-full accent-[#FE9179] h-1.5 rounded-lg bg-[#053229] cursor-pointer"
-                    />
-                  </div>
-                </div>
-
-                {/* Entity Values Columns */}
-                {entityNames.map((_, entIdx) => {
-                  const val = m.values?.[entIdx] !== undefined
-                    ? m.values[entIdx]
-                    : (entIdx === 0 ? m.entity_a : m.entity_b);
-
-                  return (
-                    <div
-                      key={entIdx}
-                      className="col-span-6 sm:col-span-4 lg:col-span-3 text-xs text-[#FFEDD1] leading-relaxed break-words"
-                    >
-                      <span className="sm:hidden text-[10px] font-mono text-[#BCDDDC] block mb-0.5">
-                        {entityNames[entIdx]}:
-                      </span>
-                      {val || 'Estimated standard'}
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="range"
+                        min="0.0"
+                        max="2.0"
+                        step="0.1"
+                        value={weight}
+                        onChange={(e) => onWeightChange(metricName, parseFloat(e.target.value))}
+                        className="w-full accent-[#FE9179] h-1.5 rounded-lg bg-[#053229] cursor-pointer"
+                      />
                     </div>
-                  );
-                })}
-              </div>
-            );
-          })}
+                  </div>
+
+                  {/* Entity Values Columns */}
+                  {entityNames.map((_, entIdx) => {
+                    const val = m.values?.[entIdx] !== undefined
+                      ? m.values[entIdx]
+                      : (entIdx === 0 ? m.entity_a : m.entity_b);
+
+                    return (
+                      <div
+                        key={entIdx}
+                        className="col-span-6 sm:col-span-4 lg:col-span-3 text-xs text-[#FFEDD1] leading-relaxed break-words"
+                      >
+                        <span className="sm:hidden text-[10px] font-mono text-[#BCDDDC] block mb-0.5">
+                          {entityNames[entIdx]}:
+                        </span>
+                        {val || 'Estimated standard'}
+                      </div>
+                    );
+                  })}
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
         </div>
       </div>
 

@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo } from 'react';
+import { motion } from 'framer-motion';
 import {
   ReactFlow,
   Background,
@@ -18,44 +19,74 @@ import {
 import '@xyflow/react/dist/style.css';
 import { VerifiedMetric, EntityVerdict } from '@/types/morphui';
 
-// Custom Node for Entity Anchors
+// Custom Node for Entity Anchors with Motion
 function EntityAnchorNode({ data }: NodeProps) {
   const isLeader = data?.isLeader;
   return (
-    <div className={`px-4 py-3 rounded-xl border font-sans min-w-[160px] shadow-lg ${isLeader ? 'bg-[#355E58] border-[#FE9179] text-[#FFEDD1]' : 'bg-[#355E58] border-[#72B0AB] text-[#FFEDD1]'}`}>
+    <motion.div
+      layout
+      transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+      className={`px-4 py-3 rounded-xl border font-sans min-w-[160px] shadow-lg ${
+        isLeader
+          ? 'bg-[#355E58] border-[#FE9179] text-[#FFEDD1]'
+          : 'bg-[#355E58] border-[#72B0AB] text-[#FFEDD1]'
+      }`}
+    >
       <Handle type="target" position={Position.Top} className="!bg-[#72B0AB] !w-2 !h-2" />
       <div className="flex items-center justify-between gap-2">
         <span className="font-bold text-xs">{data?.label as string}</span>
-        <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${isLeader ? 'bg-[#FE9179]/20 text-[#FE9179]' : 'bg-[#053229] text-[#BCDDDC]'}`}>
+        <motion.span
+          key={data?.score as number}
+          initial={{ scale: 1.15 }}
+          animate={{ scale: 1 }}
+          className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
+            isLeader ? 'bg-[#FE9179]/20 text-[#FE9179]' : 'bg-[#053229] text-[#BCDDDC]'
+          }`}
+        >
           {data?.score as number}%
-        </span>
+        </motion.span>
       </div>
       <div className="text-[10px] text-[#BCDDDC] mt-1">
         Divergence Rank #{data?.rank as number}
       </div>
       <Handle type="source" position={Position.Bottom} className="!bg-[#72B0AB] !w-2 !h-2" />
-    </div>
+    </motion.div>
   );
 }
 
-// Custom Node for Divergence Metric Points
+// Custom Node for Divergence Metric Points with Motion
 function MetricDivergenceNode({ data }: NodeProps) {
   const delta = data?.delta as number;
   const isHighDelta = delta > 30;
 
   return (
-    <div className={`p-3 rounded-lg border max-w-[200px] text-xs font-sans ${isHighDelta ? 'bg-[#053229] border-[#FE9179] text-[#FFEDD1]' : 'bg-[#053229] border-[#355E58] text-[#BCDDDC]'}`}>
+    <motion.div
+      layout
+      transition={{ type: 'spring', damping: 22, stiffness: 180 }}
+      className={`p-3 rounded-lg border max-w-[200px] text-xs font-sans ${
+        isHighDelta
+          ? 'bg-[#053229] border-[#FE9179] text-[#FFEDD1]'
+          : 'bg-[#053229] border-[#355E58] text-[#BCDDDC]'
+      }`}
+    >
       <Handle type="target" position={Position.Left} className="!bg-[#72B0AB] !w-1.5 !h-1.5" />
       <div className="font-bold text-[#FFEDD1] truncate">{data?.metric as string}</div>
       <div className="flex items-center justify-between text-[10px] font-mono mt-1 text-[#BCDDDC]">
         <span>Delta: {delta}</span>
-        <span className="text-[#FE9179] font-bold">W: {data?.weight as number}x</span>
+        <motion.span
+          key={data?.weight as number}
+          initial={{ scale: 1.2 }}
+          animate={{ scale: 1 }}
+          className="text-[#FE9179] font-bold"
+        >
+          W: {data?.weight as number}x
+        </motion.span>
       </div>
       <div className="text-[10px] text-[#72B0AB] truncate mt-1">
         {data?.summary as string}
       </div>
       <Handle type="source" position={Position.Right} className="!bg-[#72B0AB] !w-1.5 !h-1.5" />
-    </div>
+    </motion.div>
   );
 }
 
@@ -85,7 +116,6 @@ export function DivergenceField({
     }
 
     const numEntities = entities.length;
-    const entityNames = entities.map((e, i) => e.name || `Entity ${i + 1}`);
 
     // Place Entity Anchors along a top horizontal axis
     const entitySpacing = 320;
@@ -113,7 +143,6 @@ export function DivergenceField({
       const metricName = m.metric || `Metric ${mIdx + 1}`;
       const weight = weights[metricName] !== undefined ? weights[metricName] : 1.0;
 
-      // Calculate divergence delta between entities for this metric
       const valA = m.values?.[0] || m.entity_a || '';
       const valB = m.values?.[1] || m.entity_b || '';
       
@@ -126,7 +155,7 @@ export function DivergenceField({
       }
       const scaledDelta = Math.round(Math.min(100, divergenceDelta * weight));
 
-      // Coordinate encoding: x-axis biased by delta, y-axis step
+      // Coordinate encoding
       const angle = (mIdx / Math.max(1, metrics.length)) * Math.PI * 2;
       const radius = 150 + scaledDelta * 2;
       const x = Math.cos(angle) * radius;
@@ -172,7 +201,7 @@ export function DivergenceField({
 
   return (
     <div className="w-full h-[650px] rounded-xl border border-[#355E58] bg-[#053229] overflow-hidden relative shadow-2xl">
-      <div className="absolute top-3 left-3 z-10 p-2.5 rounded-lg bg-[#355E58]/90 border border-[#355E58] text-xs text-[#FFEDD1] backdrop-blur-md">
+      <div className="absolute top-3 left-3 z-10 p-2.5 rounded-lg bg-[#355E58]/90 border border-[#355E58] text-xs text-[#FFEDD1] backdrop-blur-md pointer-events-none">
         <div className="font-bold uppercase tracking-wider text-[#FE9179]">Divergence Field Topology</div>
         <div className="text-[11px] text-[#BCDDDC]">Node distance encodes mathematical feature divergence & live weight</div>
       </div>
