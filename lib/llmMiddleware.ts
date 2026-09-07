@@ -617,7 +617,7 @@ ${reviewsCombinedText}
 
   // 1. PRIMARY MODEL: Groq Multi-Tier Cascade (gpt-oss-120b -> gpt-oss-20b -> qwen3.8-27b)
   if (groqKey) {
-    const groqModels = ['openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'qwen/qwen3.8-27b'];
+    const groqModels = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768'];
     for (const modelName of groqModels) {
       try {
         const groqCall = fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -657,7 +657,7 @@ ${reviewsCombinedText}
 
   // 2. SECONDARY / FALLBACK MODEL: Google Gemini
   if (geminiKey) {
-    for (const modelName of ['gemini-3.6-flash']) {
+    for (const modelName of ['gemini-2.5-flash']) {
       try {
         const ai = new GoogleGenAI({ apiKey: geminiKey });
         const geminiCall = ai.models.generateContent({
@@ -727,7 +727,7 @@ If incompatible:
         method: 'POST',
         headers: { Authorization: `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: 'openai/gpt-oss-120b',
+          model: 'llama-3.3-70b-versatile',
           messages: [
             { role: 'system', content: 'You are a strict semantic entity validator. Output ONLY valid JSON.' },
             { role: 'user', content: prompt }
@@ -757,7 +757,7 @@ If incompatible:
     try {
       const ai = new GoogleGenAI({ apiKey: geminiKey });
       const geminiCall = ai.models.generateContent({
-        model: 'gemini-3.6-flash',
+        model: 'gemini-2.5-flash',
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         config: {
           systemInstruction: 'You are a strict semantic entity compatibility validator. Output ONLY valid JSON.',

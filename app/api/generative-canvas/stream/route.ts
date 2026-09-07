@@ -111,7 +111,7 @@ Output a tool call to spawn the most relevant tile.`;
 
         // --- TIER 1: GROQ LLM STREAM / TOOL-CALL CASCADE ---
         if (groqKey) {
-          const groqModels = ['openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'qwen/qwen3.8-27b'];
+          const groqModels = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768'];
           for (const model of groqModels) {
             try {
               const groqController = new AbortController();
@@ -187,7 +187,7 @@ Return valid JSON in this exact shape:
 }`;
 
             const geminiCall = await ai.models.generateContent({
-              model: 'gemini-3.6-flash',
+              model: 'gemini-2.5-flash',
               contents: [{ role: 'user', parts: [{ text: prompt }] }],
               config: {
                 responseMimeType: 'application/json',

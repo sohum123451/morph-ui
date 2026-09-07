@@ -106,7 +106,7 @@ ${entities.map((_, i) => `    "<Concrete factual value for Entity ${i + 1}>"`).j
           method: 'POST',
           headers: { Authorization: `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            model: 'openai/gpt-oss-120b',
+            model: 'llama-3.3-70b-versatile',
             messages: [
               { role: 'system', content: 'You are a precise JSON factual generator. Never leave fields empty or null.' },
               { role: 'user', content: prompt }
@@ -142,7 +142,7 @@ ${entities.map((_, i) => `    "<Concrete factual value for Entity ${i + 1}>"`).j
 
     // 2. Secondary: Google Gemini
     if (apiKey) {
-      for (const modelName of ['gemini-3.6-flash']) {
+      for (const modelName of ['gemini-2.5-flash']) {
         try {
           const ai = new GoogleGenAI({ apiKey });
           const geminiCall = ai.models.generateContent({

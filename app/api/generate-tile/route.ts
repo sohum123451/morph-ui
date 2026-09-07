@@ -108,7 +108,7 @@ Output JSON ONLY.`;
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'openai/gpt-oss-120b',
+            model: 'llama-3.3-70b-versatile',
             messages: [
               { role: 'system', content: 'You are a Generative UI tool synthesizer. Output ONLY valid JSON.' },
               { role: 'user', content: prompt },
@@ -134,7 +134,7 @@ Output JSON ONLY.`;
       try {
         const ai = new GoogleGenAI({ apiKey: geminiKey });
         const geminiCall = await ai.models.generateContent({
-          model: 'gemini-3.6-flash',
+          model: 'gemini-2.5-flash',
           contents: [{ role: 'user', parts: [{ text: prompt }] }],
           config: {
             responseMimeType: 'application/json',
