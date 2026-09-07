@@ -664,68 +664,122 @@ ${reviewsCombinedText}
           const content = groqData.choices?.[0]?.message?.content || '';
           const parsed = cleanAndParseJson(content, entities);
           if (parsed) {
-            // Cross-Verification & Ambiguity Resolution with Gemini
+            // Dual-Model Cross-Verification & Ambiguity Arbitration (Groq -> Gemini)
             if (geminiKey) {
               try {
                 const ai = new GoogleGenAI({ apiKey: geminiKey });
-                const verificationSystemPrompt = `You are MorphUI's dual-model cross-verification and accuracy auditing engine.
-You are tasked with verifying, refining, and resolving ambiguity in a preliminary comparative matrix produced by Tier 1 (Groq).
+                const flatMetricsList: { category: string; metric: string; values: string[] }[] = [];
+                for (const [catName, mList] of Object.entries(parsed.categories || {})) {
+                  for (const m of mList) {
+                    flatMetricsList.push({
+                      category: catName,
+                      metric: m.metric,
+                      values: (m.values || [m.entity_a, m.entity_b]).map(v => String(v || ''))
+                    });
+                  }
+                }
 
-CORE AUDIT INSTRUCTIONS:
-1. CROSS-VERIFICATION & AMBIGUITY RESOLUTION:
-   - Audit every metric, entity specification value, pro, community sentiment point, and verdict summary against live search snippets and verified real-world knowledge.
-   - If there is ambiguity, conflicting data, hallucinated numbers, inverted/swapped entity values, or inaccuracies in Groq's output:
-     → CORRECT the data with the more trustable, verified, accurate value.
-   - If Groq's extracted value is accurate, well-grounded, and consistent:
-     → PRESERVE Groq's value.
-2. EXHAUSTIVE SPECIFICATION:
-   - Ensure EVERY entity has a non-empty, meaningful value for every metric row.
-   - If any metric was left vague or blank, fill it with the most accurate, realistic specification.
-3. GROUNDING METADATA:
-   - Set "source_type": "official" if directly supported by search snippets.
-   - Set "source_type": "ai_consensus" if derived from multi-source parametric knowledge synthesis.
-4. SCHEMA INTEGRITY:
-   - Output MUST strictly conform to the exact JSON structure provided in the preliminary matrix.
-   - Return ONLY valid JSON. No conversational prose, no markdown fences.`;
+                const auditPrompt = `You are MorphUI's dual-model cross-verification and ambiguity arbitration engine.
+Cross-verify the following comparative metrics extracted by Groq against the provided search snippets and verified domain knowledge.
 
-                const verificationUserPrompt = `COMPARED ENTITIES: ${entities.join(' vs ')}
-${contextTopic ? `TOPIC / FOCUS: "${contextTopic}"` : ''}
+RULES:
+1. AMBIGUITY & ACCURACY ARBITRATION:
+   - Audit every metric and entity specification.
+   - If there is ambiguity, contradiction, inverted specs, or hallucinated numbers:
+     → Replace the cell with the most trustable, accurate value and set "arbitrated": true.
+   - If Groq's value is already accurate and well-grounded:
+     → Retain Groq's value and set "arbitrated": false.
+2. GROUNDING:
+   - Set "source_type": "official" if directly supported by search snippets, otherwise "ai_consensus".
 
+SEARCH FACTS & CONTEXT:
 ${factsCombinedText}
 
 ${reviewsCombinedText}
 
-PRELIMINARY MATRIX EXTRACTED BY GROQ (${modelName}):
-${JSON.stringify(parsed, null, 2)}
+EXTRACTED METRICS FROM GROQ (${modelName}):
+${JSON.stringify(flatMetricsList)}
 
-Audit this matrix. Resolve all ambiguities, correct any inaccurate or inverted specifications with the more trustable data, preserve accurate points, and output the finalized verified JSON matrix.`;
+Respond ONLY with a JSON object:
+{
+  "verified_metrics": [
+    {
+      "metric": "string",
+      "values": ["entity1_value", "entity2_value"],
+      "source_type": "official" | "ai_consensus",
+      "arbitrated": boolean
+    }
+  ]
+}`;
 
                 for (const verifyModel of ['gemini-3.6-flash']) {
                   try {
                     const geminiCall = ai.models.generateContent({
                       model: verifyModel,
-                      contents: [{ role: 'user', parts: [{ text: verificationUserPrompt }] }],
+                      contents: [{ role: 'user', parts: [{ text: auditPrompt }] }],
                       config: {
-                        systemInstruction: verificationSystemPrompt,
+                        systemInstruction: 'You are a strict factual verification and arbitration engine. Return ONLY valid JSON.',
                         responseMimeType: 'application/json',
                         temperature: 0.1,
                       },
                     });
 
-                    const verifyRes = await withTimeout(geminiCall, 16000, `Gemini (${verifyModel}) cross-verification timeout`);
-                    const verifiedParsed = cleanAndParseJson(verifyRes.text || '', entities);
-                    if (verifiedParsed) {
-                      verifiedParsed.model_used = isAiSynthesisMode
-                        ? `Groq (${modelName}) + Gemini (${verifyModel}) • AI Verified`
-                        : `Groq (${modelName}) + Gemini (${verifyModel}) • Verified Consensus`;
-                      return enforceGroundingOnResponse(verifiedParsed, entityAFactsText, entityBFactsText);
+                    const verifyRes = await withTimeout(geminiCall, 45000, `Gemini (${verifyModel}) cross-verification timeout`);
+                    if (verifyRes.text) {
+                      const audited = JSON.parse(verifyRes.text);
+                      if (audited && Array.isArray(audited.verified_metrics)) {
+                        let hasArbitration = false;
+                        const vMap = new Map<string, { values: string[]; source_type: string; arbitrated: boolean }>();
+                        for (const vm of audited.verified_metrics) {
+                          if (vm.metric && Array.isArray(vm.values)) {
+                            vMap.set(vm.metric.toLowerCase().trim(), {
+                              values: vm.values.map(String),
+                              source_type: vm.source_type || 'ai_consensus',
+                              arbitrated: !!vm.arbitrated
+                            });
+                            if (vm.arbitrated) hasArbitration = true;
+                          }
+                        }
+
+                        // Apply audited/arbitrated metrics back into parsed categories
+                        for (const [catName, mList] of Object.entries(parsed.categories || {})) {
+                          parsed.categories[catName] = mList.map(m => {
+                            const match = vMap.get(m.metric.toLowerCase().trim());
+                            if (match && match.values.length >= entities.length) {
+                              return {
+                                ...m,
+                                values: match.values,
+                                entity_a: match.values[0] || m.entity_a,
+                                entity_b: match.values[1] || m.entity_b,
+                                source_type: match.source_type === 'official' ? 'official' : 'ai_consensus'
+                              };
+                            }
+                            return m;
+                          });
+                        }
+
+                        parsed.verified_metrics = Object.values(parsed.categories).flat();
+                        parsed.comparison_points = parsed.verified_metrics.map(vm => ({
+                          feature_name: vm.metric,
+                          metric_name: vm.metric,
+                          entity_a_value: String(vm.values?.[0] || vm.entity_a || ''),
+                          entity_b_value: String(vm.values?.[1] || vm.entity_b || ''),
+                          values: (vm.values || [vm.entity_a, vm.entity_b]).map(v => String(v || '')),
+                          source_type: vm.source_type || 'ai_consensus'
+                        }));
+
+                        parsed.model_used = hasArbitration
+                          ? `Groq (${modelName}) + Gemini (${verifyModel}) • Verified & Arbitrated`
+                          : `Groq (${modelName}) + Gemini (${verifyModel}) • Cross-Verified`;
+                        return enforceGroundingOnResponse(parsed, entityAFactsText, entityBFactsText);
+                      }
                     }
                   } catch (mErr: any) {
                     console.warn(`Gemini verify tier (${verifyModel}) error:`, mErr?.message || mErr);
                   }
                 }
               } catch (verifyErr: any) {
-                console.warn('Gemini cross-verification failed/timed out, utilizing Groq parsed baseline:', verifyErr?.message || verifyErr);
+                console.warn('Gemini cross-verification fallback to Groq:', verifyErr?.message || verifyErr);
               }
             }
 
@@ -756,7 +810,7 @@ Audit this matrix. Resolve all ambiguities, correct any inaccurate or inverted s
           },
         });
 
-        const response = await withTimeout(geminiCall, 15000, `Gemini (${modelName}) precision extraction timeout`);
+        const response = await withTimeout(geminiCall, 45000, `Gemini (${modelName}) precision extraction timeout`);
         const parsed = cleanAndParseJson(response.text || '', entities);
         if (parsed) {
           parsed.model_used = isAiSynthesisMode ? `Gemini (${modelName}) • AI Knowledge Synthesis` : `Gemini (${modelName})`;
