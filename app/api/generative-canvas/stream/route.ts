@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
           }
         });
 
-        // Check if userQuery triggers specific widget types
+        // Determine candidate tool ordering based on intent keywords
         const queryLower = (userQuery || '').toLowerCase();
         let candidateTypes = Object.keys(WIDGET_REGISTRY);
 
@@ -84,93 +84,93 @@ export async function POST(req: NextRequest) {
           tileId?: string;
         } | null = null;
 
-        // --- TIER 1: GROQ LLM STREAM / TOOL-CALL ---
-        if (groqKey) {
-          try {
-            const groqController = new AbortController();
-            const groqTimeout = setTimeout(() => groqController.abort(), 2500);
-
-            const tools = Object.entries(WIDGET_REGISTRY).map(([id, manifest]) => ({
-              type: 'function',
-              function: {
-                name: `spawn_${id}`,
-                description: manifest.toolDescription,
-                parameters: {
-                  type: 'object',
-                  properties: {
-                    title: { type: 'string', description: 'Clear title for the widget card' },
-                    rationale: { type: 'string', description: 'Analytical rationale explaining why this tile is needed given current metrics' },
-                    props: { type: 'object', description: `Structured props matching ${id} schema` },
-                  },
-                  required: ['title', 'rationale', 'props'],
-                },
+        const tools = Object.entries(WIDGET_REGISTRY).map(([id, manifest]) => ({
+          type: 'function',
+          function: {
+            name: `spawn_${id}`,
+            description: manifest.toolDescription,
+            parameters: {
+              type: 'object',
+              properties: {
+                title: { type: 'string', description: 'Clear title for the widget card' },
+                rationale: { type: 'string', description: 'Analytical rationale explaining why this tile is needed given current metrics' },
+                props: { type: 'object', description: `Structured props matching ${id} schema` },
               },
-            }));
+              required: ['title', 'rationale', 'props'],
+            },
+          },
+        }));
 
-            const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-              method: 'POST',
-              headers: {
-                Authorization: `Bearer ${groqKey}`,
-                'Content-Type': 'application/json',
-              },
-              signal: groqController.signal,
-              body: JSON.stringify({
-                model: 'openai/gpt-oss-120b',
-                messages: [
-                  {
-                    role: 'system',
-                    content: `You are the MorphUI Autonomous Generative Canvas Orchestrator.
-Evaluate real-time telemetry deltas and spawn or update an analytical tile.
+        const systemPrompt = `You are the MorphUI Autonomous Generative Canvas Orchestrator.
+Evaluate real-time comparison telemetry and spawn or update an analytical tile.
 Category: "${category}". ${contextTopic ? `Domain/Topic Context: "${contextTopic}". ` : ''}Entities: ${JSON.stringify(entities)}.
 Active Weights: ${JSON.stringify(weights)}.
 Top Metrics: ${JSON.stringify(metrics.slice(0, 8))}.
 User Intent / Trigger: "${userQuery || 'Autonomous Live Evaluation'}".
-Output a tool call to spawn the most relevant tile.`,
-                  },
-                  {
-                    role: 'user',
-                    content: 'Evaluate telemetry and spawn the optimal decision tile.',
-                  },
-                ],
-                tools,
-                tool_choice: 'auto',
-                temperature: 0.1,
-              }),
-            });
+Output a tool call to spawn the most relevant tile.`;
 
-            clearTimeout(groqTimeout);
+        // --- TIER 1: GROQ LLM STREAM / TOOL-CALL CASCADE ---
+        if (groqKey) {
+          const groqModels = ['openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'qwen/qwen3.8-27b'];
+          for (const model of groqModels) {
+            try {
+              const groqController = new AbortController();
+              const groqTimeout = setTimeout(() => groqController.abort(), 6000);
 
-            if (groqRes.ok) {
-              const groqData = await groqRes.json();
-              const toolCall = groqData.choices?.[0]?.message?.tool_calls?.[0];
+              const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                  Authorization: `Bearer ${groqKey}`,
+                  'Content-Type': 'application/json',
+                },
+                signal: groqController.signal,
+                body: JSON.stringify({
+                  model,
+                  messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: `Evaluate telemetry for ${entityA} vs ${entityB} and spawn the optimal decision tile for intent: "${userQuery || 'Live Evaluation'}"` },
+                  ],
+                  tools,
+                  tool_choice: 'auto',
+                  temperature: 0.1,
+                }),
+              });
 
-              if (toolCall && toolCall.function) {
-                const fnName = toolCall.function.name;
-                const widgetType = fnName.replace(/^spawn_/, '');
-                const args = JSON.parse(toolCall.function.arguments || '{}');
+              clearTimeout(groqTimeout);
 
-                if (WIDGET_REGISTRY[widgetType]) {
-                  synthesizedTile = {
-                    action: 'spawn',
-                    component: widgetType,
-                    title: args.title || WIDGET_REGISTRY[widgetType].name,
-                    rationale: args.rationale || 'Real-time telemetry disparity analysis.',
-                    props: args.props || {},
-                  };
+              if (groqRes.ok) {
+                const groqData = await groqRes.json();
+                const toolCall = groqData.choices?.[0]?.message?.tool_calls?.[0];
+
+                if (toolCall && toolCall.function) {
+                  const fnName = toolCall.function.name;
+                  const widgetType = fnName.replace(/^spawn_/, '');
+                  const args = JSON.parse(toolCall.function.arguments || '{}');
+
+                  if (WIDGET_REGISTRY[widgetType]) {
+                    synthesizedTile = {
+                      action: 'spawn',
+                      component: widgetType,
+                      title: args.title || WIDGET_REGISTRY[widgetType].name,
+                      rationale: args.rationale || 'Real-time telemetry disparity analysis.',
+                      props: args.props || {},
+                    };
+                    break;
+                  }
                 }
               }
+            } catch (err) {
+              console.warn(`[GenerativeCanvas API] Groq ${model} attempt failed:`, (err as any)?.message);
             }
-          } catch (err) {
-            console.warn('[GenerativeCanvas API] Tier 1 Groq failed or timed out:', (err as any)?.message);
           }
         }
 
-        // --- TIER 2: GEMINI 2.5 / 3.6 FLASH FALLBACK ---
+        // --- TIER 2: GEMINI 3.6 FLASH FALLBACK ---
         if (!synthesizedTile && geminiKey) {
           try {
             const ai = new GoogleGenAI({ apiKey: geminiKey });
             const prompt = `You are the MorphUI Autonomous Canvas Orchestrator.
-Choose the single most analytical widget from: [DivergenceLedger, BudgetTracker, TimelineCalendar, AdmissionPredictor].
+Choose the single most analytical widget from: [DivergenceLedger, BudgetTracker, TimelineCalendar, AdmissionPredictor, ComparisonTable].
 Entities: ${JSON.stringify(entities)}
 Category: "${category}"
 ${contextTopic ? `Context Topic: "${contextTopic}"` : ''}
@@ -180,7 +180,7 @@ User Intent: "${userQuery || 'Live Telemetry'}"
 
 Return valid JSON in this exact shape:
 {
-  "component": "DivergenceLedger" | "BudgetTracker" | "TimelineCalendar" | "AdmissionPredictor",
+  "component": "DivergenceLedger" | "BudgetTracker" | "TimelineCalendar" | "AdmissionPredictor" | "ComparisonTable",
   "title": "Widget Title",
   "rationale": "Why this tile is valuable now",
   "props": {}
@@ -212,13 +212,6 @@ Return valid JSON in this exact shape:
           }
         }
 
-        // --- LIVE INFERENCE VERIFICATION ---
-        if (!synthesizedTile) {
-          sendEvent('error', {
-            message: 'Live inference stream failed to generate a validated telemetry tile from active search and LLM tools.',
-          });
-        }
-
         // --- SERVER-SIDE STRICT SCHEMAS & SANITIZER GATE ---
         if (synthesizedTile) {
           const validated = validateAndSanitizeWidgetProps(synthesizedTile.component, synthesizedTile.props);
@@ -245,6 +238,10 @@ Return valid JSON in this exact shape:
             console.warn('[GenerativeCanvas API] Tile dropped due to schema failure:', validated.error);
             sendEvent('tile_action', { action: 'noop', reason: validated.error });
           }
+        } else {
+          sendEvent('error', {
+            message: 'Live inference stream failed to generate a validated telemetry tile.',
+          });
         }
 
         sendEvent('status', { status: 'idle', timestamp: Date.now() });

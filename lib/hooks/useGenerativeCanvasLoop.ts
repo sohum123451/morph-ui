@@ -75,7 +75,7 @@ export function useGenerativeCanvasLoop({
 
       const controller = new AbortController();
       abortControllerRef.current = controller;
-      const timeoutId = setTimeout(() => controller.abort(), 4000);
+      const timeoutId = setTimeout(() => controller.abort(), 12000);
 
       const normalizedEntities = entities.map((e) => (typeof e === 'object' ? e.name : String(e)));
 
@@ -160,7 +160,6 @@ export function useGenerativeCanvasLoop({
         if (err.name !== 'AbortError') {
           console.warn('[useGenerativeCanvasLoop] Streaming fetch error:', err.message);
           setLoopStatus('offline');
-          // No synthetic dummy tile injection: preserve 100% real-time data integrity
         }
       } finally {
         setIsEvaluating(false);
