@@ -850,7 +850,28 @@ function MorphUIContent() {
     return {};
   }, [comparisonData]);
   const communitySentiment = comparisonData?.community_sentiment || [];
-  const suggestedMetrics = comparisonData?.suggested_metrics || [];
+  const suggestedMetrics = useMemo(() => {
+    if (Array.isArray(comparisonData?.suggested_metrics) && comparisonData.suggested_metrics.length > 0) {
+      return comparisonData.suggested_metrics;
+    }
+    const cat = (comparisonData?.category || '').toLowerCase();
+    if (cat.includes('phone') || cat.includes('tech') || cat.includes('device') || cat.includes('mobile')) {
+      return ['Battery Degradation (1 Year)', 'Thermals & Peak Gaming Heat', 'Low-Light Video Quality', 'Repairability & Parts Cost', 'Haptic Engine & Speaker Quality'];
+    }
+    if (cat.includes('university') || cat.includes('college') || cat.includes('school') || cat.includes('academic')) {
+      return ['Median Placement Package', 'Research Grant Funding', 'Alumni Network Strength', 'Hostel Facilities', 'Faculty Ratio'];
+    }
+    if (cat.includes('car') || cat.includes('auto') || cat.includes('vehicle')) {
+      return ['Real-World Fuel Efficiency', '5-Year Maintenance Cost', 'Cabin Noise Level', 'Resale Value Retention', 'Safety Rating'];
+    }
+    return [
+      'Real-World Durability & Reliability',
+      'Long-Term Value for Money',
+      'Performance Under Peak Load',
+      'User Satisfaction & Support',
+      'Total Cost of Ownership'
+    ];
+  }, [comparisonData]);
 
   // Flattened verified metrics for spatial canvas & counts
   const flatVerifiedMetrics = useMemo(() => {

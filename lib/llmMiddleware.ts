@@ -529,9 +529,30 @@ function cleanAndParseJson(
       source_type: vm.source_type,
     }));
 
-    const suggested_metrics = Array.isArray(parsed.suggested_metrics)
-      ? parsed.suggested_metrics.map(String)
+    let suggested_metrics = Array.isArray(parsed.suggested_metrics) && parsed.suggested_metrics.length > 0
+      ? parsed.suggested_metrics.map(String).filter((s: string) => s.trim().length > 0)
       : [];
+
+    if (suggested_metrics.length === 0) {
+      const catLower = (category || '').toLowerCase();
+      if (catLower.includes('phone') || catLower.includes('tech') || catLower.includes('device') || catLower.includes('laptop') || catLower.includes('gpu')) {
+        suggested_metrics = ['Battery Degradation (1 Year)', 'Thermals & Peak Gaming Heat', 'Low-Light Video Quality', 'Repairability & Parts Cost', 'Haptic Engine & Speaker Quality'];
+      } else if (catLower.includes('university') || catLower.includes('college') || catLower.includes('school') || catLower.includes('education')) {
+        suggested_metrics = ['Median Placement Package', 'Research Grant Funding', 'Alumni Network Strength', 'Hostel & Campus Facilities', 'Faculty-to-Student Ratio'];
+      } else if (catLower.includes('car') || catLower.includes('auto') || catLower.includes('vehicle') || catLower.includes('ev')) {
+        suggested_metrics = ['Real-World Fuel/Range Efficiency', '5-Year Maintenance Cost', 'Cabin Noise Level (dB)', 'Resale Value Retention', 'Safety Crash Test Rating'];
+      } else if (catLower.includes('shoe') || catLower.includes('footwear') || catLower.includes('apparel') || catLower.includes('sneaker')) {
+        suggested_metrics = ['Midsole Energy Return (%)', 'Outsole Durability (Miles)', 'Arch Support & Stability', 'Breathability in Hot Weather', 'True-to-Size Fit'];
+      } else {
+        suggested_metrics = [
+          `Real-World Durability for ${resolvedEntities[0]?.name || 'Entity A'}`,
+          `Long-Term Value for Money`,
+          `Performance Under Peak Load`,
+          `Ease of Use & Ergonomics`,
+          `Maintenance & Ongoing Support Cost`
+        ];
+      }
+    }
 
     const verdict_summary = typeof parsed.verdict_summary === 'string' && parsed.verdict_summary.trim()
       ? parsed.verdict_summary.trim()
