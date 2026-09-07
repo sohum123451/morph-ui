@@ -32,21 +32,11 @@ ENTITY INTEGRITY & ZERO-TEMPLATE MANDATORY RULES:
    - "Proven domain track record and reliability"
    - "Distinct domain tradeoffs across performance, architectural footprint, and ecosystem maturity"
    - NEVER return identical boilerplate text for Option A and Option B.
-3. DYNAMIC PARAMETRIC INFERENCE FOR LOCALIZED & REGIONAL ENTITIES:
-   - If an exact match isn't found in search snippets, use your deep parametric baseline to generate realistic localized specifications based on the entities' names, regions, and domains:
-   - For Indian Engineering Colleges & Universities (e.g., JNTU vs CBIT vs VNR VJIET vs DTU vs COEP):
-     - Detail state or national entrance exam cutoffs (e.g., TS EAMCET rank < 1,000 for JNTU CSE vs TS EAMCET rank < 2,200 for CBIT CSE vs JEE Main rank < 8,500 for DTU CSE).
-     - Detail realistic median B.Tech placement brackets (e.g., ₹7.5 LPA for JNTUH vs ₹9.2 LPA for CBIT with top recruiters like Oracle/ServiceNow/Microsoft vs ₹15.5 LPA for DTU).
-     - Detail campus footprint & location (e.g., 89-acre Kukatpally campus for JNTUH vs 50-acre Gandipet campus for CBIT vs 164-acre Bawana campus for DTU).
-     - Detail institution type and fee structure (e.g., Government state university with subsidized ~₹35k/yr fees vs Private autonomous institution with ~₹1.4L/yr fees).
-   - For National / Global Universities (IIT Bombay vs IIT Delhi vs BITS Pilani vs Stanford):
-     - Detail NIRF/QS ranks, JEE Advanced opening/closing ranks, flagship fests (Mood Indigo vs Rendezvous vs Oasis), and research centers.
-   - For Footwear / Consumer Tech / Botany:
-     - Detail exact cushioning foams, stack heights, battery hours, noise cancellation chips, or nutritional chemistry.
+3. NO FABRICATION: If search snippets do not contain a fact for a metric, you MUST set source_type: "unverified" and entity_a_value/entity_b_value to "No verified data found" — NEVER invent specifications, numbers, or claims not present in the provided snippets.
 4. CONCRETE PROS & VERDICT:
    - In "entities", write 2-3 genuine, distinct, highly specific strengths for each entity.
    - In "verdict_summary", provide a crisp, insightful human-like synthesis contrasting their real-world trade-offs.
-5. STRICT JSON OUTPUT: Return only valid JSON with keys: "category", "entities", "categories", "community_sentiment", "suggested_metrics", "verdict_summary".`;
+5. STRICT JSON OUTPUT: Return only valid JSON with keys: "category", "entities", "categories" (which MUST include "source_type"), "community_sentiment", "suggested_metrics", "verdict_summary".`;
 
 function cleanAndParseJson(
   raw: string,
@@ -139,7 +129,7 @@ function cleanAndParseJson(
               values,
               entity_a: values[0] || 'Not specified',
               entity_b: values[1] || 'Not specified',
-              source_type: m.source_type || 'official',
+              source_type: m.source_type || 'unverified',
             };
           });
 
@@ -909,12 +899,41 @@ export async function generateComparisonMatrix(
     hasMissingFacts = !factsA?.trim() && !factsB?.trim();
   }
 
+  if (hasMissingFacts) {
+    return {
+      category: 'Unverified Comparison',
+      entities: entities.map(e => ({ name: e, pros: ['Insufficient data for verified comparison'] })),
+      entity_a: { name: entities[0], pros: ['Insufficient data'] },
+      entity_b: { name: entities[1], pros: ['Insufficient data'] },
+      categories: {
+        'Data Availability': [{
+          metric: 'Search Results',
+          values: entities.map(() => 'No verified data found'),
+          entity_a: 'No verified data found',
+          entity_b: 'No verified data found',
+          source_type: 'unverified'
+        }]
+      },
+      verified_metrics: [],
+      community_sentiment: [],
+      suggested_metrics: [],
+      verdict_summary: 'We could not find enough verified live data to confidently compare these entities without hallucinating. Please try again with more specific search terms.',
+      comparison_points: [{
+        feature_name: 'Search Results',
+        metric_name: 'Search Results',
+        entity_a_value: 'No verified data found',
+        entity_b_value: 'No verified data found',
+        values: entities.map(() => 'No verified data found'),
+        source_type: 'unverified'
+      }],
+      model_used: 'Hard Fallback (No Live Results)'
+    };
+  }
+
   const geminiKey = process.env.GEMINI_API_KEY;
   const groqKey = process.env.GROQ_API_KEY;
 
-  const internalFallbackDirective = `UNIVERSAL PARAMETRIC SYNTHESIS DIRECTIVE:
-For all compared entities (${entities.join(', ')}), synthesize authentic, real-world comparative specifications, numbers, cutoffs, dimensions, benchmarks, tuition fees, placement averages, and technical characteristics based on your deep baseline training data.
-If live search context is missing or partial, do NOT output generic placeholders, boilerplate phrases, or identical strings for both options. Write distinct, domain-accurate facts tailored specifically to each entity.\n\n`;
+  const internalFallbackDirective = ``;
 
   const userPrompt = `${internalFallbackDirective}COMPARED ENTITIES (${entities.length}): ${entities.map((e, i) => `Entity ${i + 1}: "${e}"`).join(', ')}
 ${contextTopic ? `Specific Focus / Topic: "${contextTopic}"` : ''}

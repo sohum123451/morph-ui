@@ -2194,10 +2194,17 @@ function MorphUIContent() {
                   <h1 className={`text-xl sm:text-2xl md:text-3xl font-bold tracking-tight ${t.title} whitespace-normal break-words leading-tight`}>
                     {displayEntityA}
                   </h1>
-                  <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full ${t.cardInner} text-xs font-medium`}>
-                    <Award className="w-3.5 h-3.5 text-sky-400" />
-                    <span>Verified Baseline</span>
-                  </div>
+                  {flatVerifiedMetrics?.some((p: any) => p.source_type === 'official') ? (
+                    <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full ${t.cardInner} text-xs font-medium`}>
+                      <Award className="w-3.5 h-3.5 text-sky-400" />
+                      <span>Verified Baseline</span>
+                    </div>
+                  ) : (
+                    <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full ${t.cardInner} text-xs font-medium`}>
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+                      <span className="text-amber-500">Unverified / AI-Estimated</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* VS Badge */}
@@ -2218,10 +2225,17 @@ function MorphUIContent() {
                   <h1 className={`text-xl sm:text-2xl md:text-3xl font-bold tracking-tight ${t.title} whitespace-normal break-words leading-tight`}>
                     {displayEntityB}
                   </h1>
-                  <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full ${t.cardInner} text-xs font-medium`}>
-                    <Award className="w-3.5 h-3.5 text-indigo-400" />
-                    <span>Verified Baseline</span>
-                  </div>
+                  {flatVerifiedMetrics?.some((p: any) => p.source_type === 'official') ? (
+                    <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full ${t.cardInner} text-xs font-medium`}>
+                      <Award className="w-3.5 h-3.5 text-indigo-400" />
+                      <span>Verified Baseline</span>
+                    </div>
+                  ) : (
+                    <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full ${t.cardInner} text-xs font-medium`}>
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+                      <span className="text-amber-500">Unverified / AI-Estimated</span>
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (
@@ -2245,8 +2259,17 @@ function MorphUIContent() {
                         </div>
                         <h2 className={`text-base sm:text-lg font-bold ${t.title} leading-snug break-words`}>{ent.name}</h2>
                         <div className={`text-[11px] ${t.subtext} flex items-center gap-1`}>
-                          <Award className={`w-3 h-3 ${badge.text}`} />
-                          <span>Verified Baseline</span>
+                          {flatVerifiedMetrics?.some((p: any) => p.source_type === 'official') ? (
+                            <>
+                              <Award className={`w-3 h-3 ${badge.text}`} />
+                              <span>Verified Baseline</span>
+                            </>
+                          ) : (
+                            <>
+                              <AlertTriangle className="w-3 h-3 text-amber-500" />
+                              <span className="text-amber-500">Unverified</span>
+                            </>
+                          )}
                         </div>
                       </div>
                     );

@@ -1,4 +1,4 @@
-export type WidgetType = 'comparison_table' | 'timeline_calendar' | 'budget_tracker' | 'admission_predictor';
+﻿types_code = """export type WidgetType = 'comparison_table' | 'timeline_calendar' | 'budget_tracker' | 'admission_predictor';
 
 export interface WidgetImage {
   url: string;
@@ -12,7 +12,6 @@ export interface ComparisonPoint {
   entity_a_value?: string;
   entity_b_value?: string;
   values?: string[];
-  source_type?: 'official' | 'benchmark' | 'verified_database' | 'unverified';
 }
 
 export interface VerifiedMetric {
@@ -20,7 +19,7 @@ export interface VerifiedMetric {
   values?: string[];
   entity_a?: string;
   entity_b?: string;
-  source_type?: 'official' | 'benchmark' | 'verified_database' | 'unverified';
+  source_type?: 'official' | 'benchmark' | 'verified_database';
 }
 
 export interface CommunitySentiment {
@@ -39,7 +38,6 @@ export interface EntityVerdict {
 }
 
 export interface GenerativeComparisonResponse {
-  chat_id?: string;
   category: string;
   entities: EntityVerdict[];
   entity_a?: EntityVerdict;
@@ -113,24 +111,9 @@ export interface ImageInput {
   mimeType: string;
   name?: string;
 }
+"""
 
+with open("types/morphui.ts", "w", encoding="utf-8") as f:
+    f.write(types_code)
 
-import { z } from 'zod';
-
-export const BudgetWidgetSchema = z.object({
-  type: z.literal('BudgetTracker'),
-  title: z.string(),
-  items: z.array(z.object({ name: z.string(), cost: z.number() })),
-});
-
-export const TimelineWidgetSchema = z.object({
-  type: z.literal('TimelineCalendar'),
-  events: z.array(z.object({ date: z.string(), label: z.string() })),
-});
-
-export const CanvasPayloadSchema = z.discriminatedUnion('type', [
-  BudgetWidgetSchema,
-  TimelineWidgetSchema,
-]);
-
-export type CanvasWidgetData = z.infer<typeof CanvasPayloadSchema>;
+print("Updated types/morphui.ts")
