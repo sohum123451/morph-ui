@@ -593,39 +593,6 @@ export async function generateComparisonMatrix(
   const activeSystemPrompt = isAiSynthesisMode ? PARAMETRIC_SYNTHESIS_SYSTEM_PROMPT : PRECISION_EXTRACTION_SYSTEM_PROMPT;
 
   const geminiKey = getEnv('GEMINI_API_KEY', false);
-  const nvidiaKey2 = getEnv('NVIDIA_API_KEY', false);
-  if (nvidiaKey2) {
-    try {
-      const nvidiaCall = fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${nvidiaKey2}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'nvidia/nemotron-3-ultra-550b-a55b',
-          messages: [
-            { role: 'system', content: 'You are a strict semantic entity validator. Output ONLY valid JSON.' },
-            { role: 'user', content: prompt }
-          ],
-          response_format: { type: 'json_object' },
-          temperature: 0.0,
-        }),
-      });
-
-      const res = await withTimeout(nvidiaCall, 10000, 'NVIDIA compatibility check timeout');
-      if (res.ok) {
-        const data = await res.json();
-        const contentStr = data.choices?.[0]?.message?.content;
-        if (contentStr) {
-          const parsed = JSON.parse(contentStr);
-          if (parsed && typeof parsed.compatible === 'boolean') {
-            return parsed;
-          }
-        }
-      }
-    } catch (e: any) {
-      console.warn('NVIDIA compatibility check failed:', e?.message || e);
-    }
-  }
-
   const groqKey = getEnv('GROQ_API_KEY', false);
 
   const userPrompt = isAiSynthesisMode

@@ -1741,7 +1741,47 @@ function MorphUIContent() {
             </form>
           </div>
 
-          {/* Inspiration Query Chips */}
+          
+          {/* Error Display on Landing Page */}
+          {incompatibleError && (
+            <div className="p-4 sm:p-5 bg-slate-950/90 border border-amber-500/40 rounded-2xl text-xs sm:text-sm text-slate-200 shadow-2xl backdrop-blur-xl space-y-3 w-full animate-in fade-in duration-300">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 shrink-0">
+                    <AlertTriangle className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-100 tracking-wide">
+                      Incompatible Comparison Entities
+                    </h3>
+                    <p className="text-xs font-mono text-amber-400/90">
+                      {incompatibleError.error}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIncompatibleError(null)}
+                  className="px-2.5 py-1 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition-colors"
+                >
+                  Dismiss
+                </button>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800/80 text-slate-300 text-xs sm:text-sm leading-relaxed">
+                {incompatibleError.message}
+              </div>
+            </div>
+          )}
+
+          {error && !incompatibleError && (
+            <div className="p-3 sm:p-4 bg-rose-950/80 border border-rose-800/80 rounded-2xl text-xs sm:text-sm text-rose-200 flex items-center justify-between shadow-md w-full animate-in fade-in duration-300">
+              <span className="whitespace-normal break-words">{error}</span>
+              <button onClick={() => setError(null)} className="font-bold ml-3 text-rose-400 hover:text-rose-200 shrink-0">
+                Dismiss
+              </button>
+            </div>
+          )}
+
+{/* Inspiration Query Chips */}
           <div className="space-y-2 pt-2 w-full">
             <span className={`text-xs ${t.subtext} font-medium block`}>Try a sample search:</span>
             <div className="flex flex-wrap items-center justify-center gap-2">
