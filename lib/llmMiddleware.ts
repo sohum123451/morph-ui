@@ -592,6 +592,39 @@ export async function generateComparisonMatrix(
   const activeSystemPrompt = isAiSynthesisMode ? PARAMETRIC_SYNTHESIS_SYSTEM_PROMPT : PRECISION_EXTRACTION_SYSTEM_PROMPT;
 
   const geminiKey = process.env.GEMINI_API_KEY;
+  const nvidiaKey2 = process.env.NVIDIA_API_KEY;
+  if (nvidiaKey2) {
+    try {
+      const nvidiaCall = fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${nvidiaKey2}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'nvidia/nemotron-3-ultra-550b-a55b',
+          messages: [
+            { role: 'system', content: 'You are a strict semantic entity validator. Output ONLY valid JSON.' },
+            { role: 'user', content: prompt }
+          ],
+          response_format: { type: 'json_object' },
+          temperature: 0.0,
+        }),
+      });
+
+      const res = await withTimeout(nvidiaCall, 10000, 'NVIDIA compatibility check timeout');
+      if (res.ok) {
+        const data = await res.json();
+        const contentStr = data.choices?.[0]?.message?.content;
+        if (contentStr) {
+          const parsed = JSON.parse(contentStr);
+          if (parsed && typeof parsed.compatible === 'boolean') {
+            return parsed;
+          }
+        }
+      }
+    } catch (e: any) {
+      console.warn('NVIDIA compatibility check failed:', e?.message || e);
+    }
+  }
+
   const groqKey = process.env.GROQ_API_KEY;
 
   const userPrompt = isAiSynthesisMode
@@ -636,7 +669,7 @@ ${reviewsCombinedText}
         }),
       });
 
-      const nvidiaRes = await withTimeout(nvidiaCall, 18000, 'NVIDIA Nemotron-3 Ultra timeout');
+      const nvidiaRes = await withTimeout(nvidiaCall, 30000, 'NVIDIA Nemotron-3 Ultra timeout');
       if (nvidiaRes.ok) {
         const data = await nvidiaRes.json();
         const content = data.choices?.[0]?.message?.content || '';
