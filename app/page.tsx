@@ -1651,18 +1651,21 @@ function MorphUIContent() {
 
         {/* Main Clean Hero Landing Section */}
         <main className="w-full max-w-4xl mx-auto px-4 sm:px-6 py-12 sm:py-20 text-center space-y-6 sm:space-y-8 flex-1 flex flex-col justify-center items-center">
-          {/* Badge */}
-          <div className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full ${t.badge} text-xs shadow-sm`}>
-            <Sparkles className="w-3.5 h-3.5 text-sky-400" />
-            <span className="font-semibold text-center">AI-Powered Entity Resolution & Reddit De-Biasing</span>
-          </div>
+          <div className="flex flex-col items-center justify-center text-center py-8">
+            {/* Moved MorphUI Logo here */}
+            <div className="flex items-center gap-2 mb-4">
+              <div className="p-2 bg-blue-600 rounded-xl text-white shadow-lg">
+                <Sparkles className="w-6 h-6" />
+              </div>
+              <span className={`text-2xl font-bold tracking-tight ${t.title}`}>MorphUI</span>
+            </div>
 
-          {/* Heading */}
-          <div className="space-y-3 w-full">
-            <h1 className={`text-2xl sm:text-4xl md:text-5xl font-extrabold tracking-tight ${t.title} leading-tight`}>
+            {/* Removed the "AI-Powered Entity Resolution & Reddit De-Biasing" pill badge here */}
+
+            <h1 className={`text-4xl sm:text-5xl font-extrabold tracking-tight ${t.title} mt-2`}>
               MorphUI: Real-Time Generative Comparisons
             </h1>
-            <p className={`text-xs sm:text-sm md:text-base ${t.subtext} max-w-2xl mx-auto leading-relaxed`}>
+            <p className={`${t.subtext} mt-3 max-w-xl text-sm sm:text-base`}>
               Compare any two entities across any domain. Get instant side-by-side spec sheets, de-biased consensus, and spatial graph models.
             </p>
           </div>
