@@ -941,6 +941,10 @@ function MorphUIContent() {
         entity_a_consensus: consensuses[0] || 'General consensus',
         entity_b_consensus: consensuses[1] || 'General consensus',
         sentiment: s.sentiment,
+        score_weight: s.score_weight,
+        praises: s.praises,
+        pain_points: s.pain_points,
+        quotes: s.quotes,
       };
     });
   }, [communitySentiment, isSwapped]);
