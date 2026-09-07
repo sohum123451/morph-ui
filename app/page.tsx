@@ -2345,7 +2345,7 @@ function MorphUIContent() {
                   <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
                   <span className="truncate">Verified Facts</span>
                   <span className={`text-[10px] sm:text-[11px] font-mono px-1.5 py-0.2 rounded ${t.cardInner}`}>
-                    {flatVerifiedMetrics.length}
+                    {flatVerifiedMetrics.filter((m: any) => m.source_type === 'official').length}
                   </span>
                 </button>
 

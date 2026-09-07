@@ -174,6 +174,7 @@ function cleanAndParseJson(
       entity_a_value: vm.values?.[0] || vm.entity_a || '',
       entity_b_value: vm.values?.[1] || vm.entity_b || '',
       values: vm.values,
+      source_type: vm.source_type,
     }));
 
     const suggested_metrics = Array.isArray(parsed.suggested_metrics)
@@ -848,6 +849,7 @@ export function generateConcreteFallbackMulti(
       entity_a_value: v.values?.[0] || v.entity_a,
       entity_b_value: v.values?.[1] || v.entity_b,
       values: v.values,
+      source_type: v.source_type,
     })),
   };
 }
