@@ -200,11 +200,11 @@ function isMissingValue(val: any): boolean {
   return /^(n\/?a|not specified.*|none|null|-|unknown)$/i.test(str);
 }
 
-function renderValueWithFallback(val: any, fallbackText = 'Add specification...') {
+function renderValueWithFallback(val: any, fallbackText = 'Standard specification') {
   if (isMissingValue(val)) {
     return (
-      <span className="inline-flex items-center gap-1 text-slate-400 italic text-xs bg-slate-800/30 px-2 py-0.5 rounded border border-slate-700/40 hover:border-sky-500/50 transition-colors cursor-text">
-        <span>+ {fallbackText}</span>
+      <span className="text-slate-400 text-xs font-sans">
+        {fallbackText}
       </span>
     );
   }
