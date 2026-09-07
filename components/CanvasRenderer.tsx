@@ -1,46 +1,40 @@
 'use client';
 
-import React, { Component, ErrorInfo, ReactNode, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { VerifiedMetric, EntityVerdict } from '@/types/morphui';
-import {
-  WarningIcon,
-  RefreshIcon,
-  ExpandIcon,
-  CompressIcon,
-  SlidersIcon,
-  SpatialIcon,
-  ThreeDIcon,
-} from '@/components/icons/CustomIcons';
-import { PriorityLens } from '@/components/lenses/PriorityLens';
+import React, { Component, ErrorInfo, ReactNode, useMemo } from 'react';
 import dynamic from 'next/dynamic';
+import { ComparisonTableWidget } from './widgets/ComparisonTableWidget';
+import { BudgetTrackerWidget } from './widgets/BudgetTrackerWidget';
+import { TimelineCalendarWidget } from './widgets/TimelineCalendarWidget';
+import { AdmissionPredictorWidget } from './widgets/AdmissionPredictorWidget';
+import { BudgetWidgetSchema, TimelineWidgetSchema } from '@/types/morphui';
+import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { Spatial3DNodeData } from './canvas3d/types';
+import { calculate3DNodePositions } from '@/lib/spatialLayout';
 
-const DivergenceField = dynamic(
-  () => import('@/components/lenses/DivergenceField').then((mod) => mod.DivergenceField),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="w-full h-[600px] rounded-xl border border-theme-border bg-theme-card flex flex-col items-center justify-center space-y-3 text-theme-secondary font-mono">
-        <div className="w-6 h-6 border-2 border-theme-accent border-t-transparent rounded-full animate-spin" />
-        <span className="text-xs uppercase tracking-widest text-theme-text">INITIALIZING DIVERGENCE FIELD TOPOLOGY...</span>
-      </div>
-    ),
-  }
-);
+const Spatial3DCanvas = dynamic(() => import('./canvas3d/Spatial3DCanvas'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-[650px] rounded-2xl border border-slate-800 bg-[#03060f] flex flex-col items-center justify-center space-y-3 text-cyan-400 font-mono">
+      <div className="w-8 h-8 rounded-full border-2 border-cyan-400 border-t-transparent animate-spin" />
+      <span className="text-xs uppercase tracking-wider">INITIALIZING 3D SPATIAL TELEMETRY ENGINE...</span>
+    </div>
+  ),
+});
 
-const Playable3DCanvas = dynamic(
-  () => import('@/components/lenses/Playable3DCanvas').then((mod) => mod.Playable3DCanvas),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="w-full h-[600px] rounded-xl border border-theme-border bg-theme-card flex flex-col items-center justify-center space-y-3 text-theme-secondary font-mono">
-        <div className="w-6 h-6 border-2 border-theme-accent border-t-transparent rounded-full animate-spin" />
-        <span className="text-xs uppercase tracking-widest text-theme-text">MOUNTING PLAYABLE 3D WEBGL ENGINE...</span>
-      </div>
-    ),
-  }
-);
+// --- 1. DETERMINISTIC COMPONENT REGISTRY ---
+export const COMPONENT_REGISTRY = {
+  ComparisonTable: ComparisonTableWidget,
+  BudgetTracker: BudgetTrackerWidget,
+  TimelineCalendar: TimelineCalendarWidget,
+  AdmissionPredictor: AdmissionPredictorWidget,
+  // Normalized alias support
+  comparison_table: ComparisonTableWidget,
+  budget_tracker: BudgetTrackerWidget,
+  timeline_calendar: TimelineCalendarWidget,
+  admission_predictor: AdmissionPredictorWidget,
+};
 
+// --- 2. GRACEFUL WIDGET ERROR FALLBACK CARD ---
 export interface WidgetErrorFallbackProps {
   type?: string;
   error?: Error | null;
@@ -55,37 +49,46 @@ export function WidgetErrorFallback({
   onRetry,
 }: WidgetErrorFallbackProps) {
   return (
-    <div className="w-full min-w-[340px] max-w-md rounded-xl border border-theme-accent/40 bg-theme-card p-5 text-theme-text">
-      <div className="flex items-start gap-3">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-theme-bg text-theme-accent">
-          <WarningIcon className="h-5 w-5" />
+    <div className="w-full min-w-[340px] max-w-md rounded-2xl border border-red-500/30 bg-red-950/20 p-5 backdrop-blur-md shadow-xl text-zinc-200 transition-all hover:border-red-500/50">
+      <div className="flex items-start gap-3.5">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-500/10 border border-red-500/20 text-red-400">
+          <AlertTriangle className="h-5 w-5" />
         </div>
-        <div className="flex-1 min-w-0 space-y-1">
+        <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2">
-            <h4 className="text-sm font-bold text-theme-text truncate">Render Exception</h4>
-            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-theme-bg text-theme-secondary">
+            <h4 className="text-sm font-semibold text-red-200 truncate">
+              Widget Stream Render Exception
+            </h4>
+            <span className="inline-block px-2 py-0.5 text-[10px] uppercase font-mono font-bold tracking-wider rounded bg-red-500/20 text-red-300 border border-red-500/30">
               {type}
             </span>
           </div>
-          <p className="text-xs text-theme-secondary">
-            {message || error?.message || 'Failed to render widget component.'}
+          <p className="mt-1 text-xs text-zinc-400 line-clamp-2 leading-relaxed">
+            {message || error?.message || 'The payload for this widget failed validation or contained malformed data.'}
           </p>
-          {onRetry && (
-            <button
-              type="button"
-              onClick={onRetry}
-              className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold text-theme-bg bg-theme-accent rounded-md transition-colors hover:bg-theme-accent-hover"
-            >
-              <RefreshIcon className="h-3 w-3" />
-              <span>Retry</span>
-            </button>
-          )}
+
+          <div className="mt-3.5 flex items-center justify-between pt-2 border-t border-red-500/10">
+            <span className="text-[11px] text-zinc-500 font-mono">
+              Isolated boundary active
+            </span>
+            {onRetry && (
+              <button
+                type="button"
+                onClick={onRetry}
+                className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium text-red-300 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 rounded-lg transition-colors active:scale-95"
+              >
+                <RefreshCw className="h-3 w-3" />
+                Retry
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
+// --- 3. COMPONENT-LEVEL ERROR BOUNDARY ---
 interface ErrorBoundaryProps {
   widgetType: string;
   children: ReactNode;
@@ -107,7 +110,7 @@ export class WidgetErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoun
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.warn(`[WidgetErrorBoundary] Error in <${this.props.widgetType}>:`, error, errorInfo);
+    console.warn(`[WidgetErrorBoundary] Caught failure in <${this.props.widgetType}>:`, error, errorInfo);
   }
 
   handleRetry = () => {
@@ -128,156 +131,83 @@ export class WidgetErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoun
   }
 }
 
+// --- 4. SAFE COMPONENT RENDERER WITH ZOD VALIDATION ---
+export function renderWidgetComponent(type: string, data: any) {
+  const WidgetComponent = COMPONENT_REGISTRY[type as keyof typeof COMPONENT_REGISTRY];
+  if (!WidgetComponent) {
+    return <WidgetErrorFallback type={type} message={`Unknown widget registry type: "${type}"`} />;
+  }
+
+  // Schema pre-validation for streaming safety
+  let validationError: string | null = null;
+  if (type === 'BudgetTracker' || type === 'budget_tracker') {
+    const res = BudgetWidgetSchema.safeParse({ type: 'BudgetTracker', ...(data?.data || data) });
+    if (!res.success) {
+      validationError = res.error.issues.map((i: any) => `${i.path.join('.')}: ${i.message}`).join(', ');
+    }
+  } else if (type === 'TimelineCalendar' || type === 'timeline_calendar') {
+    const res = TimelineWidgetSchema.safeParse({ type: 'TimelineCalendar', ...(data?.data || data) });
+    if (!res.success) {
+      validationError = res.error.issues.map((i: any) => `${i.path.join('.')}: ${i.message}`).join(', ');
+    }
+  }
+
+  if (validationError) {
+    return <WidgetErrorFallback type={type} message={`Schema validation error: ${validationError}`} />;
+  }
+
+  const widgetProps = data && data.data !== undefined ? data : { data };
+
+  return (
+    <WidgetErrorBoundary widgetType={type}>
+      <WidgetComponent {...widgetProps} />
+    </WidgetErrorBoundary>
+  );
+}
+
+// --- 5. 3D WEBGL SPATIAL ENGINE RENDERER ---
 export interface CanvasRendererProps {
-  activeLens: 'priority' | 'divergence' | 'spatial3d';
-  onSelectLens: (lens: 'priority' | 'divergence' | 'spatial3d') => void;
-  entities: EntityVerdict[];
-  metrics: VerifiedMetric[];
-  weights: Record<string, number>;
-  onWeightChange: (metricName: string, weight: number) => void;
-  onMoveMetric: (fromIndex: number, toIndex: number) => void;
-  onResetWeights: () => void;
-  isFullscreen: boolean;
-  onToggleFullscreen: () => void;
+  nodes?: any[];
+  edges?: any[];
+  widgets?: any[];
+  onNodesChange?: (changes: any) => void;
+  onEdgesChange?: (changes: any) => void;
+  className?: string;
+  isStreaming?: boolean;
 }
 
 export function CanvasRenderer({
-  activeLens,
-  onSelectLens,
-  entities,
-  metrics,
-  weights,
-  onWeightChange,
-  onMoveMetric,
-  onResetWeights,
-  isFullscreen,
-  onToggleFullscreen,
+  nodes = [],
+  widgets = [],
+  className = 'h-[750px] w-full rounded-2xl border border-slate-800 bg-[#03060f] overflow-hidden',
+  isStreaming = false,
 }: CanvasRendererProps) {
-  // Global Escape key listener for fullscreen mode
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isFullscreen) {
-        e.preventDefault();
-        onToggleFullscreen();
-      }
-    };
+  const inputList = nodes.length > 0 ? nodes : widgets;
+  const positions = useMemo(() => calculate3DNodePositions(inputList.length), [inputList.length]);
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isFullscreen, onToggleFullscreen]);
+  const colors = ['#00f0ff', '#818cf8', '#a855f7', '#10b981', '#f43f5e'];
 
-  return (
-    <div
-      className={
-        isFullscreen
-          ? 'fixed inset-0 z-50 bg-theme-bg w-screen h-screen flex flex-col p-4 sm:p-6 overflow-y-auto'
-          : 'w-full space-y-4'
-      }
-    >
-      {/* Top Controls Bar with Fullscreen toggle and Lens Switcher */}
-      <div className="flex items-center justify-between gap-3 p-2 rounded-xl bg-theme-card border border-theme-border">
-        {/* Lens Switcher */}
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => onSelectLens('priority')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
-              activeLens === 'priority'
-                ? 'bg-theme-bg text-theme-text shadow-sm border border-theme-border'
-                : 'text-theme-secondary hover:text-theme-text'
-            }`}
-          >
-            <SlidersIcon className="w-3.5 h-3.5 text-theme-accent" />
-            <span>Priority Lens</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => onSelectLens('divergence')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
-              activeLens === 'divergence'
-                ? 'bg-theme-bg text-theme-text shadow-sm border border-theme-border'
-                : 'text-theme-secondary hover:text-theme-text'
-            }`}
-          >
-            <SpatialIcon className="w-3.5 h-3.5 text-theme-focus" />
-            <span>Divergence Field</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => onSelectLens('spatial3d')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
-              activeLens === 'spatial3d'
-                ? 'bg-theme-bg text-theme-text shadow-sm border border-theme-border'
-                : 'text-theme-secondary hover:text-theme-text'
-            }`}
-          >
-            <ThreeDIcon className="w-3.5 h-3.5 text-theme-secondary" />
-            <span>3D Space</span>
-          </button>
-        </div>
+  const spatial3DNodes: Spatial3DNodeData[] = useMemo(() => {
+    return inputList.map((item, idx) => {
+      const data = item.data || item;
+      const type = (data?.type as string) || (data?.widget_type as string) || (item.type as string) || 'ComparisonTable';
+      const id = item.id || `node-${idx}`;
+      const title = data.title || type;
+      const pos = positions[idx] || [idx * 8 - 8, 2, 0];
 
-        {/* Fullscreen Mode Toggle */}
-        <button
-          type="button"
-          onClick={onToggleFullscreen}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-theme-text bg-theme-bg border border-theme-border hover:border-theme-accent transition-all shrink-0"
-          title={isFullscreen ? 'Exit Fullscreen (Esc)' : 'Enter Fullscreen Live Mode'}
-        >
-          {isFullscreen ? (
-            <>
-              <CompressIcon className="w-3.5 h-3.5 text-theme-accent" />
-              <span>Exit Fullscreen</span>
-              <span className="hidden sm:inline text-[10px] font-mono text-theme-muted">(Esc)</span>
-            </>
-          ) : (
-            <>
-              <ExpandIcon className="w-3.5 h-3.5 text-theme-secondary" />
-              <span>Fullscreen Mode</span>
-            </>
-          )}
-        </button>
-      </div>
+      return {
+        id,
+        title,
+        tag: `STATION-0${idx + 1}`,
+        status: isStreaming ? 'streaming' : 'synced',
+        position: pos,
+        accentColor: colors[idx % colors.length],
+        content: renderWidgetComponent(type, data),
+      };
+    });
+  }, [inputList, positions, isStreaming]);
 
-      {/* Active Lens with Error Boundary & Framer Motion Transitions */}
-      <WidgetErrorBoundary widgetType={activeLens}>
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeLens}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
-            className={isFullscreen ? 'flex-1 min-h-0' : 'w-full'}
-          >
-            {activeLens === 'priority' && (
-              <PriorityLens
-                entities={entities}
-                metrics={metrics}
-                weights={weights}
-                onWeightChange={onWeightChange}
-                onMoveMetric={onMoveMetric}
-                onResetWeights={onResetWeights}
-              />
-            )}
-
-            {activeLens === 'divergence' && (
-              <DivergenceField
-                entities={entities}
-                metrics={metrics}
-                weights={weights}
-              />
-            )}
-
-            {activeLens === 'spatial3d' && (
-              <Playable3DCanvas
-                entities={entities}
-                metrics={metrics}
-                weights={weights}
-              />
-            )}
-          </motion.div>
-        </AnimatePresence>
-      </WidgetErrorBoundary>
-    </div>
-  );
+  return <Spatial3DCanvas nodes={spatial3DNodes} isStreaming={isStreaming} className={className} />;
 }
+
+export default CanvasRenderer;
