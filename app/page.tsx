@@ -738,6 +738,7 @@ function MorphUIContent() {
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [incompatibleError, setIncompatibleError] = useState<{ error: string; message: string; entities?: string[] } | null>(null);
   const [comparisonData, setComparisonData] = useState<GenerativeComparisonResponse | null>(null);
 
   // View mode: 'spec' (Table view) vs 'canvas' (Spatial React Flow Graph)
@@ -1065,6 +1066,15 @@ function MorphUIContent() {
 
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({}));
+        if (errJson.incompatible) {
+          setIncompatibleError({
+            error: errJson.error || 'Incompatible comparison entities detected.',
+            message: errJson.message || "These items appear to be from completely different categories. Please specify a shared context or category (e.g., 'Compare Apple [fruit] to Banana' or 'Compare Apple [tech] to Microsoft').",
+            entities: errJson.entities || []
+          });
+          setLoading(false);
+          return;
+        }
         throw new Error(errJson.error || `Comparison failed with HTTP ${res.status}`);
       }
 
@@ -1662,6 +1672,11 @@ function MorphUIContent() {
               ))}
             </div>
           </div>
+        
+          {/* Subtle Footnote for Synthesized Consensus Estimates */}
+          <div className="w-full px-2 py-3 text-[11px] font-mono text-slate-500 flex items-center gap-1.5 border-t border-slate-800/30">
+            <span>* Metrics marked with an asterisk represent AI-synthesized consensus estimates derived from multi-source data extraction.</span>
+          </div>
         </main>
 
         <footer className={`${t.footer} py-6 text-center text-xs w-full transition-colors duration-300`}>
@@ -2142,8 +2157,50 @@ function MorphUIContent() {
             </div>
           )}
 
-          {/* Error Alert Box */}
-          {error && (
+          {/* Incompatible Entities Clarification State */}
+          {incompatibleError && (
+            <div className="p-5 sm:p-6 bg-slate-950/90 border border-amber-500/40 rounded-2xl text-xs sm:text-sm text-slate-200 shadow-2xl backdrop-blur-xl space-y-4 w-full animate-in fade-in duration-300">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 shrink-0">
+                    <AlertTriangle className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-100 tracking-wide">
+                      Incompatible Comparison Entities Detected
+                    </h3>
+                    <p className="text-xs font-mono text-amber-400/90">
+                      Error: Incompatible comparison entities detected.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIncompatibleError(null)}
+                  className="px-2.5 py-1 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition-colors"
+                >
+                  Dismiss
+                </button>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800/80 text-slate-300 text-xs sm:text-sm leading-relaxed whitespace-normal break-words">
+                {incompatibleError.message}
+              </div>
+
+              {incompatibleError.entities && incompatibleError.entities.length > 0 && (
+                <div className="flex items-center gap-2 flex-wrap pt-1">
+                  <span className="text-[11px] font-mono text-slate-400">Detected Entities:</span>
+                  {incompatibleError.entities.map((ent, idx) => (
+                    <span key={idx} className="px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-900 border border-slate-800 text-slate-200 font-mono">
+                      {ent}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* General Error Alert Box */}
+          {error && !incompatibleError && (
             <div className="p-3 sm:p-4 bg-rose-950/80 border border-rose-800/80 rounded-2xl text-xs sm:text-sm text-rose-200 flex items-center justify-between shadow-md w-full">
               <span className="whitespace-normal break-words">{error}</span>
               <button onClick={() => setError(null)} className="font-bold ml-3 text-rose-400 hover:text-rose-200 shrink-0">
@@ -2167,22 +2224,7 @@ function MorphUIContent() {
                   <h1 className={`text-xl sm:text-2xl md:text-3xl font-bold tracking-tight ${t.title} whitespace-normal break-words leading-tight`}>
                     {displayEntityA}
                   </h1>
-                  {flatVerifiedMetrics?.some((p: any) => p.source_type === 'official') ? (
-                    <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full ${t.cardInner} text-xs font-medium`}>
-                      <Award className="w-3.5 h-3.5 text-sky-400" />
-                      <span>Verified Baseline</span>
-                    </div>
-                  ) : flatVerifiedMetrics?.some((p: any) => p.source_type === 'ai_consensus') ? (
-                    <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full ${t.cardInner} text-xs font-medium text-purple-400 border border-purple-500/20 bg-purple-500/10`}>
-                      <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-                      <span>AI Knowledge Synthesis</span>
-                    </div>
-                  ) : (
-                    <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full ${t.cardInner} text-xs font-medium`}>
-                      <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
-                      <span className="text-amber-500">Unverified / AI-Estimated</span>
-                    </div>
-                  )}
+
                 </div>
 
                 {/* VS Badge */}
@@ -2203,22 +2245,7 @@ function MorphUIContent() {
                   <h1 className={`text-xl sm:text-2xl md:text-3xl font-bold tracking-tight ${t.title} whitespace-normal break-words leading-tight`}>
                     {displayEntityB}
                   </h1>
-                  {flatVerifiedMetrics?.some((p: any) => p.source_type === 'official') ? (
-                    <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full ${t.cardInner} text-xs font-medium`}>
-                      <Award className="w-3.5 h-3.5 text-indigo-400" />
-                      <span>Verified Baseline</span>
-                    </div>
-                  ) : flatVerifiedMetrics?.some((p: any) => p.source_type === 'ai_consensus') ? (
-                    <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full ${t.cardInner} text-xs font-medium text-purple-400 border border-purple-500/20 bg-purple-500/10`}>
-                      <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-                      <span>AI Knowledge Synthesis</span>
-                    </div>
-                  ) : (
-                    <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full ${t.cardInner} text-xs font-medium`}>
-                      <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
-                      <span className="text-amber-500">Unverified / AI-Estimated</span>
-                    </div>
-                  )}
+
                 </div>
               </div>
             ) : (
@@ -2504,24 +2531,16 @@ function MorphUIContent() {
                                       }`}
                                     >
                                       <div className="w-1/3 min-w-[180px] shrink-0 pr-2 align-top whitespace-normal break-words">
-                                        <div className={`font-semibold ${t.title} leading-relaxed whitespace-normal break-words`}>
-                                          {m.metric}
-                                        </div>
-                                        <div className="flex items-center gap-1.5 mt-1">
-                                          <span
-                                            className={`text-[10px] uppercase font-mono px-1.5 py-0.5 rounded ${
-                                              m.source_type === 'official'
-                                                ? `${t.cardInner} text-emerald-400 border border-emerald-500/20`
-                                                : m.source_type === 'ai_consensus'
-                                                ? 'bg-purple-500/15 text-purple-300 border border-purple-500/30'
-                                                : `${t.cardInner} text-amber-400 border border-amber-500/20`
-                                            }`}
-                                          >
-                                            {m.source_type === 'official' ? 'Official' : m.source_type === 'ai_consensus' ? 'AI Synthesis' : 'Estimated'}
+                                        <div className="flex items-center gap-1.5">
+                                          <span className={`font-semibold ${t.title} leading-relaxed whitespace-normal break-words`}>
+                                            {m.metric}
+                                            {(m.source_type === 'ai_consensus' || m.source_type === 'unverified') && (
+                                              <span className="text-sky-400/90 font-mono ml-1 text-xs select-none" title="AI-synthesized consensus estimate">*</span>
+                                            )}
                                           </span>
                                           {isNewlyAdded && (
-                                            <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                                              Custom Added
+                                            <span className="text-[9px] uppercase font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                                              Custom
                                             </span>
                                           )}
                                         </div>

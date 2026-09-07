@@ -770,3 +770,136 @@ export async function orchestrateLLMCascade(prompt: string): Promise<any> {
 
   throw new Error('All LLM providers (Groq, Gemini) failed. Cannot generate widget data without inference.');
 }
+
+
+export interface SemanticValidationResult {
+  compatible: boolean;
+  domain?: string;
+  error?: string;
+  message?: string;
+}
+
+/**
+ * Pre-Flight Semantic Check:
+ * Evaluates if requested entities share a logical comparison domain (e.g. phones, universities, fruits).
+ * If entities belong to completely unrelated domains and no common context is specified, aborts comparison.
+ */
+export async function validateEntityCompatibility(
+  entities: string[],
+  contextTopic?: string
+): Promise<SemanticValidationResult> {
+  if (!entities || entities.length < 2) {
+    return { compatible: true };
+  }
+
+  const prompt = `You are a strict semantic entity compatibility validator for a comparative matrix engine.
+Evaluate whether the following entities share a logical comparison domain (e.g., both are smartphones, both are universities, both are fruits, both are automotive brands, both are video games, both are database systems, etc.).
+
+Entities to compare: ${JSON.stringify(entities)}
+${contextTopic ? `User-Specified Context/Topic: "${contextTopic}"` : 'No specific shared context provided.'}
+
+RULES:
+1. If the entities belong to completely unrelated domains (e.g., a tech company vs a fruit vs a developer tool, or a pair of sneakers vs a quantum physics theory) AND no unifying context was provided by the user:
+   Output incompatible JSON.
+2. If the entities share a coherent category or if the user specified a clear context, output compatible JSON.
+
+Output JSON format ONLY:
+If compatible:
+{
+  "compatible": true,
+  "domain": "<Brief domain name, e.g. Smartphones, Universities, Tropical Fruits>"
+}
+
+If incompatible:
+{
+  "compatible": false,
+  "error": "Incompatible comparison entities detected.",
+  "message": "These items appear to be from completely different categories. Please specify a shared context or category (e.g., 'Compare Apple [fruit] to Banana' or 'Compare Apple [tech] to Microsoft')."
+}`;
+
+  const groqKey = process.env.GROQ_API_KEY;
+  const geminiKey = process.env.GEMINI_API_KEY;
+
+  if (groqKey) {
+    try {
+      const groqCall = fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${groqKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'openai/gpt-oss-120b',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a strict semantic entity compatibility validator. Output ONLY valid JSON matching the requested schema. No conversational prose.',
+            },
+            { role: 'user', content: prompt },
+          ],
+          response_format: { type: 'json_object' },
+          temperature: 0.0,
+        }),
+      });
+
+      const res = await withTimeout(groqCall, 4000, 'Groq compatibility check timeout');
+      if (res.ok) {
+        const data = await res.json();
+        const content = data.choices?.[0]?.message?.content;
+        if (content) {
+          const parsed = JSON.parse(content);
+          if (parsed && typeof parsed.compatible === 'boolean') {
+            return {
+              compatible: parsed.compatible,
+              domain: parsed.domain,
+              error: parsed.error || (parsed.compatible ? undefined : 'Incompatible comparison entities detected.'),
+              message:
+                parsed.message ||
+                (parsed.compatible
+                  ? undefined
+                  : "These items appear to be from completely different categories. Please specify a shared context or category (e.g., 'Compare Apple [fruit] to Banana' or 'Compare Apple [tech] to Microsoft')."),
+            };
+          }
+        }
+      }
+    } catch (e: any) {
+      console.warn('Groq compatibility check failed, falling back to Gemini:', e?.message || e);
+    }
+  }
+
+  if (geminiKey) {
+    try {
+      const ai = new GoogleGenAI({ apiKey: geminiKey });
+      const geminiCall = ai.models.generateContent({
+        model: 'gemini-3.6-flash',
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        config: {
+          systemInstruction: 'You are a strict semantic entity compatibility validator. Output ONLY valid JSON.',
+          responseMimeType: 'application/json',
+          temperature: 0.0,
+        },
+      });
+
+      const response = await withTimeout(geminiCall, 4000, 'Gemini compatibility check timeout');
+      if (response.text) {
+        const parsed = JSON.parse(response.text);
+        if (parsed && typeof parsed.compatible === 'boolean') {
+          return {
+            compatible: parsed.compatible,
+            domain: parsed.domain,
+            error: parsed.error || (parsed.compatible ? undefined : 'Incompatible comparison entities detected.'),
+            message:
+              parsed.message ||
+              (parsed.compatible
+                ? undefined
+                : "These items appear to be from completely different categories. Please specify a shared context or category (e.g., 'Compare Apple [fruit] to Banana' or 'Compare Apple [tech] to Microsoft')."),
+          };
+        }
+      }
+    } catch (e: any) {
+      console.warn('Gemini compatibility check failed:', e?.message || e);
+    }
+  }
+
+  return { compatible: true };
+}

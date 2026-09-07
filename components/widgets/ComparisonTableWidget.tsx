@@ -456,19 +456,13 @@ export const ComparisonTableWidget = memo(function ComparisonTableWidget({
                         <div className="w-1/3 min-w-[130px] font-medium text-slate-200 pr-1 flex flex-col gap-1 whitespace-normal break-words leading-relaxed shrink-0">
                           <div className="flex items-center gap-1.5">
                             <span className="w-1.5 h-1.5 rounded-full bg-slate-600 shrink-0 mt-0.5" />
-                            <span>{m.metric}</span>
-                          </div>
-                          {m.source_type && (
-                            <span className={`text-[9px] uppercase font-mono px-1 py-0.2 rounded w-fit ${
-                              m.source_type === 'official'
-                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                                : m.source_type === 'ai_consensus'
-                                ? 'bg-purple-500/10 text-purple-300 border border-purple-500/20'
-                                : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                            }`}>
-                              {m.source_type === 'official' ? 'Official' : m.source_type === 'ai_consensus' ? 'AI Synthesis' : 'Estimated'}
+                            <span className="font-medium text-slate-200">
+                              {m.metric}
+                              {(m.source_type === 'ai_consensus' || m.source_type === 'unverified') && (
+                                <span className="text-sky-400/90 font-mono ml-0.5 text-xs select-none" title="AI-synthesized consensus estimate">*</span>
+                              )}
                             </span>
-                          )}
+                          </div>
                         </div>
                         {entityNames.map((_, entIdx) => {
                           const val = m.values?.[entIdx] !== undefined
@@ -568,6 +562,10 @@ export const ComparisonTableWidget = memo(function ComparisonTableWidget({
           </div>
         </div>
       )}
+      {/* Footnote */}
+      <div className="relative z-10 mt-3 pt-2 border-t border-slate-800/40 text-[10px] font-mono text-slate-500 flex items-center gap-1">
+        <span>* Metrics marked with an asterisk represent AI-synthesized consensus estimates derived from multi-source data extraction.</span>
+      </div>
     </div>
   );
 });

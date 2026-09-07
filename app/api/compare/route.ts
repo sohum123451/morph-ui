@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { splitMultiComparisonQuery, splitComparisonQuery, extractEntitiesFromImages } from '@/lib/entitySplitter';
 import { fetchMultiEntityFacts } from '@/lib/factRetrieval';
-import { generateComparisonMatrix } from '@/lib/llmMiddleware';
+import { generateComparisonMatrix, validateEntityCompatibility } from '@/lib/llmMiddleware';
 import {
   getCachedComparison,
   setCachedComparison,
@@ -115,6 +115,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: 'Could not extract at least two entities to compare. Please specify "A vs B".' },
         { status: 400 }
+      );
+    }
+
+    // Pre-Flight Semantic Entity Compatibility Validation
+    const validation = await validateEntityCompatibility(entities, contextTopic);
+    if (!validation.compatible) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: validation.error || 'Incompatible comparison entities detected.',
+          incompatible: true,
+          message:
+            validation.message ||
+            "These items appear to be from completely different categories. Please specify a shared context or category (e.g., 'Compare Apple [fruit] to Banana' or 'Compare Apple [tech] to Microsoft').",
+          entities,
+          contextTopic,
+        },
+        { status: 422 }
       );
     }
 
