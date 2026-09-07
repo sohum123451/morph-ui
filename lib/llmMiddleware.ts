@@ -636,38 +636,43 @@ ${reviewsCombinedText}
 4. Extract granular Reddit / community sentiment across all 4 mandatory sub-topics ("Build Quality / Curriculum Depth", "Price-to-Value Ratio", "Durability / Long-Term Reliability (6+ Mos)", "Common User Complaints") with score weights, praises, pain points, and quote summaries.
 5. Produce authentic pros and a nuanced verdict summary.`;
 
-  // 1. PRIMARY MODEL: Groq (openai/gpt-oss-120b)
+  // 1. PRIMARY MODEL: Groq Multi-Tier Cascade (gpt-oss-120b -> gpt-oss-20b -> qwen3.8-27b)
   if (groqKey) {
-    try {
-      const groqCall = fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${groqKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'openai/gpt-oss-120b',
-          messages: [
-            { role: 'system', content: activeSystemPrompt },
-            { role: 'user', content: userPrompt },
-          ],
-          response_format: { type: 'json_object' },
-          temperature: 0.1,
-        }),
-      });
+    const groqModels = ['openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'qwen/qwen3.8-27b'];
+    for (const modelName of groqModels) {
+      try {
+        const groqCall = fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${groqKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: modelName,
+            messages: [
+              { role: 'system', content: activeSystemPrompt },
+              { role: 'user', content: userPrompt },
+            ],
+            response_format: { type: 'json_object' },
+            temperature: 0.1,
+          }),
+        });
 
-      const groqRes = await withTimeout(groqCall, 10000, 'Groq precision extraction timeout');
-      if (groqRes.ok) {
-        const groqData = await groqRes.json();
-        const content = groqData.choices?.[0]?.message?.content || '';
-        const parsed = cleanAndParseJson(content, entities);
-        if (parsed) {
-          parsed.model_used = isAiSynthesisMode ? 'Groq (gpt-oss-120b) • AI Knowledge Synthesis' : 'Groq (gpt-oss-120b)';
-          return enforceGroundingOnResponse(parsed, entityAFactsText, entityBFactsText);
+        const groqRes = await withTimeout(groqCall, 16000, `Groq (${modelName}) extraction timeout`);
+        if (groqRes.ok) {
+          const groqData = await groqRes.json();
+          const content = groqData.choices?.[0]?.message?.content || '';
+          const parsed = cleanAndParseJson(content, entities);
+          if (parsed) {
+            parsed.model_used = isAiSynthesisMode ? `Groq (${modelName}) • AI Knowledge Synthesis` : `Groq (${modelName})`;
+            return enforceGroundingOnResponse(parsed, entityAFactsText, entityBFactsText);
+          }
+        } else {
+          console.warn(`Groq model ${modelName} returned status ${groqRes.status}, cascading to next model...`);
         }
+      } catch (err: any) {
+        console.warn(`Groq (${modelName}) attempt failed, cascading:`, err?.message || err);
       }
-    } catch (err: any) {
-      console.warn('Groq primary extraction failed, cascading to Gemini fallback:', err?.message || err);
     }
   }
 
@@ -686,7 +691,7 @@ ${reviewsCombinedText}
           },
         });
 
-        const response = await withTimeout(geminiCall, 15000, `Gemini (${modelName}) precision extraction timeout`);
+        const response = await withTimeout(geminiCall, 40000, `Gemini (${modelName}) precision extraction timeout`);
         const parsed = cleanAndParseJson(response.text || '', entities);
         if (parsed) {
           parsed.model_used = isAiSynthesisMode ? `Gemini (${modelName}) • AI Knowledge Synthesis` : `Gemini (${modelName})`;
