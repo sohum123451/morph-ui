@@ -1,3 +1,4 @@
+import { validateCanvasPayload } from './schemas';
 import Groq from 'groq-sdk';
 import { GoogleGenAI } from '@google/genai';
 import {
@@ -779,3 +780,5 @@ If incompatible:
 
   return { compatible: true };
 }
+
+export { validateCanvasPayload };

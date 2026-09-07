@@ -1,3 +1,4 @@
+import COMPONENT_REGISTRY, { getRegisteredComponent } from './registry';
 'use client';
 
 import React, { Component, ErrorInfo, ReactNode, memo, useEffect, useMemo, useState, useCallback } from 'react';
@@ -51,19 +52,8 @@ import {
   X,
 } from 'lucide-react';
 
-// --- 1. DETERMINISTIC COMPONENT REGISTRY ---
-export const COMPONENT_REGISTRY = {
-  ComparisonTable: ComparisonTableWidget,
-  BudgetTracker: BudgetTrackerWidget,
-  TimelineCalendar: TimelineCalendarWidget,
-  AdmissionPredictor: AdmissionPredictorWidget,
-  DivergenceLedger: DivergenceLedgerWidget,
-  comparison_table: ComparisonTableWidget,
-  budget_tracker: BudgetTrackerWidget,
-  timeline_calendar: TimelineCalendarWidget,
-  admission_predictor: AdmissionPredictorWidget,
-  divergence_ledger: DivergenceLedgerWidget,
-};
+// --- 1. CENTRALIZED GENERATIVE UI COMPONENT REGISTRY ---
+export { COMPONENT_REGISTRY, getRegisteredComponent };
 
 // --- 2. GRACEFUL WIDGET ERROR FALLBACK CARD ---
 export interface WidgetErrorFallbackProps {
@@ -164,7 +154,7 @@ export class WidgetErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoun
 
 // --- 4. SAFE COMPONENT RENDERER WITH ZOD VALIDATION ---
 export function renderWidgetComponent(type: string, data: any) {
-  const WidgetComponent = COMPONENT_REGISTRY[type as keyof typeof COMPONENT_REGISTRY];
+  const WidgetComponent = getRegisteredComponent(type);
   if (!WidgetComponent) {
     return <WidgetErrorFallback type={type} message={`Unknown widget registry type: "${type}"`} />;
   }
