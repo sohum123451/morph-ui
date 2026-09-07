@@ -1,6 +1,6 @@
-import COMPONENT_REGISTRY, { getRegisteredComponent } from './registry';
 'use client';
 
+import COMPONENT_REGISTRY, { getRegisteredComponent } from './registry';
 import React, { Component, ErrorInfo, ReactNode, memo, useEffect, useMemo, useState, useCallback } from 'react';
 import {
   ReactFlow,
