@@ -106,7 +106,7 @@ ${entities.map((_, i) => `    "<Concrete factual value for Entity ${i + 1}>"`).j
           method: 'POST',
           headers: { Authorization: `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            model: 'openai/gpt-oss-120b',
+            model: 'openai/gpt-oss-20b',
             messages: [
               { role: 'system', content: 'You are a precise JSON factual generator. Never leave fields empty or null.' },
               { role: 'user', content: prompt }
@@ -121,9 +121,37 @@ ${entities.map((_, i) => `    "<Concrete factual value for Entity ${i + 1}>"`).j
           const content = groqData.choices?.[0]?.message?.content || '{}';
           const parsed = JSON.parse(content);
           if (parsed && (Array.isArray(parsed.values) || (parsed.entity_a && parsed.entity_b))) {
-            const values = Array.isArray(parsed.values) && parsed.values.length >= entities.length
+            let values = Array.isArray(parsed.values) && parsed.values.length >= entities.length
               ? parsed.values.map(String)
               : [String(parsed.entity_a || ''), String(parsed.entity_b || '')];
+
+            // Gemini cross-verification for ambiguity resolution
+            if (apiKey) {
+              try {
+                const ai = new GoogleGenAI({ apiKey });
+                const verifyCall = ai.models.generateContent({
+                  model: 'gemini-3.6-flash',
+                  contents: [{ role: 'user', parts: [{ text: `Cross-verify and resolve any ambiguity or hallucination for custom metric "${customMetric}" comparing entities ${entities.join(' vs ')}.\nSearch facts:\n${findingsText}\n\nPreliminary values from Groq:\n${JSON.stringify(parsed, null, 2)}\n\nIf ambiguous or inaccurate, correct with the most trustable value. Return JSON: { "metric": "${customMetric}", "values": ["val1", "val2"], "source_type": "official" | "ai_consensus" }` }] }],
+                  config: { responseMimeType: 'application/json', temperature: 0.1 },
+                });
+                const verifyRes = await withTimeout(verifyCall, 6000, 'Gemini custom metric verify timeout');
+                const vParsed = JSON.parse(verifyRes.text || '{}');
+                if (vParsed && (Array.isArray(vParsed.values) || (vParsed.entity_a && vParsed.entity_b))) {
+                  const vValues = Array.isArray(vParsed.values) && vParsed.values.length >= entities.length
+                    ? vParsed.values.map(String)
+                    : [String(vParsed.entity_a || ''), String(vParsed.entity_b || '')];
+                  return NextResponse.json({
+                    metric: vParsed.metric || customMetric,
+                    values: vValues,
+                    entity_a: vValues[0] || 'Verified attribute',
+                    entity_b: vValues[1] || 'Verified attribute',
+                    source_type: vParsed.source_type === 'official' ? 'official' : (vParsed.source_type === 'unverified' ? 'unverified' : 'ai_consensus'),
+                  });
+                }
+              } catch (vErr) {
+                console.warn('Gemini custom metric verification fallback to Groq:', vErr);
+              }
+            }
 
             return NextResponse.json({
               metric: parsed.metric || customMetric,

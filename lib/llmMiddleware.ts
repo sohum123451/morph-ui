@@ -636,38 +636,108 @@ ${reviewsCombinedText}
 4. Extract granular Reddit / community sentiment across all 4 mandatory sub-topics ("Build Quality / Curriculum Depth", "Price-to-Value Ratio", "Durability / Long-Term Reliability (6+ Mos)", "Common User Complaints") with score weights, praises, pain points, and quote summaries.
 5. Produce authentic pros and a nuanced verdict summary.`;
 
-  // 1. PRIMARY MODEL: Groq (openai/gpt-oss-120b)
+  // 1. PRIMARY MODEL: Groq Multi-Tier Cascade (gpt-oss-120b -> gpt-oss-20b -> qwen3.8-27b)
   if (groqKey) {
-    try {
-      const groqCall = fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${groqKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'openai/gpt-oss-120b',
-          messages: [
-            { role: 'system', content: activeSystemPrompt },
-            { role: 'user', content: userPrompt },
-          ],
-          response_format: { type: 'json_object' },
-          temperature: 0.1,
-        }),
-      });
+    const groqModels = ['openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'qwen/qwen3.8-27b'];
+    for (const modelName of groqModels) {
+      try {
+        const groqCall = fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${groqKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: modelName,
+            messages: [
+              { role: 'system', content: activeSystemPrompt },
+              { role: 'user', content: userPrompt },
+            ],
+            response_format: { type: 'json_object' },
+            temperature: 0.1,
+          }),
+        });
 
-      const groqRes = await withTimeout(groqCall, 10000, 'Groq precision extraction timeout');
-      if (groqRes.ok) {
-        const groqData = await groqRes.json();
-        const content = groqData.choices?.[0]?.message?.content || '';
-        const parsed = cleanAndParseJson(content, entities);
-        if (parsed) {
-          parsed.model_used = isAiSynthesisMode ? 'Groq (gpt-oss-120b) • AI Knowledge Synthesis' : 'Groq (gpt-oss-120b)';
-          return enforceGroundingOnResponse(parsed, entityAFactsText, entityBFactsText);
+        const groqRes = await withTimeout(groqCall, 16000, `Groq (${modelName}) extraction timeout`);
+        if (groqRes.ok) {
+          const groqData = await groqRes.json();
+          const content = groqData.choices?.[0]?.message?.content || '';
+          const parsed = cleanAndParseJson(content, entities);
+          if (parsed) {
+            // Cross-Verification & Ambiguity Resolution with Gemini
+            if (geminiKey) {
+              try {
+                const ai = new GoogleGenAI({ apiKey: geminiKey });
+                const verificationSystemPrompt = `You are MorphUI's dual-model cross-verification and accuracy auditing engine.
+You are tasked with verifying, refining, and resolving ambiguity in a preliminary comparative matrix produced by Tier 1 (Groq).
+
+CORE AUDIT INSTRUCTIONS:
+1. CROSS-VERIFICATION & AMBIGUITY RESOLUTION:
+   - Audit every metric, entity specification value, pro, community sentiment point, and verdict summary against live search snippets and verified real-world knowledge.
+   - If there is ambiguity, conflicting data, hallucinated numbers, inverted/swapped entity values, or inaccuracies in Groq's output:
+     → CORRECT the data with the more trustable, verified, accurate value.
+   - If Groq's extracted value is accurate, well-grounded, and consistent:
+     → PRESERVE Groq's value.
+2. EXHAUSTIVE SPECIFICATION:
+   - Ensure EVERY entity has a non-empty, meaningful value for every metric row.
+   - If any metric was left vague or blank, fill it with the most accurate, realistic specification.
+3. GROUNDING METADATA:
+   - Set "source_type": "official" if directly supported by search snippets.
+   - Set "source_type": "ai_consensus" if derived from multi-source parametric knowledge synthesis.
+4. SCHEMA INTEGRITY:
+   - Output MUST strictly conform to the exact JSON structure provided in the preliminary matrix.
+   - Return ONLY valid JSON. No conversational prose, no markdown fences.`;
+
+                const verificationUserPrompt = `COMPARED ENTITIES: ${entities.join(' vs ')}
+${contextTopic ? `TOPIC / FOCUS: "${contextTopic}"` : ''}
+
+${factsCombinedText}
+
+${reviewsCombinedText}
+
+PRELIMINARY MATRIX EXTRACTED BY GROQ (${modelName}):
+${JSON.stringify(parsed, null, 2)}
+
+Audit this matrix. Resolve all ambiguities, correct any inaccurate or inverted specifications with the more trustable data, preserve accurate points, and output the finalized verified JSON matrix.`;
+
+                for (const verifyModel of ['gemini-3.6-flash']) {
+                  try {
+                    const geminiCall = ai.models.generateContent({
+                      model: verifyModel,
+                      contents: [{ role: 'user', parts: [{ text: verificationUserPrompt }] }],
+                      config: {
+                        systemInstruction: verificationSystemPrompt,
+                        responseMimeType: 'application/json',
+                        temperature: 0.1,
+                      },
+                    });
+
+                    const verifyRes = await withTimeout(geminiCall, 16000, `Gemini (${verifyModel}) cross-verification timeout`);
+                    const verifiedParsed = cleanAndParseJson(verifyRes.text || '', entities);
+                    if (verifiedParsed) {
+                      verifiedParsed.model_used = isAiSynthesisMode
+                        ? `Groq (${modelName}) + Gemini (${verifyModel}) • AI Verified`
+                        : `Groq (${modelName}) + Gemini (${verifyModel}) • Verified Consensus`;
+                      return enforceGroundingOnResponse(verifiedParsed, entityAFactsText, entityBFactsText);
+                    }
+                  } catch (mErr: any) {
+                    console.warn(`Gemini verify tier (${verifyModel}) error:`, mErr?.message || mErr);
+                  }
+                }
+              } catch (verifyErr: any) {
+                console.warn('Gemini cross-verification failed/timed out, utilizing Groq parsed baseline:', verifyErr?.message || verifyErr);
+              }
+            }
+
+            parsed.model_used = isAiSynthesisMode ? `Groq (${modelName}) • AI Knowledge Synthesis` : `Groq (${modelName})`;
+            return enforceGroundingOnResponse(parsed, entityAFactsText, entityBFactsText);
+          }
+        } else {
+          console.warn(`Groq model ${modelName} returned status ${groqRes.status}, cascading to next Groq model...`);
         }
+      } catch (err: any) {
+        console.warn(`Groq (${modelName}) attempt failed, cascading:`, err?.message || err);
       }
-    } catch (err: any) {
-      console.warn('Groq primary extraction failed, cascading to Gemini fallback:', err?.message || err);
     }
   }
 
