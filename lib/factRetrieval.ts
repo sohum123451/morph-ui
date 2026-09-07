@@ -1,9 +1,9 @@
-﻿/**
+/**
  * Parallel Fact & Reddit Retrieval Utility
- * Executes independent, parallel search queries for Entity A and Entity B:
- * 1. SerpApi / Serper / DuckDuckGo search
- * 2. Community reviews & Reddit discussions for multi-dimensional sentiment analysis
- * 3. Graceful fallback flag when search returns empty or key is absent
+ * Executes independent, parallel search queries for entities:
+ * 1. SerpApi / Serper / DuckDuckGo search with multi-query fallback expansion
+ * 2. Multi-dimensional Reddit reviews & community sentiment
+ * 3. Broadened query variants for niche/contrasting entities to guarantee rich facts
  */
 
 export interface EntityFactsResult {
@@ -81,14 +81,19 @@ async function searchDuckDuckGo(query: string, timeoutMs: number): Promise<strin
 export async function fetchEntityFacts(
   entity: string,
   contextTopic?: string,
-  timeoutMs = 2500
+  timeoutMs = 3000
 ): Promise<EntityFactsResult> {
   const serpApiKey = process.env.SERP_API_KEY;
   const serperApiKey = process.env.SERPER_API_KEY;
 
+  // Primary Query
   const searchQuery = contextTopic
-    ? `${entity} ${contextTopic} specifications ranking tuition placement statistics 2025 2026`
-    : `${entity} official overview specifications metrics ranking statistics 2025 2026`;
+    ? `${entity} ${contextTopic} specifications dimensions price ranking statistics 2025 2026`
+    : `${entity} official overview specifications dimensions price metrics ranking statistics 2025 2026`;
+
+  // Secondary Broader Fallback Queries for niche or contrasting entities
+  const broaderSpecsQuery = `${entity} technical specifications dimensions weight ground clearance engine battery price archive`;
+  const generalOverviewQuery = `${entity} overview features review capabilities`;
 
   // Multi-dimensional Reddit query targeting durability, worth-it pricing, and pain points
   const redditPrimaryQuery = `${entity} site:reddit.com OR reddit review pros cons "worth it" durability complaints`;
@@ -136,6 +141,22 @@ export async function fetchEntityFacts(
           }
         }
       }
+
+      // If primary query yielded sparse facts (<3 snippets), run broader query
+      if (factsSnippets.length < 3) {
+        const broaderUrl = `https://serpapi.com/search.json?engine=google&q=${encodeURIComponent(broaderSpecsQuery)}&api_key=${serpApiKey}&num=4`;
+        const resBroader = await fetch(broaderUrl).catch(() => null);
+        if (resBroader && resBroader.ok) {
+          const broaderData = await resBroader.json();
+          if (Array.isArray(broaderData.organic_results)) {
+            for (const item of broaderData.organic_results.slice(0, 3)) {
+              if (item.snippet && !factsSnippets.includes(item.snippet)) {
+                factsSnippets.push(item.snippet);
+              }
+            }
+          }
+        }
+      }
     } catch {
       // fallback
     }
@@ -165,15 +186,47 @@ export async function fetchEntityFacts(
         }
         if (factsSnippets.length > 0) source = 'serper_api';
       }
+
+      // Broaden if sparse
+      if (factsSnippets.length < 3) {
+        const resBroader = await fetch('https://google.serper.dev/search', {
+          method: 'POST',
+          headers: { 'X-API-KEY': serperApiKey, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ q: broaderSpecsQuery, num: 4 }),
+        }).catch(() => null);
+        if (resBroader && resBroader.ok) {
+          const bData = await resBroader.json();
+          if (Array.isArray(bData.organic)) {
+            for (const item of bData.organic.slice(0, 3)) {
+              if (item.snippet && !factsSnippets.includes(item.snippet)) {
+                factsSnippets.push(item.snippet);
+              }
+            }
+          }
+        }
+      }
     } catch {
       // fallback
     }
   }
 
-  // 3. DuckDuckGo Fallback for Facts
-  if (factsSnippets.length === 0) {
-    factsSnippets = await searchDuckDuckGo(searchQuery, timeoutMs);
-    if (factsSnippets.length > 0) source = 'duckduckgo';
+  // 3. DuckDuckGo Multi-Query Fallback for Facts
+  if (factsSnippets.length < 3) {
+    const [ddgPrimary, ddgBroader, ddgGeneral] = await Promise.all([
+      searchDuckDuckGo(searchQuery, timeoutMs),
+      searchDuckDuckGo(broaderSpecsQuery, timeoutMs),
+      searchDuckDuckGo(generalOverviewQuery, timeoutMs),
+    ]);
+
+    [...ddgPrimary, ...ddgBroader, ...ddgGeneral].forEach((snip) => {
+      if (!factsSnippets.includes(snip)) {
+        factsSnippets.push(snip);
+      }
+    });
+
+    if (factsSnippets.length > 0 && source === 'internal_knowledge') {
+      source = 'duckduckgo';
+    }
   }
 
   // 4. DuckDuckGo Fallback for Reddit & Community Sentiment if empty
@@ -201,7 +254,7 @@ export async function fetchParallelEntityFacts(
   entityA: string,
   entityB: string,
   contextTopic?: string,
-  timeoutMs = 2500
+  timeoutMs = 3000
 ): Promise<{ factsA: EntityFactsResult; factsB: EntityFactsResult }> {
   const [factsA, factsB] = await Promise.all([
     fetchEntityFacts(entityA, contextTopic, timeoutMs),
@@ -214,7 +267,7 @@ export async function fetchParallelEntityFacts(
 export async function fetchMultiEntityFacts(
   entities: string[],
   contextTopic?: string,
-  timeoutMs = 3000
+  timeoutMs = 3500
 ): Promise<EntityFactsResult[]> {
   return Promise.all(
     entities.map((entity) => fetchEntityFacts(entity, contextTopic, timeoutMs))
