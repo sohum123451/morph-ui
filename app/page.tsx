@@ -65,6 +65,7 @@ import {
 } from '@/types/morphui';
 
 import dynamic from 'next/dynamic';
+import CanvasRenderer from '@/components/CanvasRenderer';
 import { Spatial3DNodeData } from '@/components/canvas3d/types';
 import {
   PlayableMetricMatrix,
@@ -108,91 +109,91 @@ const THEME_STYLES: Record<MorphTheme, {
   canvasDotColor: string;
 }> = {
   dark: {
-    bg: 'bg-[#0B0F17] text-slate-100 selection:bg-slate-800 selection:text-white',
-    card: 'bg-[#111827]/90 border border-slate-800/90 text-slate-100 shadow-xl shadow-black/20 backdrop-blur-md',
-    cardInner: 'bg-[#0B0F17]/80 border border-slate-800/80 text-slate-300',
-    nav: 'bg-[#0B0F17]/90 border-b border-slate-800/80 text-white backdrop-blur-xl shadow-sm',
-    input: 'bg-[#0B0F17] border border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-sky-500 focus:ring-1 focus:ring-sky-500/40 focus:outline-none caret-sky-400',
-    tableHeader: 'bg-slate-900/95 text-slate-300 border-b border-slate-800',
-    tableRow: 'hover:bg-slate-800/40 border-b border-slate-800/60',
-    tableSection: 'bg-slate-950/70 hover:bg-slate-950/90 border-t border-slate-800',
+    bg: 'bg-[#090D16] text-slate-100',
+    card: 'bg-[#0F172A] border border-slate-800 text-slate-100',
+    cardInner: 'bg-[#090D16] border border-slate-800/80 text-slate-300',
+    nav: 'bg-[#090D16] border-b border-slate-800 text-white',
+    input: 'bg-[#090D16] border border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-sky-500 focus:outline-none caret-sky-400',
+    tableHeader: 'bg-[#0F172A] text-slate-300 border-b border-slate-800',
+    tableRow: 'hover:bg-slate-900/60 border-b border-slate-800/80',
+    tableSection: 'bg-[#0B1120] hover:bg-[#0F172A] border-t border-slate-800',
     badge: 'bg-slate-800 text-sky-400 border border-slate-700',
-    badgeSecondary: 'bg-slate-800 text-slate-400 border border-slate-700',
+    badgeSecondary: 'bg-slate-800/60 text-slate-400 border border-slate-700',
     subtext: 'text-slate-400',
     title: 'text-white',
     btnSecondary: 'bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white',
-    pillActive: 'bg-slate-800 text-sky-400 shadow-sm border border-slate-700 font-semibold',
+    pillActive: 'bg-slate-800 text-sky-400 border border-slate-700 font-semibold',
     pillInactive: 'text-slate-400 hover:text-slate-200',
     accentText: 'text-sky-400',
-    footer: 'border-t border-slate-800/80 bg-slate-900/40 text-slate-500',
-    sidebar: 'bg-slate-900 border-r border-slate-800 text-slate-100',
-    canvasBg: '#030712',
+    footer: 'border-t border-slate-800 bg-[#090D16] text-slate-500',
+    sidebar: 'bg-[#0F172A] border-r border-slate-800 text-slate-100',
+    canvasBg: '#090D16',
     canvasDotColor: '#1e293b',
   },
   light: {
-    bg: 'bg-[#F8FAFC] text-slate-900 selection:bg-sky-100 selection:text-slate-900',
-    card: 'bg-white border border-slate-200/90 text-slate-900 shadow-xl shadow-slate-200/50 backdrop-blur-md',
+    bg: 'bg-[#F8FAFC] text-slate-900',
+    card: 'bg-white border border-slate-200 text-slate-900',
     cardInner: 'bg-slate-50 border border-slate-200 text-slate-800',
-    nav: 'bg-white/95 border-b border-slate-200/90 text-slate-900 backdrop-blur-xl shadow-sm',
-    input: 'bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-sky-500 focus:ring-1 focus:ring-sky-500/30 focus:bg-white focus:outline-none caret-sky-600',
-    tableHeader: 'bg-slate-100/90 text-slate-700 border-b border-slate-200',
-    tableRow: 'hover:bg-slate-50/90 border-b border-slate-200/80',
-    tableSection: 'bg-slate-100/80 hover:bg-slate-200/60 border-t border-slate-200',
+    nav: 'bg-white border-b border-slate-200 text-slate-900',
+    input: 'bg-white border border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-sky-600 focus:outline-none caret-sky-600',
+    tableHeader: 'bg-slate-100 text-slate-700 border-b border-slate-200',
+    tableRow: 'hover:bg-slate-50 border-b border-slate-200',
+    tableSection: 'bg-slate-100 hover:bg-slate-200/60 border-t border-slate-200',
     badge: 'bg-sky-50 text-sky-700 border border-sky-200',
     badgeSecondary: 'bg-slate-100 text-slate-600 border border-slate-200',
     subtext: 'text-slate-600',
     title: 'text-slate-900',
-    btnSecondary: 'bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 hover:text-slate-900 shadow-xs',
-    pillActive: 'bg-white text-slate-900 shadow-sm border border-slate-300 font-bold',
+    btnSecondary: 'bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 hover:text-slate-900',
+    pillActive: 'bg-white text-slate-900 border border-slate-300 font-bold',
     pillInactive: 'text-slate-500 hover:text-slate-800',
     accentText: 'text-sky-600',
-    footer: 'border-t border-slate-200 bg-white/80 text-slate-500',
+    footer: 'border-t border-slate-200 bg-white text-slate-500',
     sidebar: 'bg-white border-r border-slate-200 text-slate-900',
-    canvasBg: '#f1f5f9',
+    canvasBg: '#F8FAFC',
     canvasDotColor: '#cbd5e1',
   },
   botanical: {
-    bg: 'bg-[#061e16] text-emerald-100 selection:bg-emerald-800 selection:text-white',
-    card: 'bg-[#0a2f23]/95 border border-emerald-800/70 text-emerald-100 shadow-xl shadow-emerald-950/60 backdrop-blur-md',
-    cardInner: 'bg-[#062219]/90 border border-emerald-900/60 text-emerald-200',
-    nav: 'bg-[#061e16]/95 border-b border-emerald-800/80 text-emerald-100 backdrop-blur-xl shadow-sm',
-    input: 'bg-[#062219] border border-emerald-800/60 text-emerald-100 placeholder:text-emerald-400/50 focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400/30 focus:outline-none',
-    tableHeader: 'bg-[#08281e] text-emerald-200 border-b border-emerald-800/60',
-    tableRow: 'hover:bg-[#0c382a]/50 border-b border-emerald-900/50',
-    tableSection: 'bg-[#07251c] hover:bg-[#0a3327] border-t border-emerald-800/60',
-    badge: 'bg-emerald-900/70 text-emerald-300 border border-emerald-700',
-    badgeSecondary: 'bg-emerald-950 text-emerald-400 border border-emerald-800',
-    subtext: 'text-emerald-300/80',
+    bg: 'bg-[#071712] text-emerald-100',
+    card: 'bg-[#0B231C] border border-emerald-900/80 text-emerald-100',
+    cardInner: 'bg-[#071712] border border-emerald-900/60 text-emerald-200',
+    nav: 'bg-[#071712] border-b border-emerald-900/80 text-emerald-100',
+    input: 'bg-[#071712] border border-emerald-800 text-emerald-100 placeholder:text-emerald-500 focus:border-emerald-400 focus:outline-none',
+    tableHeader: 'bg-[#0B231C] text-emerald-200 border-b border-emerald-900',
+    tableRow: 'hover:bg-[#0E2D24] border-b border-emerald-900/60',
+    tableSection: 'bg-[#081B15] hover:bg-[#0B231C] border-t border-emerald-900',
+    badge: 'bg-emerald-950 text-emerald-300 border border-emerald-800',
+    badgeSecondary: 'bg-emerald-950/60 text-emerald-400 border border-emerald-800',
+    subtext: 'text-emerald-400/80',
     title: 'text-emerald-50',
-    btnSecondary: 'bg-[#0a2f23] hover:bg-[#0e3d2e] border border-emerald-800/70 text-emerald-200 hover:text-white',
-    pillActive: 'bg-emerald-700 text-white shadow-sm border border-emerald-600 font-semibold',
-    pillInactive: 'text-emerald-300/70 hover:text-emerald-100',
+    btnSecondary: 'bg-[#0B231C] hover:bg-[#0E2D24] border border-emerald-800 text-emerald-200 hover:text-white',
+    pillActive: 'bg-emerald-800 text-white border border-emerald-700 font-semibold',
+    pillInactive: 'text-emerald-400 hover:text-emerald-100',
     accentText: 'text-emerald-400',
-    footer: 'border-t border-emerald-900/80 bg-[#061e16]/80 text-emerald-400/60',
-    sidebar: 'bg-[#0a2f23] border-r border-emerald-800 text-emerald-100',
-    canvasBg: '#03150e',
+    footer: 'border-t border-emerald-900 bg-[#071712] text-emerald-500',
+    sidebar: 'bg-[#0B231C] border-r border-emerald-900 text-emerald-100',
+    canvasBg: '#071712',
     canvasDotColor: '#064e3b',
   },
   pink: {
-    bg: 'bg-[#0f0714] text-pink-50 selection:bg-pink-500 selection:text-white',
-    card: 'bg-[#1a0c24]/95 border border-pink-900/50 text-pink-50 shadow-xl shadow-pink-950/50 backdrop-blur-md',
-    cardInner: 'bg-[#12071a]/90 border border-pink-950/60 text-pink-200',
-    nav: 'bg-[#0f0714]/95 border-b border-pink-900/60 text-pink-50 backdrop-blur-xl shadow-sm',
-    input: 'bg-[#12071a] border border-pink-900/60 text-pink-50 placeholder:text-pink-400/50 focus:border-pink-500 focus:ring-1 focus:ring-pink-500/30 focus:outline-none',
-    tableHeader: 'bg-[#200f2d] text-pink-200 border-b border-pink-900/50',
-    tableRow: 'hover:bg-[#281338]/50 border-b border-pink-950/50',
-    tableSection: 'bg-[#1c0d27] hover:bg-[#251134] border-t border-pink-900/50',
-    badge: 'bg-pink-950/80 text-pink-300 border border-pink-800',
-    badgeSecondary: 'bg-pink-950 text-pink-400 border border-pink-900',
-    subtext: 'text-pink-300/80',
-    title: 'text-pink-50',
-    btnSecondary: 'bg-[#1a0c24] hover:bg-[#251134] border border-pink-900/60 text-pink-200 hover:text-white',
-    pillActive: 'bg-pink-600 text-white shadow-sm border border-pink-500 font-semibold',
-    pillInactive: 'text-pink-300/70 hover:text-pink-100',
-    accentText: 'text-pink-400',
-    footer: 'border-t border-pink-950 bg-[#0f0714]/80 text-pink-400/60',
-    sidebar: 'bg-[#1a0c24] border-r border-pink-900 text-pink-50',
-    canvasBg: '#0a030e',
+    bg: 'bg-[#151016] text-rose-100',
+    card: 'bg-[#1E1720] border border-rose-950 text-rose-100',
+    cardInner: 'bg-[#151016] border border-rose-950 text-rose-200',
+    nav: 'bg-[#151016] border-b border-rose-950 text-rose-100',
+    input: 'bg-[#151016] border border-rose-900 text-rose-100 placeholder:text-rose-500 focus:border-rose-400 focus:outline-none',
+    tableHeader: 'bg-[#1E1720] text-rose-200 border-b border-rose-950',
+    tableRow: 'hover:bg-[#271E2A] border-b border-rose-950/80',
+    tableSection: 'bg-[#181219] hover:bg-[#1E1720] border-t border-rose-950',
+    badge: 'bg-rose-950/80 text-rose-300 border border-rose-800',
+    badgeSecondary: 'bg-rose-950/40 text-rose-400 border border-rose-900',
+    subtext: 'text-rose-400/80',
+    title: 'text-rose-50',
+    btnSecondary: 'bg-[#1E1720] hover:bg-[#271E2A] border border-rose-900 text-rose-200 hover:text-white',
+    pillActive: 'bg-rose-800 text-white border border-rose-700 font-semibold',
+    pillInactive: 'text-rose-400 hover:text-rose-100',
+    accentText: 'text-rose-400',
+    footer: 'border-t border-rose-950 bg-[#151016] text-rose-500',
+    sidebar: 'bg-[#1E1720] border-r border-rose-950 text-rose-100',
+    canvasBg: '#151016',
     canvasDotColor: '#3b0764',
   },
 };
@@ -212,6 +213,22 @@ const ENTITY_BADGES = [
   { bg: 'bg-amber-500/10 text-amber-400 border-amber-500/20', dot: 'bg-amber-400', text: 'text-amber-400', label: 'Option E' },
 ];
 
+function sanitizeEntityName(rawName: string): string {
+  if (!rawName) return '';
+  let trimmed = String(rawName).trim();
+  if (trimmed.includes(':')) {
+    const colonParts = trimmed.split(':');
+    if (colonParts[0].trim().length > 0) {
+      trimmed = colonParts[0].trim();
+    }
+  }
+  const bracketMatch = trimmed.match(/^([^(\[]+)[(\[]([^)\]]+)[)\]]$/);
+  if (bracketMatch && bracketMatch[1].trim().length > 0) {
+    trimmed = bracketMatch[1].trim();
+  }
+  return trimmed;
+}
+
 function isMissingValue(val: any): boolean {
   if (val === null || val === undefined) return true;
   const str = String(val).trim();
@@ -228,6 +245,32 @@ function renderValueWithFallback(val: any, fallbackText = 'Standard specificatio
     );
   }
   return val;
+}
+
+
+// Helper to filter out non-differentiating metrics (metrics where all entities have identical values)
+function filterDifferentiatingMetrics(metrics: VerifiedMetric[], entitiesCount = 2): VerifiedMetric[] {
+  if (!Array.isArray(metrics)) return [];
+  return metrics.filter((m) => {
+    if (!m || !m.metric) return false;
+    
+    // Check if entity_a and entity_b or values array are identical
+    if (m.values && m.values.length > 1) {
+      const first = String(m.values[0] || '').trim().toLowerCase();
+      const allIdentical = m.values.every((v) => String(v || '').trim().toLowerCase() === first);
+      if (allIdentical && first !== '' && !isMissingValue(m.values[0])) {
+        // If identical and trivial (like Yes/Yes, Supported/Supported), omit from high-density diff table
+        return false;
+      }
+    } else if (m.entity_a !== undefined && m.entity_b !== undefined) {
+      const valA = String(m.entity_a || '').trim().toLowerCase();
+      const valB = String(m.entity_b || '').trim().toLowerCase();
+      if (valA === valB && valA !== '' && !isMissingValue(m.entity_a)) {
+        return false;
+      }
+    }
+    return true;
+  });
 }
 
 function parseNumericValue(val: string): number | null {
@@ -467,84 +510,21 @@ function SpatialCanvasWorkspace({
   verifiedMetrics = [],
   communitySentiment = [],
   verdictSummary = '',
+  theme = 'dark',
   isStreaming = false,
 }: SpatialCanvasViewProps) {
-  const spatial3DNodes: Spatial3DNodeData[] = useMemo(() => {
-    return [
-      {
-        id: 'station-spec-matrix',
-        title: 'Spec Matrix',
-        tag: 'SPEC-01',
-        status: 'synced',
-        position: [-10, 0, 0],
-        accentColor: '#00f0ff',
-        content: (
-          <SpecMatrixWorkstation
-            data={{
-              entities,
-              category,
-              metrics: verifiedMetrics,
-            }}
-          />
-        ),
-      },
-      {
-        id: 'station-sentiment',
-        title: 'Community Insights',
-        tag: 'SENTIMENT-02',
-        status: isStreaming ? 'streaming' : 'synced',
-        position: [-3.5, 0, -6],
-        accentColor: '#818cf8',
-        content: (
-          <SentimentWorkstation
-            data={{
-              entities,
-              sentiments: communitySentiment,
-            }}
-          />
-        ),
-      },
-      {
-        id: 'station-ledger',
-        title: 'Delta Ledger',
-        tag: 'LEDGER-03',
-        status: 'synced',
-        position: [3.5, 0, -6],
-        accentColor: '#a855f7',
-        content: (
-          <LedgerWorkstation
-            data={{
-              entities,
-              metrics: verifiedMetrics,
-            }}
-          />
-        ),
-      },
-      {
-        id: 'station-verdict',
-        title: 'Executive Verdict',
-        tag: 'VERDICT-04',
-        status: 'active',
-        position: [10, 0, 0],
-        accentColor: '#10b981',
-        content: (
-          <VerdictWorkstation
-            data={{
-              entities,
-              verdictSummary,
-            }}
-          />
-        ),
-      },
-    ];
-  }, [entities, category, verifiedMetrics, communitySentiment, verdictSummary, isStreaming]);
-
   return (
-    <Spatial3DCanvas
-      nodes={spatial3DNodes}
-      isStreaming={isStreaming}
-      className="relative w-full h-[65vh] sm:h-[75vh] md:h-[calc(100vh-140px)] min-h-[500px] rounded-2xl border border-slate-800 overflow-hidden shadow-2xl bg-[#030712]"
-    />
+    <div className="w-full">
+      <CanvasRenderer
+        entities={entities}
+        category={category}
+        verifiedMetrics={verifiedMetrics}
+        communitySentiment={communitySentiment}
+        verdictSummary={verdictSummary}
+        isStreaming={isStreaming}
+        className="relative w-full h-[70vh] sm:h-[78vh] md:h-[calc(100vh-140px)] min-h-[580px] rounded-2xl border border-slate-800 overflow-hidden shadow-2xl bg-[#030712]"
+      />
+    </div>
   );
 }
 // ============================================================================
@@ -556,12 +536,41 @@ function ComparisonSkeleton({ prompt, viewMode, theme = 'dark' }: { prompt: stri
 
   if (viewMode === 'canvas') {
     return (
-      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-6">
-        <div className={`w-full h-[65vh] min-h-[500px] ${t.card} rounded-2xl flex flex-col items-center justify-center space-y-4 p-8 text-center`}>
-          <Loader2 className="w-10 h-10 text-sky-400 animate-spin" />
-          <div className="space-y-2">
-            <h3 className={`text-base font-bold ${t.title}`}>Building Spatial Graph Model...</h3>
-            <p className={`text-xs ${t.subtext} font-mono`}>Extracting entities & connecting structural consensus nodes</p>
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-4 animate-pulse">
+        <div className={`w-full h-[70vh] min-h-[550px] ${t.card} rounded-2xl p-6 relative overflow-hidden border border-slate-800 flex flex-col justify-between`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="h-5 w-36 bg-slate-800 rounded" />
+              <div className="h-5 w-24 bg-sky-900/40 rounded" />
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="h-7 w-20 bg-slate-800 rounded-lg" />
+              <div className="h-7 w-20 bg-slate-800 rounded-lg" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 my-auto">
+            <div className="p-4 rounded-xl border border-sky-500/20 bg-slate-900/80 space-y-3">
+              <div className="h-4 w-28 bg-sky-500/30 rounded" />
+              <div className="h-7 w-40 bg-slate-800 rounded" />
+              <div className="h-16 w-full bg-slate-800/60 rounded" />
+            </div>
+            <div className="p-4 rounded-xl border border-cyan-500/20 bg-slate-900/80 space-y-3">
+              <div className="h-4 w-32 bg-cyan-500/30 rounded" />
+              <div className="h-6 w-full bg-slate-800 rounded" />
+              <div className="h-6 w-full bg-slate-800 rounded" />
+              <div className="h-6 w-full bg-slate-800 rounded" />
+            </div>
+            <div className="p-4 rounded-xl border border-emerald-500/20 bg-slate-900/80 space-y-3">
+              <div className="h-4 w-28 bg-emerald-500/30 rounded" />
+              <div className="h-7 w-36 bg-slate-800 rounded" />
+              <div className="h-16 w-full bg-slate-800/60 rounded" />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between pt-4 border-t border-slate-800 text-xs font-mono text-slate-500">
+            <span>Synthesizing multi-entity graph telemetry...</span>
+            <span className="text-sky-400">Layouting nodes</span>
           </div>
         </div>
       </div>
@@ -569,33 +578,42 @@ function ComparisonSkeleton({ prompt, viewMode, theme = 'dark' }: { prompt: stri
   }
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-6 animate-pulse">
-      <div className={`p-6 sm:p-8 rounded-2xl ${t.card} space-y-6`}>
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pb-6 border-b border-slate-700/40">
-          <div className="space-y-2.5 w-full sm:w-1/3">
-            <div className="h-4 w-24 bg-sky-500/20 rounded-md" />
-            <div className="h-8 w-48 bg-slate-700/40 rounded-xl" />
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-4 animate-pulse">
+      {/* Entity Verdict & Comparison Header Skeleton */}
+      <div className={`p-6 rounded-2xl ${t.card} space-y-4`}>
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pb-4 border-b border-slate-800">
+          <div className="space-y-2 w-full sm:w-1/3">
+            <div className="h-4 w-24 bg-sky-500/30 rounded" />
+            <div className="h-7 w-48 bg-slate-800 rounded-lg" />
           </div>
-          <div className="w-12 h-12 rounded-full bg-slate-800/60 flex items-center justify-center shrink-0">
-            <Loader2 className="w-5 h-5 text-sky-400 animate-spin" />
+          <div className="px-3 py-1 bg-slate-800 text-slate-400 rounded-full text-xs font-mono">
+            Direct Spec Arbitration
           </div>
-          <div className="space-y-2.5 w-full sm:w-1/3 sm:text-right flex flex-col sm:items-end">
-            <div className="h-4 w-24 bg-indigo-500/20 rounded-md" />
-            <div className="h-8 w-48 bg-slate-700/40 rounded-xl" />
+          <div className="space-y-2 w-full sm:w-1/3 sm:text-right flex flex-col sm:items-end">
+            <div className="h-4 w-24 bg-indigo-500/30 rounded" />
+            <div className="h-7 w-48 bg-slate-800 rounded-lg" />
           </div>
         </div>
 
-        <div className="space-y-3">
-          <div className="h-5 w-44 bg-slate-700/40 rounded-md" />
-          <div className="h-20 w-full bg-slate-800/30 rounded-xl" />
+        <div className="space-y-2 pt-2">
+          <div className="h-4 w-36 bg-slate-800 rounded" />
+          <div className="h-14 w-full bg-slate-900/60 rounded-xl" />
         </div>
       </div>
 
-      <div className={`p-6 rounded-2xl ${t.card} space-y-4`}>
-        <div className="h-6 w-56 bg-slate-700/40 rounded-md" />
-        <div className="space-y-3">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-12 w-full bg-slate-800/30 rounded-xl" />
+      {/* Table Rows Skeleton */}
+      <div className={`p-5 rounded-2xl ${t.card} space-y-3`}>
+        <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+          <div className="h-5 w-44 bg-slate-800 rounded" />
+          <div className="h-5 w-24 bg-slate-800 rounded" />
+        </div>
+        <div className="space-y-2.5 pt-1">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="h-11 w-full bg-slate-900/70 border border-slate-800/60 rounded-lg flex items-center px-4 justify-between">
+              <div className="h-4 w-1/4 bg-slate-800 rounded" />
+              <div className="h-4 w-1/4 bg-slate-800 rounded" />
+              <div className="h-4 w-1/4 bg-slate-800 rounded" />
+            </div>
           ))}
         </div>
       </div>
@@ -729,6 +747,9 @@ function getClientCustomMetricFallback(metric: string, entityA: string, entityB:
   return null;
 }
 
+// Feature Flag: Contextual entity background (1-line toggle)
+const ENABLE_CONTEXTUAL_BACKGROUND = true;
+
 export default function MorphUIPage() {
   return <MorphUIContent />;
 }
@@ -740,6 +761,8 @@ function MorphUIContent() {
   const [error, setError] = useState<string | null>(null);
   const [incompatibleError, setIncompatibleError] = useState<{ error: string; message: string; entities?: string[] } | null>(null);
   const [comparisonData, setComparisonData] = useState<GenerativeComparisonResponse | null>(null);
+  const [contextImages, setContextImages] = useState<Record<string, string>>({});
+
 
   // View mode: 'spec' (Table view) vs 'canvas' (Spatial React Flow Graph)
   const [viewMode, setViewMode] = useState<'spec' | 'canvas'>('spec');
@@ -808,13 +831,21 @@ function MorphUIContent() {
 
   // Dynamic Multi-Entity Resolution
   const rawEntities: EntityVerdict[] = useMemo(() => {
+    let list: any[] = [];
     if (comparisonData?.entities && comparisonData.entities.length > 0) {
-      return comparisonData.entities;
+      list = comparisonData.entities;
+    } else if (comparisonData?.entity_a && comparisonData?.entity_b) {
+      list = [comparisonData.entity_a, comparisonData.entity_b];
     }
-    if (comparisonData?.entity_a && comparisonData?.entity_b) {
-      return [comparisonData.entity_a, comparisonData.entity_b];
-    }
-    return [];
+    
+    return list.map((ent: any, idx: number) => {
+      const rawName = typeof ent === 'object' && ent.name ? ent.name : String(ent || `Option ${idx + 1}`);
+      const cleanName = sanitizeEntityName(rawName);
+      if (typeof ent === 'object') {
+        return { ...ent, name: cleanName };
+      }
+      return { name: cleanName, pros: [] };
+    });
   }, [comparisonData]);
 
   const displayEntities: EntityVerdict[] = useMemo(() => {
@@ -827,6 +858,32 @@ function MorphUIContent() {
 
   const displayEntityA = displayEntities[0]?.name || 'Option A';
   const displayEntityB = displayEntities[1]?.name || 'Option B';
+
+  // Contextual multi-entity background image fetch
+  useEffect(() => {
+    if (!ENABLE_CONTEXTUAL_BACKGROUND || displayEntities.length === 0) return;
+    const names = displayEntities.map((e) => (typeof e === 'object' ? e.name : e)).filter(Boolean);
+    if (names.length === 0) return;
+
+    let isMounted = true;
+    const controller = new AbortController();
+
+    fetch(`/api/context-images?entities=${encodeURIComponent(names.join(','))}`, {
+      signal: controller.signal,
+    })
+      .then((res) => (res.ok ? res.json() : { images: {} }))
+      .then((data) => {
+        if (isMounted && data?.images) {
+          setContextImages(data.images);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      isMounted = false;
+      controller.abort();
+    };
+  }, [displayEntities]);
 
   const category = comparisonData?.category || 'Comparative Analysis';
   const verdictSummary = comparisonData?.verdict_summary || '';
@@ -879,8 +936,18 @@ function MorphUIContent() {
     Object.values(categories).forEach((arr) => {
       if (Array.isArray(arr)) list.push(...arr);
     });
-    return list;
-  }, [categories]);
+    
+    // Deduplicate by metric name and filter out non-differentiating metrics
+    const seen = new Set<string>();
+    const deduped = list.filter((m) => {
+      const key = (m.metric || '').trim().toLowerCase();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    return filterDifferentiatingMetrics(deduped, displayEntities.length);
+  }, [categories, displayEntities.length]);
 
   const normalizedCategories = useMemo(() => {
     const result: Record<string, VerifiedMetric[]> = {};
@@ -1055,6 +1122,7 @@ function MorphUIContent() {
     setPrompt('');
     setUploadedImages([]);
     setError(null);
+    setIncompatibleError(null);
   };
 
   const handleRunComparison = async (e?: React.FormEvent, overridePrompt?: string) => {
@@ -1062,10 +1130,15 @@ function MorphUIContent() {
     const queryToRun = (overridePrompt ?? prompt).trim();
     if (!queryToRun && uploadedImages.length === 0) return;
 
-    // Guest execution supported seamlessly without blocking
+    // Immediately synchronize prompt input if triggered via chip / suggestion
+    if (overridePrompt && overridePrompt !== prompt) {
+      setPrompt(overridePrompt);
+    }
 
+    // Immediately clear all stale errors and previous incompatible states before new request
     setLoading(true);
     setError(null);
+    setIncompatibleError(null);
 
     try {
       const payload: any = {
@@ -1493,7 +1566,7 @@ function MorphUIContent() {
                     theme === 'dark' ? t.pillActive : t.pillInactive
                   }`}
                 >
-                  <span>🌙</span>
+                  <span></span>
                   <span className="hidden sm:inline text-[11px]">Dark</span>
                 </button>
                 <button
@@ -1504,7 +1577,7 @@ function MorphUIContent() {
                     theme === 'light' ? t.pillActive : t.pillInactive
                   }`}
                 >
-                  <span>☀️</span>
+                  <span>️</span>
                   <span className="hidden sm:inline text-[11px]">Light</span>
                 </button>
                 <button
@@ -1515,7 +1588,7 @@ function MorphUIContent() {
                     theme === 'botanical' ? t.pillActive : t.pillInactive
                   }`}
                 >
-                  <span>🌸</span>
+                  <span></span>
                   <span className="hidden sm:inline text-[11px]">Botanical</span>
                 </button>
               </div>
@@ -1673,11 +1746,11 @@ function MorphUIContent() {
             <span className={`text-xs ${t.subtext} font-medium block`}>Try a sample search:</span>
             <div className="flex flex-wrap items-center justify-center gap-2">
               {[
-                { label: '👟 Nike Pegasus 41 vs Adidas Ultraboost', query: 'Nike Pegasus 41 vs Adidas Ultraboost Light' },
-                { label: '🍎 Apple vs 🥭 Mango', query: 'Apple vs Mango: Nutrition & Shelf Life' },
-                { label: '🎧 Sony WH-1000XM5 vs Bose QC Ultra', query: 'Sony WH-1000XM5 vs Bose QC Ultra' },
-                { label: '🏛️ IIT Bombay vs IIT Delhi', query: 'IIT Bombay vs IIT Delhi for Computer Science' },
-                { label: '⚡ React vs Vue', query: 'React vs Vue: Performance & DX' },
+                { label: ' Nike Pegasus 41 vs Adidas Ultraboost', query: 'Nike Pegasus 41 vs Adidas Ultraboost Light' },
+                { label: ' Apple vs  Mango', query: 'Apple vs Mango: Nutrition & Shelf Life' },
+                { label: ' Sony WH-1000XM5 vs Bose QC Ultra', query: 'Sony WH-1000XM5 vs Bose QC Ultra' },
+                { label: '️ IIT Bombay vs IIT Delhi', query: 'IIT Bombay vs IIT Delhi for Computer Science' },
+                { label: ' React vs Vue', query: 'React vs Vue: Performance & DX' },
               ].map((item, idx) => (
                 <button
                   key={idx}
@@ -2008,7 +2081,7 @@ function MorphUIContent() {
                   theme === 'dark' ? t.pillActive : t.pillInactive
                 }`}
               >
-                <span>🌙</span>
+                <span></span>
                 <span className="hidden xl:inline text-[11px]">Dark</span>
               </button>
               <button
@@ -2019,7 +2092,7 @@ function MorphUIContent() {
                   theme === 'light' ? t.pillActive : t.pillInactive
                 }`}
               >
-                <span>☀️</span>
+                <span>️</span>
                 <span className="hidden xl:inline text-[11px]">Light</span>
               </button>
               <button
@@ -2030,7 +2103,7 @@ function MorphUIContent() {
                   theme === 'botanical' ? t.pillActive : t.pillInactive
                 }`}
               >
-                <span>🌸</span>
+                <span></span>
                 <span className="hidden xl:inline text-[11px]">Botanical</span>
               </button>
             </div>
@@ -2112,21 +2185,21 @@ function MorphUIContent() {
               onClick={() => setTheme('dark')}
               className={`px-2 py-0.5 rounded-lg text-xs ${theme === 'dark' ? t.pillActive : t.pillInactive}`}
             >
-              🌙 Dark
+               Dark
             </button>
             <button
               type="button"
               onClick={() => setTheme('light')}
               className={`px-2 py-0.5 rounded-lg text-xs ${theme === 'light' ? t.pillActive : t.pillInactive}`}
             >
-              ☀️ Light
+              ️ Light
             </button>
             <button
               type="button"
               onClick={() => setTheme('botanical')}
               className={`px-2 py-0.5 rounded-lg text-xs ${theme === 'botanical' ? t.pillActive : t.pillInactive}`}
             >
-              🌸 Botanical
+               Botanical
             </button>
           </div>
           <span className={`text-[10px] font-mono ${t.subtext}`}>{activeModel.split(' ')[0]}</span>
@@ -2746,9 +2819,9 @@ function MorphUIContent() {
 
       {/* Footer */}
       <footer className={`${t.footer} py-6 mt-8 sm:mt-12 text-center text-xs w-full transition-colors duration-300`}>
-        <div className="w-full max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+        <div className="w-full max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2 font-mono">
           <span>MorphUI • Persistent Dual-View Spec Sheet & Spatial Graph Runtime</span>
-          <span>© 2026 MorphUI</span>
+          <span>© 2026 MorphUI Telemetry Engine</span>
         </div>
       </footer>
     </div>

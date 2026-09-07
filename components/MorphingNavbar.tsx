@@ -3,7 +3,7 @@
  * Figma layer naming (for parity when reverse-designed):
  *   Frame: "navbar-floating" (auto-layout, horizontal, gap-2, padding 8px)
  *     └─ Component Set: "nav-item" (variants: default / active)
- *          └─ "active-pill" (Sapphire fill, corner radius 999 — maps to layoutId)
+ *          └─ "active-pill" (Sapphire fill, corner radius 999  -  maps to layoutId)
  *          └─ "nav-label" (text, Lace/Heading token)
  *
  * Variable mapping: bg-surface/90 = Spruce@90%, bg-sapphire = active pill,

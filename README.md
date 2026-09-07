@@ -1,4 +1,4 @@
-# 🌐 MorphUI — Real-Time Generative Multi-Entity Comparison & Spatial Intelligence Engine
+#  MorphUI  -  Real-Time Generative Multi-Entity Comparison & Spatial Intelligence Engine
 
 MorphUI is a dual-engine comparison and spatial intelligence platform that transforms complex entity comparisons into **interactive side-by-side spec sheets**, **multi-dimensional de-biased community consensus matrices**, and **cinematic 3D WebGL spatial command centers**.
 
@@ -6,51 +6,51 @@ Traditional AI tools return long, unstructured walls of text. **MorphUI replaces
 
 ---
 
-## ✨ Key Capabilities
+##  Key Capabilities
 
-- ⚡ **Dual-Engine Spatial Viewport**:
+-  **Dual-Engine Spatial Viewport**:
   - Seamlessly toggle between **Structured Spec Sheet View** and **Cinematic 3D WebGL Spatial Canvas** (Three.js / `@react-three/fiber` / `@react-three/drei` with 2D ReactFlow fallback).
   - Press `V` to switch views instantly.
-- 🌌 **Full-Scale Interactive Command Center**:
+-  **Full-Scale Interactive Command Center**:
   - Immersive full-screen 3D data command center with smooth camera flight controls.
   - Physics-driven spring nodes, particle dust fields, and glowing data-stream energy bridges.
   - Playable HUD with interactive **Recharts Radar Spectrum charts** and dimension sliders.
-- 🛡️ **Pre-Flight Semantic Entity Validation**:
+- ️ **Pre-Flight Semantic Entity Validation**:
   - Pre-flight classification evaluates entity domain compatibility before initiating live tool calls or SERP lookups.
   - Gracefully aborts comparisons between completely unrelated domains (e.g. tech company vs fresh fruit vs software tool) unless a unifying context topic is provided.
   - Displays a clean dark-mode clarification state on the canvas with actionable refinement guidance.
-- 📊 **Exhaustive Extraction & Minimal Asterisk Notation**:
+-  **Exhaustive Extraction & Minimal Asterisk Notation**:
   - Guaranteed non-empty matrix cells across all compared dimensions with authentic domain-tailored specs and synthetic fallback estimation.
   - Clean, clutter-free design: bulky "AI consensus" badges are replaced with a minimal asterisk (`*`) notation next to synthesized metrics.
   - Subtle bottom footnote: `* Metrics marked with an asterisk represent AI-synthesized consensus estimates derived from multi-source data extraction.`
-- 🗣️ **4-Pillar Granular Reddit & Forum Sentiment**:
+- ️ **4-Pillar Granular Reddit & Forum Sentiment**:
   - Structured extraction across 4 mandatory dimensions:
     1. *Build Quality / Curriculum Depth*
     2. *Price-to-Value Ratio & Worth-It Verdict*
     3. *Durability / Long-Term Reliability (6+ Months)*
     4. *Common User Complaints & Buyer Remorse*
-- 🔀 **N-Way Multi-Entity Comparisons**: Compare 2, 3, 4, or more entities in parallel (e.g., `React vs Vue vs Svelte`, `Sony WH-1000XM5 vs Bose QC Ultra vs AirPods Max`).
-- 🎨 **Adaptive Three-Tier Theme System**:
-  - **🌙 Dark Mode** (`#09090b` Cyber-Tactical Slate)
-  - **☀️ Clean White Mode**
-  - **🌸 Cyberpunk C2C Pink Mode** with `localStorage` state persistence.
-- 🚀 **Multi-Model LLM Orchestration Cascade**:
+-  **N-Way Multi-Entity Comparisons**: Compare 2, 3, 4, or more entities in parallel (e.g., `React vs Vue vs Svelte`, `Sony WH-1000XM5 vs Bose QC Ultra vs AirPods Max`).
+-  **Adaptive Three-Tier Theme System**:
+  - ** Dark Mode** (`#09090b` Cyber-Tactical Slate)
+  - **️ Clean White Mode**
+  - ** Cyberpunk C2C Pink Mode** with `localStorage` state persistence.
+-  **Multi-Model LLM Orchestration Cascade**:
   1. **Groq (`openai/gpt-oss-120b`)**: Ultra-fast structured precision extraction.
   2. **Google Gemini 3.6 Flash (`gemini-3.6-flash`)**: High-accuracy fallback.
   3. **Direct Parametric Knowledge Synthesis**: Seamless fallback if search APIs are throttled.
-- 🧠 **Stale-While-Revalidate (SWR) Cache**:
+-  **Stale-While-Revalidate (SWR) Cache**:
   - Instant cache hits with background detached revalidation.
   - Circuit breaker protection and jitter stampede mitigation.
-- 🔐 **Turso DB & AES-256-GCM Stealth Encryption**:
+-  **Turso DB & AES-256-GCM Stealth Encryption**:
   - Encrypted comparison session persistence using `AES-256-GCM` and SHA-256 key derivation.
   - In-memory database fallback for zero-configuration local execution.
   - Responsive History sidebar with 1-click comparison restoration.
-- 🖼️ **Multimodal Visual Inputs & Voice Search**: Upload screenshots/images for visual fact extraction or use the Web Speech API for real-time voice queries.
-- ➕ **Dynamic AI Metric Expansion**: One-click AI-suggested comparison metric addition with optimistic UI updates.
+- ️ **Multimodal Visual Inputs & Voice Search**: Upload screenshots/images for visual fact extraction or use the Web Speech API for real-time voice queries.
+-  **Dynamic AI Metric Expansion**: One-click AI-suggested comparison metric addition with optimistic UI updates.
 
 ---
 
-## 🛠️ Architecture & Data Pipeline
+## ️ Architecture & Data Pipeline
 
 ```
 User Query (Text, Voice, or Multimodal Image)
@@ -87,7 +87,7 @@ SWR Caching Layer (Upstash / Memory Map + Jitter)
 
 ---
 
-## 🚀 Getting Started
+##  Getting Started
 
 ### Prerequisites
 
@@ -130,7 +130,7 @@ SWR Caching Layer (Upstash / Memory Map + Jitter)
 
 ---
 
-## 💡 Example Queries to Explore
+##  Example Queries to Explore
 
 - **Smartphones**: `iPhone 16 Pro vs Galaxy S25 Ultra: Camera & Battery Life`
 - **Multi-Entity Frameworks**: `React vs Vue vs Svelte vs Angular: Performance & DX`
@@ -142,7 +142,7 @@ SWR Caching Layer (Upstash / Memory Map + Jitter)
 
 ---
 
-## ⌨️ Keyboard Shortcuts
+## ️ Keyboard Shortcuts
 
 | Key | Action |
 | --- | --- |
@@ -154,6 +154,6 @@ SWR Caching Layer (Upstash / Memory Map + Jitter)
 
 ---
 
-## 📄 License
+##  License
 
 MIT © 2026 MorphUI

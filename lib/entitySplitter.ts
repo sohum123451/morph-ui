@@ -19,10 +19,44 @@ const KNOWN_ACRONYMS = new Set([
   'LDAC', 'AAC', 'SBC', 'LEP', 'BOOST', 'US', 'UK', 'EU', 'CS', 'AI/ML'
 ]);
 
-function preserveEntityName(rawName: string): string {
+export function sanitizeEntityName(rawName: string): string {
   if (!rawName) return '';
-  const trimmed = rawName.trim();
-  const words = trimmed.split(/\s+/);
+  let trimmed = String(rawName).trim();
+  
+  // 1. Extract bracketed disambiguations like "Apple [tech]" or "Apple (Fruit)"
+  const bracketMatch = trimmed.match(/^([^(\[]+)[(\[]([^)\]]+)[)\]]$/);
+  if (bracketMatch && bracketMatch[1].trim().length > 0) {
+    trimmed = bracketMatch[1].trim();
+  }
+
+  // 2. Strip colon subtitles if they remain (fallback safety)
+  if (trimmed.includes(':')) {
+    const colonParts = trimmed.split(':');
+    if (colonParts[0].trim().length > 0) {
+      trimmed = colonParts[0].trim();
+    }
+  }
+
+  return trimmed;
+}
+
+export function sanitizeMetricLabel(rawLabel: string): string {
+  if (!rawLabel) return 'Specification';
+  let str = String(rawLabel).trim();
+  if (str.includes(':') && !str.toLowerCase().startsWith('http')) {
+    const parts = str.split(':');
+    if (parts[0].trim().length >= 3) {
+      str = parts[0].trim();
+    }
+  }
+  return str;
+}
+
+export function preserveEntityName(rawName: string): string {
+  const cleaned = sanitizeEntityName(rawName);
+  if (!cleaned) return '';
+  
+  const words = cleaned.split(/\s+/);
   const normalizedWords = words.map((w) => {
     const upper = w.toUpperCase();
     if (KNOWN_ACRONYMS.has(upper)) {
@@ -45,15 +79,54 @@ export function splitMultiComparisonQuery(rawQuery: string): MultiComparisonEnti
   let query = rawQuery.trim();
   if (!query) return null;
 
+  // Strip leading comparison trigger phrases
   query = query.replace(/^(compare|versus|vs|diff|difference between|difference of)\s+/i, '');
 
   let contextTopic = '';
-  const forMatch = query.match(/\s+(?:for|in|regarding|on|as|in terms of|based on)\s+(.+)$/i);
-  if (forMatch && forMatch[1]) {
-    contextTopic = forMatch[1].trim();
-    query = query.substring(0, forMatch.index).trim();
+
+  // 1. Pattern: Prefix topic notation (e.g., "Nutrition: Apple vs Mango" or "[Nutrition] Apple vs Mango")
+  const prefixMatch = query.match(/^([A-Za-z0-9\s&/]+)[:\]]\s+(.+)$/i);
+  if (prefixMatch && prefixMatch[1] && prefixMatch[2] && (/\s+(?:vs\.?|versus|v\.?|and|or)\s+/i.test(prefixMatch[2]) || prefixMatch[2].includes(','))) {
+    contextTopic = prefixMatch[1].replace(/^\[/, '').trim();
+    query = prefixMatch[2].trim();
   }
 
+  // 2. Pattern: Suffix topic notation with colon (e.g., "Apple vs Mango: Nutrition" or "iPhone vs Galaxy: Camera & Battery")
+  if (!contextTopic) {
+    const colonMatch = query.match(/^(.+?):\s*([A-Za-z0-9\s&/,\-()]+)$/i);
+    if (colonMatch && colonMatch[1] && colonMatch[2]) {
+      const potentialEntities = colonMatch[1].trim();
+      const potentialTopic = colonMatch[2].trim();
+      // Ensure the pre-colon part actually contains comparison delimiters
+      if (/\s+(?:vs\.?|versus|v\.?|and|or|,|\+)\s+/i.test(potentialEntities) || potentialEntities.split(/\s+/).length >= 2) {
+        contextTopic = potentialTopic;
+        query = potentialEntities;
+      }
+    }
+  }
+
+  // 3. Pattern: Keyword topic notation (e.g., "Apple vs Mango in terms of nutrition" / "regarding battery")
+  if (!contextTopic) {
+    const forMatch = query.match(/\s+(?:in terms of|based on|regarding|topic:|for|in|on|as)\s+(.+)$/i);
+    if (forMatch && forMatch[1]) {
+      contextTopic = forMatch[1].trim();
+      query = query.substring(0, forMatch.index).trim();
+    }
+  }
+
+  // 4. Pattern: Dash suffix topic notation (e.g., "Apple vs Mango - Nutrition & Taste")
+  if (!contextTopic) {
+    const dashMatch = query.match(/^(.+?)\s+[-–—]\s+([A-Za-z0-9\s&/()]+)$/i);
+    if (dashMatch && dashMatch[1] && dashMatch[2]) {
+      const potentialEntities = dashMatch[1].trim();
+      if (/\s+(?:vs\.?|versus|v\.?|and|or|,|\+)\s+/i.test(potentialEntities)) {
+        contextTopic = dashMatch[2].trim();
+        query = potentialEntities;
+      }
+    }
+  }
+
+  // Split entities by comparison delimiters
   const delimiterPattern = /\s+(?:vs\.?|versus|v\.?|and|or|,|\+)\s+|\s*,\s*/gi;
   const parts = query.split(delimiterPattern).map((p) => p.trim()).filter((p) => p.length > 0);
 
@@ -73,14 +146,25 @@ export function splitMultiComparisonQuery(rawQuery: string): MultiComparisonEnti
     }
   }
 
+  // If the last entity still has a lingering colon topic (safety net)
+  if (!contextTopic && entityList.length >= 2) {
+    const last = entityList[entityList.length - 1];
+    if (last.includes(':')) {
+      const [eName, ...rest] = last.split(':');
+      entityList[entityList.length - 1] = eName.trim();
+      contextTopic = rest.join(':').trim();
+    }
+  }
+
   const seen = new Set<string>();
   const finalizedEntities: string[] = [];
 
   entityList.forEach((e) => {
-    const key = e.toLowerCase();
-    if (!seen.has(key) && e.length > 0) {
+    const sanitized = preserveEntityName(e);
+    const key = sanitized.toLowerCase();
+    if (!seen.has(key) && sanitized.length > 0) {
       seen.add(key);
-      finalizedEntities.push(preserveEntityName(e));
+      finalizedEntities.push(sanitized);
     }
   });
 
@@ -88,7 +172,9 @@ export function splitMultiComparisonQuery(rawQuery: string): MultiComparisonEnti
     return null;
   }
 
-  contextTopic = contextTopic.replace(/^[^\w\d]+|[^\w\d]+$/g, '').trim();
+  if (contextTopic) {
+    contextTopic = contextTopic.replace(/^[^\w\d]+|[^\w\d]+$/g, '').trim();
+  }
 
   return {
     entities: finalizedEntities,

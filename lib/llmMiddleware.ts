@@ -1,3 +1,31 @@
+function sanitizeEntityName(rawName: string): string {
+  if (!rawName) return '';
+  let trimmed = String(rawName).trim();
+  if (trimmed.includes(':')) {
+    const colonParts = trimmed.split(':');
+    if (colonParts[0].trim().length > 0) {
+      trimmed = colonParts[0].trim();
+    }
+  }
+  const bracketMatch = trimmed.match(/^([^(\[]+)[(\[]([^)\]]+)[)\]]$/);
+  if (bracketMatch && bracketMatch[1].trim().length > 0) {
+    trimmed = bracketMatch[1].trim();
+  }
+  return trimmed;
+}
+
+function sanitizeMetricLabel(rawLabel: string): string {
+  if (!rawLabel) return 'Specification';
+  let str = String(rawLabel).trim();
+  if (str.includes(':') && !str.toLowerCase().startsWith('http')) {
+    const parts = str.split(':');
+    if (parts[0].trim().length >= 3) {
+      str = parts[0].trim();
+    }
+  }
+  return str;
+}
+
 ﻿import Groq from 'groq-sdk';
 import { GoogleGenAI } from '@google/genai';
 import {
@@ -18,7 +46,7 @@ function withTimeout<T>(promise: Promise<T>, ms: number, errMsg: string): Promis
 }
 
 const UNIVERSAL_DYNAMIC_COMPARISON_SYSTEM_PROMPT = `You are MorphUI's universal dynamic comparative engine.
-You specialize in comparing ANY entities across infinite, unconstrained domains — including universities, consumer tech, software, footwear, cosmetics, countries, sports, and abstract concepts.
+You specialize in comparing ANY entities across infinite, unconstrained domains  -  including universities, consumer tech, software, footwear, cosmetics, countries, sports, and abstract concepts.
 
 ═══════════════════════════════════════
 CORE WORKFLOW & DYNAMIC SYNTHESIS:
@@ -158,7 +186,7 @@ function normalizeForMatch(text: string): string {
 }
 
 /**
- * Extracts "meaningful" tokens from a value string — numbers, and words 4+ chars long,
+ * Extracts "meaningful" tokens from a value string  -  numbers, and words 4+ chars long,
  * skipping common filler words that would false-positive against almost any snippet.
  */
 function extractGroundingTokens(value: string): string[] {
@@ -317,21 +345,24 @@ function cleanAndParseJson(
     if (Array.isArray(parsed.entities) && parsed.entities.length > 0) {
       resolvedEntities = parsed.entities.map((e: any, idx: number) => {
         const rawName = typeof e === 'object' && e?.name ? String(e.name) : typeof e === 'string' ? e : fallbackEntities[idx] || `Entity ${idx + 1}`;
-        const name = fallbackEntities[idx] && fallbackEntities[idx].toLowerCase() === rawName.toLowerCase()
+        const cleanRaw = sanitizeEntityName(rawName);
+        const name = fallbackEntities[idx] && fallbackEntities[idx].toLowerCase() === cleanRaw.toLowerCase()
           ? fallbackEntities[idx]
-          : rawName;
+          : cleanRaw;
 
         const pros = typeof e === 'object' && Array.isArray(e?.pros)
           ? e.pros.map(String).filter((p: string) => !isInvalidPro(p))
           : [];
         return {
-          name,
+          name: name || `Entity ${idx + 1}`,
           pros: pros.length > 0 ? pros : ['No specific pros extracted from search data'],
         };
       });
     } else if (parsed.entity_a || parsed.entity_b) {
-      const eA = fallbackEntities[0] || (typeof parsed.entity_a === 'object' && parsed.entity_a?.name ? String(parsed.entity_a.name) : 'Entity A');
-      const eB = fallbackEntities[1] || (typeof parsed.entity_b === 'object' && parsed.entity_b?.name ? String(parsed.entity_b.name) : 'Entity B');
+      const rawA = typeof parsed.entity_a === 'object' && parsed.entity_a?.name ? String(parsed.entity_a.name) : String(parsed.entity_a || 'Entity A');
+      const rawB = typeof parsed.entity_b === 'object' && parsed.entity_b?.name ? String(parsed.entity_b.name) : String(parsed.entity_b || 'Entity B');
+      const eA = sanitizeEntityName(fallbackEntities[0] || rawA);
+      const eB = sanitizeEntityName(fallbackEntities[1] || rawB);
       const prosA = typeof parsed.entity_a === 'object' && Array.isArray(parsed.entity_a?.pros)
         ? parsed.entity_a.pros.map(String).filter((p: string) => !isInvalidPro(p))
         : [];
@@ -357,7 +388,7 @@ function cleanAndParseJson(
 
     const parseMetricItem = (m: any, catOrIndex?: string | number): VerifiedMetric => {
       const catName = typeof catOrIndex === 'string' ? catOrIndex : 'General';
-      const metricName = String(m.metric || m.metric_name || m.feature_name || 'Specification').trim();
+      const metricName = sanitizeMetricLabel(String(m.metric || m.metric_name || m.feature_name || 'Specification'));
       let values: string[] = [];
 
       const isBlank = (v: any) =>
@@ -637,7 +668,7 @@ export async function generateComparisonMatrix(
 
   const userPrompt = isAiSynthesisMode
     ? `COMPARED ENTITIES (${entities.length}): ${entities.map((e, i) => `Entity ${i + 1}: "${e}"`).join(', ')}
-${contextTopic ? `Specific Focus / Topic: "${contextTopic}"` : ''}
+${contextTopic ? `CRITICAL DOMAIN & CONTEXT FOCUS: "${contextTopic}" (All entity names, pros, metrics, and verdicts MUST be evaluated strictly within the domain of ${contextTopic}).` : ''}
 
 No rigid spec sheet exists in live web results for this comparison.
 1. Analyze these entities to identify their domain (geopolitical, athletic, cosmetic, philosophical, technical, cultural, etc.).
@@ -645,7 +676,7 @@ No rigid spec sheet exists in live web results for this comparison.
 3. Extract granular Reddit / community sentiment across all 4 mandatory sub-topics ("Build Quality / Curriculum Depth", "Price-to-Value Ratio", "Durability / Long-Term Reliability (6+ Mos)", "Common User Complaints") with score weights, praises, pain points, and quote summaries.
 4. Synthesize a comprehensive, multi-category comparison JSON object. Set source_type: "ai_consensus" on all synthesized metrics.`
     : `COMPARED ENTITIES (${entities.length}): ${entities.map((e, i) => `Entity ${i + 1}: "${e}"`).join(', ')}
-${contextTopic ? `Specific Focus / Topic: "${contextTopic}"` : ''}
+${contextTopic ? `CRITICAL DOMAIN & CONTEXT FOCUS: "${contextTopic}" (All entity names, pros, metrics, and verdicts MUST be evaluated strictly within the domain of ${contextTopic}).` : ''}
 
 ${factsCombinedText}
 
@@ -724,10 +755,10 @@ ${reviewsCombinedText}
     }
   }
 
-  // All LLM providers failed — return structured error instead of fabricated data
+  // All LLM providers failed  -  return structured error instead of fabricated data
   return {
     category: 'Comparison Unavailable',
-    entities: entities.map(e => ({ name: e, pros: ['LLM inference failed — no verified data available'] })),
+    entities: entities.map(e => ({ name: e, pros: ['LLM inference failed  -  no verified data available'] })),
     entity_a: { name: entities[0] || 'Entity A', pros: ['LLM inference unavailable'] },
     entity_b: { name: entities[1] || 'Entity B', pros: ['LLM inference unavailable'] },
     categories: {

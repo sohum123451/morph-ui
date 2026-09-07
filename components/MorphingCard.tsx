@@ -1,15 +1,15 @@
 'use client';
 /**
  * Figma layer naming (for parity when reverse-designed):
- *   Frame: "feature-card" — Collapsed state (Trigger)
- *     └─ "card-icon", "card-title", "card-desc" — identical names/nesting
+ *   Frame: "feature-card"  -  Collapsed state (Trigger)
+ *     └─ "card-icon", "card-title", "card-desc"  -  identical names/nesting
  *        must exist in the Expanded state so Smart Animate (and here,
  *        framer-motion's layoutId) can interpolate without glitches.
- *   Frame: "feature-modal" — Expanded state (Detail view)
+ *   Frame: "feature-modal"  -  Expanded state (Detail view)
  *     └─ same child names as above, larger sizing + "Close" button.
  *
  * Key rule: both states use SOLID fills (bg-surface), never a fill with
- * changing alpha mid-transition — avoids the alpha-flash Framer Motion
+ * changing alpha mid-transition  -  avoids the alpha-flash Framer Motion
  * warns about when layoutId elements cross-fade backgrounds.
  */
 import { useState } from "react";
@@ -18,19 +18,19 @@ import { motion, AnimatePresence } from "framer-motion";
 const FEATURES = [
   {
     id: "spec",
-    icon: "📊",
+    icon: "",
     title: "Spec Sheet View",
     description: "Side-by-side structured comparison of every metric, generated live.",
   },
   {
     id: "graph",
-    icon: "🕸️",
+    icon: "️",
     title: "Relationship View",
     description: "See how compared entities relate to each other at a glance.",
   },
   {
     id: "voice",
-    icon: "🎙️",
+    icon: "️",
     title: "Voice Search",
     description: "Speak your comparison query instead of typing it out.",
   },
