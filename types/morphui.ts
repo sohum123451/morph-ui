@@ -112,3 +112,24 @@ export interface ImageInput {
   mimeType: string;
   name?: string;
 }
+
+
+import { z } from 'zod';
+
+export const BudgetWidgetSchema = z.object({
+  type: z.literal('BudgetTracker'),
+  title: z.string(),
+  items: z.array(z.object({ name: z.string(), cost: z.number() })),
+});
+
+export const TimelineWidgetSchema = z.object({
+  type: z.literal('TimelineCalendar'),
+  events: z.array(z.object({ date: z.string(), label: z.string() })),
+});
+
+export const CanvasPayloadSchema = z.discriminatedUnion('type', [
+  BudgetWidgetSchema,
+  TimelineWidgetSchema,
+]);
+
+export type CanvasWidgetData = z.infer<typeof CanvasPayloadSchema>;

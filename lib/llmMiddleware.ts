@@ -1,3 +1,4 @@
+import Groq from 'groq-sdk';
 import { GoogleGenAI } from '@google/genai';
 import {
   GenerativeComparisonResponse,
@@ -989,4 +990,59 @@ Generate a comprehensive comparison JSON object for all ${entities.length} entit
   const fallback = generateConcreteFallbackMulti(entities, contextTopic);
   fallback.model_used = 'MorphUI Parametric Engine';
   return fallback;
+}
+
+// --- MULTI-TIER LLM MIDDLEWARE CASCADE (Groq Llama 3.3 70B -> Gemini 2.5 Flash -> Parametric Baseline) ---
+const groqClient = process.env.GROQ_API_KEY ? new Groq({ apiKey: process.env.GROQ_API_KEY }) : null;
+const geminiClient = process.env.GEMINI_API_KEY ? new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY }) : null;
+
+const SYSTEM_PROMPT = `You are the MorphUI structural engine. Analyze the user prompt, gather constraints, and output ONLY a valid JSON array of widgets matching the requested schema. No markdown wrapping, no conversational text.`;
+
+export async function orchestrateLLMCascade(prompt: string): Promise<any> {
+  // --- TIER 1: Groq (Llama 3.3 70B) ---
+  if (groqClient) {
+    try {
+      const completion = await groqClient.chat.completions.create({
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: prompt }
+        ],
+        response_format: { type: 'json_object' },
+        temperature: 0.1,
+      });
+      
+      const text = completion.choices[0]?.message?.content;
+      if (text) return JSON.parse(text);
+    } catch (groqError) {
+      console.warn('Groq tier failed, falling back to Gemini 2.5 Flash...', groqError);
+    }
+  }
+
+  // --- TIER 2: Google Gemini 2.5 Flash Fallback ---
+  if (geminiClient) {
+    try {
+      const response = await geminiClient.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: `${SYSTEM_PROMPT}\n\nUser Request: ${prompt}`,
+        config: {
+          responseMimeType: 'application/json',
+          temperature: 0.1,
+        }
+      });
+
+      if (response.text) return JSON.parse(response.text);
+    } catch (geminiError) {
+      console.error('Gemini tier failed, deploying parametric baseline fallback.', geminiError);
+    }
+  }
+
+  // --- TIER 3: Parametric Baseline (0-Crash Resilience) ---
+  return [
+    {
+      type: 'BudgetTracker',
+      title: 'Estimated Baseline Ledger',
+      items: [{ name: 'Standard Allocation', cost: 1000 }]
+    }
+  ];
 }
