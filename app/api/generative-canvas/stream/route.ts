@@ -109,6 +109,51 @@ Top Metrics: ${JSON.stringify(metrics.slice(0, 8))}.
 User Intent / Trigger: "${userQuery || 'Autonomous Live Evaluation'}".
 Output a tool call to spawn the most relevant tile.`;
 
+        // --- TIER 0: NVIDIA NIM NEMOTRON-3 ULTRA CASCADE ---
+        const nvidiaKey = process.env.NVIDIA_API_KEY;
+        if (!synthesizedTile && nvidiaKey) {
+          try {
+            const nvidiaCall = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${nvidiaKey}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                model: 'nvidia/nemotron-3-ultra-550b-a55b',
+                messages: [
+                  {
+                    role: 'system',
+                    content: 'You are the MorphUI Autonomous Canvas Orchestrator. Select the best analytical widget [DivergenceLedger, BudgetTracker, TimelineCalendar, AdmissionPredictor, ComparisonTable]. Return JSON: {"component": "...", "title": "...", "rationale": "...", "props": {}}'
+                  },
+                  { role: 'user', content: `Entities: ${JSON.stringify(entities)}, Intent: "${userQuery || 'Telemetry'}"` }
+                ],
+                response_format: { type: 'json_object' },
+                temperature: 0.1,
+              }),
+            });
+
+            if (nvidiaCall.ok) {
+              const resData = await nvidiaCall.json();
+              const text = resData.choices?.[0]?.message?.content;
+              if (text) {
+                const parsed = JSON.parse(text);
+                if (parsed.component && WIDGET_REGISTRY[parsed.component]) {
+                  synthesizedTile = {
+                    action: 'spawn',
+                    component: parsed.component,
+                    title: parsed.title || WIDGET_REGISTRY[parsed.component].name,
+                    rationale: parsed.rationale || 'NVIDIA Nemotron 550B Telemetry Synthesis.',
+                    props: parsed.props || {},
+                  };
+                }
+              }
+            }
+          } catch (err) {
+            console.warn('[GenerativeCanvas API] Tier 0 NVIDIA NIM failed:', (err as any)?.message);
+          }
+        }
+
         // --- TIER 1: GROQ LLM STREAM / TOOL-CALL CASCADE ---
         if (groqKey) {
           const groqModels = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768'];

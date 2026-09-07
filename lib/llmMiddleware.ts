@@ -615,7 +615,45 @@ ${reviewsCombinedText}
 4. Extract granular Reddit / community sentiment across all 4 mandatory sub-topics ("Build Quality / Curriculum Depth", "Price-to-Value Ratio", "Durability / Long-Term Reliability (6+ Mos)", "Common User Complaints") with score weights, praises, pain points, and quote summaries.
 5. Produce authentic pros and a decisive, non-defeatist executive verdict summary.`;
 
-  // 1. PRIMARY MODEL: Groq Multi-Tier Cascade (gpt-oss-120b -> gpt-oss-20b -> qwen3.8-27b)
+  // 0. TIER 0 ULTRA-HIGH-PERFORMANCE MODEL: NVIDIA NIM Nemotron-3 Ultra (550B)
+  const nvidiaKey = process.env.NVIDIA_API_KEY;
+  if (nvidiaKey) {
+    try {
+      const nvidiaCall = fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${nvidiaKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'nvidia/nemotron-3-ultra-550b-a55b',
+          messages: [
+            { role: 'system', content: activeSystemPrompt },
+            { role: 'user', content: userPrompt },
+          ],
+          response_format: { type: 'json_object' },
+          temperature: 0.1,
+        }),
+      });
+
+      const nvidiaRes = await withTimeout(nvidiaCall, 18000, 'NVIDIA Nemotron-3 Ultra timeout');
+      if (nvidiaRes.ok) {
+        const data = await nvidiaRes.json();
+        const content = data.choices?.[0]?.message?.content || '';
+        const parsed = cleanAndParseJson(content, entities);
+        if (parsed) {
+          parsed.model_used = isAiSynthesisMode ? 'NVIDIA Nemotron-3 Ultra (550B) • AI Knowledge Synthesis' : 'NVIDIA Nemotron-3 Ultra (550B)';
+          return enforceGroundingOnResponse(parsed, entityAFactsText, entityBFactsText);
+        }
+      } else {
+        console.warn(`NVIDIA NIM returned status ${nvidiaRes.status}, falling back to Groq/Gemini...`);
+      }
+    } catch (err: any) {
+      console.warn('NVIDIA NIM Nemotron attempt failed, falling back:', err?.message || err);
+    }
+  }
+
+  // 1. PRIMARY MODEL: Groq Multi-Tier Cascade
   if (groqKey) {
     const groqModels = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768'];
     for (const modelName of groqModels) {
