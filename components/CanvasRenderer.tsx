@@ -468,7 +468,7 @@ const GenerativeTileNode = memo(function GenerativeTileNode({ data }: NodeProps)
   );
 });
 
-export const customNodeTypes = {
+const baseNodeTypes = {
   entityNode: EntityGraphNode,
   specMatrixNode: SpecMatrixGraphNode,
   sentimentNode: SentimentGraphNode,
@@ -480,7 +480,20 @@ export const customNodeTypes = {
   TimelineCalendar: GenerativeTileNode,
   AdmissionPredictor: GenerativeTileNode,
   DivergenceLedger: GenerativeTileNode,
+  WeatherWidget: GenerativeTileNode,
+  StockTicker: GenerativeTileNode,
+  InteractiveGraph: GenerativeTileNode,
+  ComparisonMatrix: GenerativeTileNode,
 };
+
+export const customNodeTypes: Record<string, any> = new Proxy(baseNodeTypes, {
+  get(target: any, prop: string) {
+    if (prop in target) {
+      return target[prop];
+    }
+    return GenerativeTileNode;
+  },
+});
 
 // --- 7. INTERNAL SPATIAL FLOW CONTROLLER WITH AUTONOMOUS LOOP ---
 
