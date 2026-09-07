@@ -81,55 +81,6 @@ Every object inside "categories" (and any flattened comparison_points) MUST incl
 No prose outside the JSON. No markdown fences.`;
 
 
-const BANNED_BOILERPLATE_PATTERNS = [
-  /distinguishing functional design/i,
-  /specialized architecture/i,
-  /modular design philosophy/i,
-  /streamlined operational overhead/i,
-  /turnkey configuration/i,
-  /proven domain adoption/i,
-  /high initial ease of adoption/i,
-  /no verified data found/i,
-  /not specified/i,
-  /established core specifications/i,
-  /industry benchmark specification/i,
-  /premier engineering standing/i,
-];
-
-function validateSourceTypeGrounding(
-  metricName: string,
-  values: string[],
-  claimedSourceType?: string,
-  retrievedFactsText?: string
-): 'official' | 'unverified' {
-  if (claimedSourceType !== 'official') return 'unverified';
-
-  const combinedValueText = `${metricName} ${values.join(' ')}`;
-
-  // 1. Reject banned boilerplate patterns
-  for (const pattern of BANNED_BOILERPLATE_PATTERNS) {
-    if (pattern.test(combinedValueText)) {
-      return 'unverified';
-    }
-  }
-
-  // 2. Reject if no search snippets retrieved
-  if (!retrievedFactsText || !retrievedFactsText.trim() || retrievedFactsText.includes('No search snippets retrieved.')) {
-    return 'unverified';
-  }
-
-  // 3. Extract tokens (>3 chars) and verify presence in retrieved facts
-  const tokens = combinedValueText
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, ' ')
-    .split(/\s+/)
-    .filter(t => t.length > 3 && !['with', 'from', 'that', 'this', 'have', 'for', 'than', 'more', 'less', 'user', 'users', 'which', 'their', 'entity', 'primary', 'secondary'].includes(t));
-
-  const lowerSnippet = retrievedFactsText.toLowerCase();
-  const isGrounded = tokens.some(token => lowerSnippet.includes(token));
-
-  return isGrounded ? 'official' : 'unverified';
-}
 
 
 /**
@@ -154,9 +105,12 @@ function extractGroundingTokens(value: string): string[] {
     'design', 'optimized', 'specialized', 'tailored', 'general', 'broad',
   ]);
   const normalized = normalizeForMatch(value);
-  const tokens = normalized.split(' ').filter(t => t.length >= 4 && !STOPWORDS.has(t));
+  // Include tokens >= 3 chars (e.g. spf, ram, cpu, gpu, vram, fps)
+  const tokens = normalized.split(' ').filter(t => t.length >= 3 && !STOPWORDS.has(t));
+  // Include standalone numbers and short spec tokens (e.g., "16gb", "spf30", "24gb", "4k")
   const numbers = normalized.match(/\b\d+(\.\d+)?%?\w*\b/g) || [];
-  return Array.from(new Set([...tokens, ...numbers]));
+  const shortSpecs = normalized.match(/\b[a-z]{1,4}\s?\d+\b|\b\d+\s?[a-z]{1,4}\b/gi) || [];
+  return Array.from(new Set([...tokens, ...numbers, ...shortSpecs]));
 }
 
 /**
@@ -235,8 +189,7 @@ export function enforceGroundingOnResponse(
 
 function cleanAndParseJson(
   raw: string,
-  fallbackEntities: string[],
-  retrievedFactsText?: string
+  fallbackEntities: string[]
 ): GenerativeComparisonResponse | null {
   if (!raw) return null;
   let cleaned = raw.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
@@ -325,7 +278,7 @@ function cleanAndParseJson(
               values,
               entity_a: values[0] || 'Not specified',
               entity_b: values[1] || 'Not specified',
-              source_type: validateSourceTypeGrounding(String(m.metric || m.metric_name || 'Metric'), values, m.source_type, retrievedFactsText),
+              source_type: m.source_type === 'official' ? 'official' : 'unverified',
             };
           });
 
@@ -960,71 +913,27 @@ export function generateConcreteFallbackMulti(
     suggested_metrics = ['Hydration & SSR Performance', 'Bundle Size Overhead', 'State Management DX', 'Enterprise Adoption'];
     verdict_summary = `The comparison between ${entities.join(' and ')} reflects the evolution of modern web architecture: combining robust developer ecosystems with compile-time reactive performance.`;
 
-  // 6. UNIVERSAL DOMAIN ENGINE (Dynamic Differentiated Parametric Fallback)
+  // 6. UNIVERSAL DOMAIN ENGINE (Clean Unverified Data Availability Fallback)
   } else {
     category = `${entities[0]} vs ${entities[1]} Comparative Analysis`;
 
-    entityVerdicts = entities.map((name, idx) => ({
+    entityVerdicts = entities.map((name) => ({
       name,
-      pros: [
-        `Distinguishing functional design and specialized execution profile for ${name}`,
-        `Proven domain adoption with optimized efficiency tailored for ${idx === 0 ? 'primary workflows' : 'flexible integration'}`,
-      ],
+      pros: [`Insufficient verified search data to establish specific feature pros for ${name}`],
     }));
 
-    categories['Core Specifications & Capabilities'] = [
+    categories['Data Availability'] = [
       {
-        metric: 'Primary Architectural Focus',
-        values: entities.map((e, idx) => 
-          idx === 0 
-            ? `Specialized architecture optimized for direct efficiency and core performance in ${e}`
-            : `Modular design philosophy emphasizing flexibility, scalability, and broad compatibility in ${e}`
-        ),
-        entity_a: `Specialized direct architecture of ${entities[0]}`,
-        entity_b: `Modular scalable architecture of ${entities[1]}`,
-        source_type: 'unverified',
-      },
-      {
-        metric: 'Operational Footprint & Resource Efficiency',
-        values: entities.map((e, idx) => 
-          idx === 0 
-            ? `Streamlined operational overhead with predictable high-throughput delivery in ${e}`
-            : `Dynamic resource allocation adapted for diverse multi-environment demands in ${e}`
-        ),
-        entity_a: `Streamlined resource footprint for ${entities[0]}`,
-        entity_b: `Dynamic adaptable footprint for ${entities[1]}`,
+        metric: 'Search Results & Specifications',
+        values: entities.map(() => 'No verified data found'),
+        entity_a: 'No verified data found',
+        entity_b: 'No verified data found',
         source_type: 'unverified',
       },
     ];
 
-    categories['Ecosystem & Real-World Utility'] = [
-      {
-        metric: 'Practical Usability & Deployment Lifespan',
-        values: entities.map((e, idx) => 
-          idx === 0 
-            ? `High initial ease of adoption with turnkey configuration in ${e}`
-            : `Deep configurability with long-term ecosystem extensibility in ${e}`
-        ),
-        entity_a: `Turnkey configuration and rapid adoption for ${entities[0]}`,
-        entity_b: `Deep configurability and extensibility for ${entities[1]}`,
-        source_type: 'unverified',
-      },
-    ];
-
-    community_sentiment.push({
-      topic: 'Community Consensus & Experience',
-      consensuses: entities.map((e, idx) => 
-        idx === 0 
-          ? `Users appreciate ${e} for its direct, consistent execution and straightforward learning curve.`
-          : `Users value ${e} for its versatility and robust capabilities across demanding use cases.`
-      ),
-      entity_a_consensus: `Consistent execution and straightforward onboarding for ${entities[0]}.`,
-      entity_b_consensus: `Versatile capabilities and strong adaptability for ${entities[1]}.`,
-      sentiment: 'Positive',
-    });
-
-    suggested_metrics = ['Total Cost of Ownership', 'Long-Term Durability', 'Daily Usability', 'Performance Benchmarks'];
-    verdict_summary = `Choosing between ${entities[0]} and ${entities[1]} depends on specific operational priorities: ${entities[0]} excels in direct, high-efficiency execution, while ${entities[1]} offers broader versatility and adaptability.`;
+    suggested_metrics = ['Verified Specifications', 'Official Documentation', 'User Reviews'];
+    verdict_summary = `We could not retrieve enough verified live search data to confidently compare ${entities.join(' and ')} without relying on unverified estimates.`;
   }
 
   const flatVerifiedMetrics = Object.values(categories).flat();
@@ -1172,7 +1081,7 @@ Generate a comprehensive comparison JSON object for all ${entities.length} entit
       if (groqRes.ok) {
         const groqData = await groqRes.json();
         const content = groqData.choices?.[0]?.message?.content || '';
-        const parsed = cleanAndParseJson(content, entities, factsCombinedText);
+        const parsed = cleanAndParseJson(content, entities);
         if (parsed) {
           parsed.model_used = 'Groq (llama-3.3-70b)';
           return enforceGroundingOnResponse(parsed, entityAFactsText, entityBFactsText);
@@ -1199,7 +1108,7 @@ Generate a comprehensive comparison JSON object for all ${entities.length} entit
         });
 
         const response = await withTimeout(geminiCall, 7000, `Gemini (${modelName}) precision extraction timeout`);
-        const parsed = cleanAndParseJson(response.text || '', entities, factsCombinedText);
+        const parsed = cleanAndParseJson(response.text || '', entities);
         if (parsed) {
           parsed.model_used = `Gemini (${modelName})`;
           return enforceGroundingOnResponse(parsed, entityAFactsText, entityBFactsText);
@@ -1212,7 +1121,7 @@ Generate a comprehensive comparison JSON object for all ${entities.length} entit
 
   const fallback = generateConcreteFallbackMulti(entities, contextTopic);
   fallback.model_used = 'MorphUI Parametric Engine';
-  return fallback;
+  return enforceGroundingOnResponse(fallback, entityAFactsText, entityBFactsText);
 }
 
 // --- MULTI-TIER LLM MIDDLEWARE CASCADE (Groq Llama 3.3 70B -> Gemini 2.5 Flash -> Parametric Baseline) ---
