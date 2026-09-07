@@ -1,29 +1,25 @@
 'use client';
 
-import React, { Component, ErrorInfo, ReactNode, memo } from 'react';
-import {
-  ReactFlow,
-  Background,
-  Controls,
-  MiniMap,
-  Node,
-  Edge,
-  NodeProps,
-  Handle,
-  Position,
-  BackgroundVariant,
-} from '@xyflow/react';
-import '@xyflow/react/dist/style.css';
-
+import React, { Component, ErrorInfo, ReactNode, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import { ComparisonTableWidget } from './widgets/ComparisonTableWidget';
 import { BudgetTrackerWidget } from './widgets/BudgetTrackerWidget';
 import { TimelineCalendarWidget } from './widgets/TimelineCalendarWidget';
 import { AdmissionPredictorWidget } from './widgets/AdmissionPredictorWidget';
-import {
-  BudgetWidgetSchema,
-  TimelineWidgetSchema,
-} from '@/types/morphui';
+import { BudgetWidgetSchema, TimelineWidgetSchema } from '@/types/morphui';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { Spatial3DNodeData } from './canvas3d/types';
+import { calculate3DNodePositions } from '@/lib/spatialLayout';
+
+const Spatial3DCanvas = dynamic(() => import('./canvas3d/Spatial3DCanvas'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-[650px] rounded-2xl border border-slate-800 bg-[#03060f] flex flex-col items-center justify-center space-y-3 text-cyan-400 font-mono">
+      <div className="w-8 h-8 rounded-full border-2 border-cyan-400 border-t-transparent animate-spin" />
+      <span className="text-xs uppercase tracking-wider">INITIALIZING 3D SPATIAL TELEMETRY ENGINE...</span>
+    </div>
+  ),
+});
 
 // --- 1. DETERMINISTIC COMPONENT REGISTRY ---
 export const COMPONENT_REGISTRY = {
@@ -160,7 +156,6 @@ export function renderWidgetComponent(type: string, data: any) {
     return <WidgetErrorFallback type={type} message={`Schema validation error: ${validationError}`} />;
   }
 
-  // Handle data payload variations ({ data: ... } vs flat payload)
   const widgetProps = data && data.data !== undefined ? data : { data };
 
   return (
@@ -170,69 +165,49 @@ export function renderWidgetComponent(type: string, data: any) {
   );
 }
 
-// --- 5. REACT FLOW CUSTOM NODE WRAPPER ---
-export const CanvasWidgetNode = memo(function CanvasWidgetNode({ data }: NodeProps) {
-  const widgetType = (data?.type as string) || (data?.widget_type as string) || 'ComparisonTable';
-
-  return (
-    <div className="group relative">
-      <Handle type="target" position={Position.Top} className="!bg-blue-500/80 !w-2.5 !h-2.5 !border-2 !border-zinc-950" />
-      <div className="shadow-2xl transition-transform duration-200 group-hover:scale-[1.005]">
-        {renderWidgetComponent(widgetType, data)}
-      </div>
-      <Handle type="source" position={Position.Bottom} className="!bg-blue-500/80 !w-2.5 !h-2.5 !border-2 !border-zinc-950" />
-    </div>
-  );
-});
-
-export const nodeTypes = {
-  widgetNode: CanvasWidgetNode,
-  ComparisonTable: CanvasWidgetNode,
-  BudgetTracker: CanvasWidgetNode,
-  TimelineCalendar: CanvasWidgetNode,
-  AdmissionPredictor: CanvasWidgetNode,
-};
-
-// --- 6. STANDALONE INTERACTIVE CANVAS RENDERER ---
+// --- 5. 3D WEBGL SPATIAL ENGINE RENDERER ---
 export interface CanvasRendererProps {
-  nodes: Node[];
-  edges: Edge[];
+  nodes?: any[];
+  edges?: any[];
+  widgets?: any[];
   onNodesChange?: (changes: any) => void;
   onEdgesChange?: (changes: any) => void;
   className?: string;
+  isStreaming?: boolean;
 }
 
 export function CanvasRenderer({
-  nodes,
-  edges,
-  onNodesChange,
-  onEdgesChange,
-  className = 'h-[750px] w-full rounded-2xl border border-zinc-800/80 bg-zinc-950/90 overflow-hidden',
+  nodes = [],
+  widgets = [],
+  className = 'h-[750px] w-full rounded-2xl border border-slate-800 bg-[#03060f] overflow-hidden',
+  isStreaming = false,
 }: CanvasRendererProps) {
-  return (
-    <div className={className}>
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        nodeTypes={nodeTypes}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        fitView
-        fitViewOptions={{ padding: 0.2 }}
-        minZoom={0.2}
-        maxZoom={2}
-      >
-        <Background variant={BackgroundVariant.Dots} gap={24} size={1.5} color="#3f3f46" />
-        <Controls className="!bg-zinc-900/90 !border-zinc-800 !fill-zinc-300 !text-zinc-300" />
-        <MiniMap
-          nodeStrokeWidth={3}
-          zoomable
-          pannable
-          className="!bg-zinc-900/90 !border-zinc-800 rounded-xl overflow-hidden"
-        />
-      </ReactFlow>
-    </div>
-  );
+  const inputList = nodes.length > 0 ? nodes : widgets;
+  const positions = useMemo(() => calculate3DNodePositions(inputList.length), [inputList.length]);
+
+  const colors = ['#00f0ff', '#818cf8', '#a855f7', '#10b981', '#f43f5e'];
+
+  const spatial3DNodes: Spatial3DNodeData[] = useMemo(() => {
+    return inputList.map((item, idx) => {
+      const data = item.data || item;
+      const type = (data?.type as string) || (data?.widget_type as string) || (item.type as string) || 'ComparisonTable';
+      const id = item.id || `node-${idx}`;
+      const title = data.title || type;
+      const pos = positions[idx] || [idx * 8 - 8, 2, 0];
+
+      return {
+        id,
+        title,
+        tag: `STATION-0${idx + 1}`,
+        status: isStreaming ? 'streaming' : 'synced',
+        position: pos,
+        accentColor: colors[idx % colors.length],
+        content: renderWidgetComponent(type, data),
+      };
+    });
+  }, [inputList, positions, isStreaming]);
+
+  return <Spatial3DCanvas nodes={spatial3DNodes} isStreaming={isStreaming} className={className} />;
 }
 
 export default CanvasRenderer;
