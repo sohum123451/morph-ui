@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import {
   GenerativeComparisonResponse,
@@ -12,43 +11,15 @@ import {
 } from '@/types/morphui';
 import {
   SearchIcon,
-  SlidersIcon,
-  SpatialIcon,
-  ThreeDIcon,
   WarningIcon,
   ShieldIcon,
   PlusIcon,
   SpinnerIcon,
   MicIcon,
-  RefreshIcon,
+  SunIcon,
+  MoonIcon,
 } from '@/components/icons/CustomIcons';
-import { PriorityLens } from '@/components/lenses/PriorityLens';
-
-const DivergenceField = dynamic(
-  () => import('@/components/lenses/DivergenceField').then((mod) => mod.DivergenceField),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="w-full h-[650px] rounded-xl border border-[#355E58] bg-[#053229] flex flex-col items-center justify-center space-y-3 text-[#72B0AB] font-mono">
-        <SpinnerIcon className="w-6 h-6 text-[#FE9179]" />
-        <span className="text-xs uppercase tracking-widest">INITIALIZING DIVERGENCE FIELD TOPOLOGY...</span>
-      </div>
-    ),
-  }
-);
-
-const Playable3DCanvas = dynamic(
-  () => import('@/components/lenses/Playable3DCanvas').then((mod) => mod.Playable3DCanvas),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="w-full h-[650px] rounded-xl border border-[#355E58] bg-[#053229] flex flex-col items-center justify-center space-y-3 text-[#72B0AB] font-mono">
-        <SpinnerIcon className="w-6 h-6 text-[#FE9179]" />
-        <span className="text-xs uppercase tracking-widest">MOUNTING PLAYABLE 3D WEBGL ENGINE...</span>
-      </div>
-    ),
-  }
-);
+import { CanvasRenderer } from '@/components/CanvasRenderer';
 
 const SAMPLE_QUERIES = [
   'iPhone 16 Pro vs Pixel 9 Pro',
@@ -69,6 +40,12 @@ export default function MorphUIWorkbench() {
     entities?: string[];
   } | null>(null);
 
+  // Theming state: 'dark' | 'light'
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+
+  // Fullscreen state
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
   // Active View: 'priority' | 'divergence' | 'spatial3d'
   const [activeLens, setActiveLens] = useState<'priority' | 'divergence' | 'spatial3d'>('priority');
 
@@ -82,6 +59,32 @@ export default function MorphUIWorkbench() {
   // Custom metric input
   const [customMetricInput, setCustomMetricInput] = useState('');
   const [addingMetric, setAddingMetric] = useState(false);
+
+  // Initialize theme from localStorage or default to dark
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('morphui_theme') as 'dark' | 'light' | null;
+    if (savedTheme) {
+      setTheme(savedTheme);
+      if (savedTheme === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    } else {
+      document.documentElement.classList.add('dark');
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    const newTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(newTheme);
+    localStorage.setItem('morphui_theme', newTheme);
+    if (newTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  };
 
   // Synchronize comparison metrics when new data arrives
   useEffect(() => {
@@ -287,58 +290,40 @@ export default function MorphUIWorkbench() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#053229] text-[#FFEDD1] flex flex-col font-sans selection:bg-[#FE9179] selection:text-[#053229]">
+    <div className="min-h-screen bg-theme-bg text-theme-text flex flex-col font-sans selection:bg-theme-accent selection:text-theme-bg">
       {/* Top Header Bar */}
-      <header className="w-full border-b border-[#355E58] bg-[#053229]/90 backdrop-blur-md sticky top-0 z-30 px-4 sm:px-8 py-3.5 flex items-center justify-between">
+      <header className="w-full border-b border-theme-border bg-theme-bg/95 backdrop-blur-md sticky top-0 z-30 px-4 sm:px-8 py-3.5 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-7 h-7 rounded-lg bg-[#355E58] border border-[#72B0AB] flex items-center justify-center font-bold text-xs text-[#FE9179]">
+          <div className="w-7 h-7 rounded-lg bg-theme-card border border-theme-focus flex items-center justify-center font-bold text-xs text-theme-accent">
             M
           </div>
           <div>
-            <span className="font-bold text-sm tracking-tight text-[#FFEDD1]">MorphUI</span>
-            <span className="hidden sm:inline-block ml-2 text-[11px] font-mono text-[#BCDDDC]">
+            <span className="font-bold text-sm tracking-tight text-theme-text">MorphUI</span>
+            <span className="hidden sm:inline-block ml-2 text-[11px] font-mono text-theme-secondary">
               Real-Time Comparative Workbench
             </span>
           </div>
         </div>
 
-        {/* Tri-View Lens Navigation Switcher */}
-        <div className="flex items-center gap-1 p-1 rounded-lg bg-[#355E58] border border-[#355E58]">
+        {/* Header Right Actions: Theme Toggle */}
+        <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setActiveLens('priority')}
-            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 ${
-              activeLens === 'priority'
-                ? 'bg-[#053229] text-[#FFEDD1] shadow-md'
-                : 'text-[#BCDDDC] hover:text-[#FFEDD1]'
-            }`}
+            onClick={toggleTheme}
+            className="p-2 rounded-lg bg-theme-card border border-theme-border text-theme-text hover:border-theme-accent transition-colors flex items-center gap-1.5 text-xs font-semibold"
+            title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} mode`}
           >
-            <SlidersIcon className="w-3.5 h-3.5 text-[#FE9179]" />
-            <span>Priority Lens</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveLens('divergence')}
-            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 ${
-              activeLens === 'divergence'
-                ? 'bg-[#053229] text-[#FFEDD1] shadow-md'
-                : 'text-[#BCDDDC] hover:text-[#FFEDD1]'
-            }`}
-          >
-            <SpatialIcon className="w-3.5 h-3.5 text-[#72B0AB]" />
-            <span>Divergence Field</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveLens('spatial3d')}
-            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 ${
-              activeLens === 'spatial3d'
-                ? 'bg-[#053229] text-[#FFEDD1] shadow-md'
-                : 'text-[#BCDDDC] hover:text-[#FFEDD1]'
-            }`}
-          >
-            <ThreeDIcon className="w-3.5 h-3.5 text-[#CFB97E]" />
-            <span>3D Space</span>
+            {theme === 'dark' ? (
+              <>
+                <SunIcon className="w-4 h-4 text-theme-accent" />
+                <span className="hidden sm:inline">Light</span>
+              </>
+            ) : (
+              <>
+                <MoonIcon className="w-4 h-4 text-theme-focus" />
+                <span className="hidden sm:inline">Dark</span>
+              </>
+            )}
           </button>
         </div>
       </header>
@@ -346,7 +331,7 @@ export default function MorphUIWorkbench() {
       {/* Main Container */}
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         {/* Search & Query Execution Bar */}
-        <section className="w-full p-4 sm:p-5 rounded-xl bg-[#355E58] border border-[#355E58] space-y-3">
+        <section className="w-full p-4 sm:p-5 rounded-xl bg-theme-card border border-theme-border space-y-3 shadow-sm">
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -361,13 +346,13 @@ export default function MorphUIWorkbench() {
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder="Compare entities (e.g. 'iPhone 16 Pro vs Pixel 9 Pro', 'React vs Svelte')..."
                 disabled={loading}
-                className="w-full bg-[#053229] border border-[#355E58] text-[#FFEDD1] placeholder-[#BCDDDC]/60 rounded-lg px-4 py-2.5 text-xs sm:text-sm outline-none focus:border-[#72B0AB] transition-colors"
+                className="w-full bg-theme-bg border border-theme-border text-theme-text placeholder-theme-secondary/60 rounded-lg px-4 py-2.5 text-xs sm:text-sm outline-none focus:border-theme-focus transition-colors"
               />
               <button
                 type="button"
                 onClick={toggleVoiceInput}
                 className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs p-1 rounded transition-colors ${
-                  isListening ? 'text-[#FE9179] animate-pulse' : 'text-[#BCDDDC] hover:text-[#FFEDD1]'
+                  isListening ? 'text-theme-accent animate-pulse' : 'text-theme-secondary hover:text-theme-text'
                 }`}
                 title="Voice input"
               >
@@ -378,16 +363,16 @@ export default function MorphUIWorkbench() {
             <button
               type="submit"
               disabled={loading || !prompt.trim()}
-              className="px-5 py-2.5 rounded-lg text-xs sm:text-sm font-bold bg-[#FE9179] hover:bg-[#FE9179]/90 text-[#053229] transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 shrink-0"
+              className="px-5 py-2.5 rounded-lg text-xs sm:text-sm font-bold bg-theme-accent hover:bg-theme-accent-hover text-theme-bg transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 shrink-0"
             >
               {loading ? (
                 <>
-                  <SpinnerIcon className="w-4 h-4 text-[#053229]" />
+                  <SpinnerIcon className="w-4 h-4 text-theme-bg" />
                   <span>Synthesizing...</span>
                 </>
               ) : (
                 <>
-                  <SearchIcon className="w-4 h-4 text-[#053229]" />
+                  <SearchIcon className="w-4 h-4 text-theme-bg" />
                   <span>Execute Comparison</span>
                 </>
               )}
@@ -396,7 +381,7 @@ export default function MorphUIWorkbench() {
 
           {/* Sample Query Chips */}
           <div className="flex items-center gap-2 flex-wrap pt-1">
-            <span className="text-[11px] font-mono text-[#BCDDDC]">Suggested:</span>
+            <span className="text-[11px] font-mono text-theme-secondary">Suggested:</span>
             {SAMPLE_QUERIES.map((sq, idx) => (
               <button
                 key={idx}
@@ -406,7 +391,7 @@ export default function MorphUIWorkbench() {
                   handleExecuteComparison(sq);
                 }}
                 disabled={loading}
-                className="px-2.5 py-1 rounded-md text-[11px] font-medium bg-[#053229] hover:bg-[#053229]/80 border border-[#355E58] text-[#BCDDDC] hover:text-[#FFEDD1] transition-colors"
+                className="px-2.5 py-1 rounded-md text-[11px] font-medium bg-theme-bg hover:bg-theme-secondary/15 border border-theme-border text-theme-secondary hover:text-theme-text transition-colors"
               >
                 {sq}
               </button>
@@ -416,9 +401,9 @@ export default function MorphUIWorkbench() {
 
         {/* Error Alert Box */}
         {error && !incompatibleError && (
-          <div className="p-4 rounded-xl bg-[#355E58] border border-[#FE9179]/50 text-xs sm:text-sm text-[#FFEDD1] flex items-center justify-between">
+          <div className="p-4 rounded-xl bg-theme-card border border-theme-accent/50 text-xs sm:text-sm text-theme-text flex items-center justify-between">
             <span>{error}</span>
-            <button onClick={() => setError(null)} className="font-bold text-[#FE9179] hover:underline ml-3">
+            <button onClick={() => setError(null)} className="font-bold text-theme-accent hover:underline ml-3">
               Dismiss
             </button>
           </div>
@@ -426,19 +411,19 @@ export default function MorphUIWorkbench() {
 
         {/* Incompatible Entities Clarification State */}
         {incompatibleError && (
-          <div className="p-5 sm:p-6 rounded-xl bg-[#355E58] border border-[#CFB97E] text-xs sm:text-sm text-[#FFEDD1] space-y-3">
-            <div className="flex items-center gap-2.5 text-[#CFB97E] font-bold text-sm">
+          <div className="p-5 sm:p-6 rounded-xl bg-theme-card border border-theme-focus text-xs sm:text-sm text-theme-text space-y-3">
+            <div className="flex items-center gap-2.5 text-theme-accent font-bold text-sm">
               <WarningIcon className="w-5 h-5" />
               <span>Incompatible Comparison Entities Detected</span>
             </div>
-            <p className="text-[#FFEDD1] leading-relaxed">
+            <p className="text-theme-text leading-relaxed">
               {incompatibleError.message}
             </p>
             {incompatibleError.entities && incompatibleError.entities.length > 0 && (
               <div className="flex items-center gap-2 flex-wrap pt-1">
-                <span className="text-[11px] font-mono text-[#BCDDDC]">Entities Checked:</span>
+                <span className="text-[11px] font-mono text-theme-secondary">Entities Checked:</span>
                 {incompatibleError.entities.map((ent, i) => (
-                  <span key={i} className="px-2 py-0.5 rounded bg-[#053229] border border-[#355E58] text-xs font-mono text-[#FFEDD1]">
+                  <span key={i} className="px-2 py-0.5 rounded bg-theme-bg border border-theme-border text-xs font-mono text-theme-text">
                     {ent}
                   </span>
                 ))}
@@ -449,88 +434,64 @@ export default function MorphUIWorkbench() {
 
         {/* Skeleton Loading State */}
         {loading && (
-          <div className="p-6 sm:p-8 rounded-xl bg-[#355E58] border border-[#355E58] space-y-6 animate-pulse">
-            <div className="flex items-center justify-between border-b border-[#053229]/40 pb-4">
-              <div className="h-5 w-40 bg-[#053229] rounded" />
-              <div className="h-4 w-24 bg-[#053229] rounded" />
+          <div className="p-6 sm:p-8 rounded-xl bg-theme-card border border-theme-border space-y-6 animate-pulse">
+            <div className="flex items-center justify-between border-b border-theme-border pb-4">
+              <div className="h-5 w-40 bg-theme-bg rounded" />
+              <div className="h-4 w-24 bg-theme-bg rounded" />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="h-28 bg-[#053229] rounded-lg" />
-              <div className="h-28 bg-[#053229] rounded-lg" />
+              <div className="h-28 bg-theme-bg rounded-lg" />
+              <div className="h-28 bg-theme-bg rounded-lg" />
             </div>
             <div className="space-y-3 pt-2">
-              <div className="h-10 bg-[#053229] rounded" />
-              <div className="h-10 bg-[#053229] rounded" />
-              <div className="h-10 bg-[#053229] rounded" />
+              <div className="h-10 bg-theme-bg rounded" />
+              <div className="h-10 bg-theme-bg rounded" />
+              <div className="h-10 bg-theme-bg rounded" />
             </div>
           </div>
         )}
 
-        {/* Live Multi-Lens Visual Workspace */}
+        {/* Live Multi-Lens Visual Workspace with CanvasRenderer & Fullscreen Mode */}
         {!loading && comparisonData && (
           <div className="space-y-6">
-            {/* 1. Active Interactive Lens with Continuous Data Handoff */}
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeLens}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.22, ease: 'easeOut' }}
-              >
-                {activeLens === 'priority' && (
-                  <PriorityLens
-                    entities={entities}
-                    metrics={orderedMetrics}
-                    weights={metricWeights}
-                    onWeightChange={handleWeightChange}
-                    onMoveMetric={handleMoveMetric}
-                    onResetWeights={handleResetWeights}
-                  />
-                )}
+            {/* 1. CanvasRenderer hosting Priority Lens, Divergence Field, and Playable 3D Space */}
+            <CanvasRenderer
+              activeLens={activeLens}
+              onSelectLens={setActiveLens}
+              entities={entities}
+              metrics={orderedMetrics}
+              weights={metricWeights}
+              onWeightChange={handleWeightChange}
+              onMoveMetric={handleMoveMetric}
+              onResetWeights={handleResetWeights}
+              isFullscreen={isFullscreen}
+              onToggleFullscreen={() => setIsFullscreen((prev) => !prev)}
+            />
 
-                {activeLens === 'divergence' && (
-                  <DivergenceField
-                    entities={entities}
-                    metrics={orderedMetrics}
-                    weights={metricWeights}
-                  />
-                )}
-
-                {activeLens === 'spatial3d' && (
-                  <Playable3DCanvas
-                    entities={entities}
-                    metrics={orderedMetrics}
-                    weights={metricWeights}
-                  />
-                )}
-              </motion.div>
-            </AnimatePresence>
-
-            {/* 2. Executive Synthesis & Nuanced Verdict */}
+            {/* 2. Executive Synthesis & Strategic Verdict */}
             {comparisonData.verdict_summary && (
-              <section className="p-5 sm:p-6 rounded-xl bg-[#355E58] border border-[#355E58] space-y-4">
-                <div className="flex items-center gap-2 border-b border-[#053229]/40 pb-3">
-                  <ShieldIcon className="w-4 h-4 text-[#72B0AB]" />
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-[#FFEDD1]">
+              <section className="p-5 sm:p-6 rounded-xl bg-theme-card border border-theme-border space-y-4 shadow-sm">
+                <div className="flex items-center gap-2 border-b border-theme-border pb-3">
+                  <ShieldIcon className="w-4 h-4 text-theme-focus" />
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-theme-text">
                     Executive Synthesis & Strategic Verdict
                   </h3>
                 </div>
-                <p className="text-xs sm:text-sm text-[#FFEDD1] leading-relaxed p-4 rounded-lg bg-[#053229] border border-[#355E58]">
+                <p className="text-xs sm:text-sm text-theme-text leading-relaxed p-4 rounded-lg bg-theme-bg border border-theme-border">
                   {comparisonData.verdict_summary}
                 </p>
 
                 {/* Entity Strengths */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                   {entities.map((ent, idx) => (
-                    <div key={idx} className="p-3.5 rounded-lg bg-[#053229] border border-[#355E58] space-y-2">
-                      <div className="font-bold text-xs text-[#FFEDD1] truncate">
+                    <div key={idx} className="p-3.5 rounded-lg bg-theme-bg border border-theme-border space-y-2">
+                      <div className="font-bold text-xs text-theme-text truncate">
                         Recommended Scenarios for {ent.name}
                       </div>
-                      <ul className="space-y-1.5 text-xs text-[#BCDDDC]">
+                      <ul className="space-y-1.5 text-xs text-theme-secondary">
                         {(ent.pros && ent.pros.length > 0 ? ent.pros : ['Distinguishing functional strength']).map((pro, pIdx) => (
                           <li key={pIdx} className="flex items-start gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#FE9179] shrink-0 mt-1.5" />
+                            <span className="w-1.5 h-1.5 rounded-full bg-theme-accent shrink-0 mt-1.5" />
                             <span>{pro}</span>
                           </li>
                         ))}
@@ -543,36 +504,36 @@ export default function MorphUIWorkbench() {
 
             {/* 3. Granular Reddit & Forum Community Insights */}
             {comparisonData.community_sentiment && comparisonData.community_sentiment.length > 0 && (
-              <section className="p-5 sm:p-6 rounded-xl bg-[#355E58] border border-[#355E58] space-y-4">
-                <div className="flex items-center justify-between border-b border-[#053229]/40 pb-3">
+              <section className="p-5 sm:p-6 rounded-xl bg-theme-card border border-theme-border space-y-4 shadow-sm">
+                <div className="flex items-center justify-between border-b border-theme-border pb-3">
                   <div className="flex items-center gap-2">
-                    <ShieldIcon className="w-4 h-4 text-[#72B0AB]" />
-                    <h3 className="text-sm font-bold uppercase tracking-wider text-[#FFEDD1]">
+                    <ShieldIcon className="w-4 h-4 text-theme-focus" />
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-theme-text">
                       Community Sentiment & Real-World Forum Insights
                     </h3>
                   </div>
-                  <span className="text-[11px] font-mono text-[#BCDDDC]">Normalized Consensus</span>
+                  <span className="text-[11px] font-mono text-theme-secondary">Normalized Consensus</span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {comparisonData.community_sentiment.map((cs, idx) => (
-                    <div key={idx} className="p-3.5 rounded-lg bg-[#053229] border border-[#355E58] space-y-2 text-xs">
+                    <div key={idx} className="p-3.5 rounded-lg bg-theme-bg border border-theme-border space-y-2 text-xs">
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-[#FFEDD1]">{cs.topic}</span>
-                        <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-[#355E58] text-[#BCDDDC]">
+                        <span className="font-bold text-theme-text">{cs.topic}</span>
+                        <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-theme-card text-theme-secondary border border-theme-border">
                           Score: {cs.score_weight || 7}/10
                         </span>
                       </div>
-                      <div className="space-y-1 text-[#BCDDDC]">
+                      <div className="space-y-1 text-theme-secondary">
                         {cs.praises && cs.praises.length > 0 && (
                           <div>
-                            <span className="text-[#72B0AB] font-semibold">Praises: </span>
+                            <span className="text-theme-focus font-semibold">Praises: </span>
                             {cs.praises.join(', ')}
                           </div>
                         )}
                         {cs.pain_points && cs.pain_points.length > 0 && (
                           <div>
-                            <span className="text-[#FE9179] font-semibold">Friction Points: </span>
+                            <span className="text-theme-accent font-semibold">Friction Points: </span>
                             {cs.pain_points.join(', ')}
                           </div>
                         )}
@@ -584,12 +545,12 @@ export default function MorphUIWorkbench() {
             )}
 
             {/* 4. Append Custom Metric */}
-            <section className="p-4 sm:p-5 rounded-xl bg-[#355E58] border border-[#355E58] space-y-3">
-              <div className="flex items-center justify-between text-xs border-b border-[#053229]/40 pb-2">
-                <span className="font-bold uppercase tracking-wider text-[#FFEDD1]">
+            <section className="p-4 sm:p-5 rounded-xl bg-theme-card border border-theme-border space-y-3 shadow-sm">
+              <div className="flex items-center justify-between text-xs border-b border-theme-border pb-2">
+                <span className="font-bold uppercase tracking-wider text-theme-text">
                   Add Dimension to Active Priority Lens
                 </span>
-                <span className="text-[11px] font-mono text-[#BCDDDC]">Live Extraction</span>
+                <span className="text-[11px] font-mono text-theme-secondary">Live Extraction</span>
               </div>
 
               <form
@@ -605,14 +566,14 @@ export default function MorphUIWorkbench() {
                   onChange={(e) => setCustomMetricInput(e.target.value)}
                   placeholder="+ Add custom metric (e.g. Battery endurance, RAM bandwidth)..."
                   disabled={addingMetric}
-                  className="flex-1 bg-[#053229] border border-[#355E58] text-[#FFEDD1] placeholder-[#BCDDDC]/60 rounded-lg px-3.5 py-2 text-xs outline-none focus:border-[#72B0AB]"
+                  className="flex-1 bg-theme-bg border border-theme-border text-theme-text placeholder-theme-secondary/60 rounded-lg px-3.5 py-2 text-xs outline-none focus:border-theme-focus transition-colors"
                 />
                 <button
                   type="submit"
                   disabled={addingMetric || !customMetricInput.trim()}
-                  className="px-4 py-2 rounded-lg text-xs font-bold bg-[#FE9179] text-[#053229] disabled:opacity-40 shrink-0 flex items-center gap-1.5"
+                  className="px-4 py-2 rounded-lg text-xs font-bold bg-theme-accent hover:bg-theme-accent-hover text-theme-bg disabled:opacity-40 shrink-0 flex items-center gap-1.5 transition-colors"
                 >
-                  {addingMetric ? <SpinnerIcon className="w-3.5 h-3.5 text-[#053229]" /> : <PlusIcon className="w-3.5 h-3.5 text-[#053229]" />}
+                  {addingMetric ? <SpinnerIcon className="w-3.5 h-3.5 text-theme-bg" /> : <PlusIcon className="w-3.5 h-3.5 text-theme-bg" />}
                   <span>Add</span>
                 </button>
               </form>
@@ -622,15 +583,15 @@ export default function MorphUIWorkbench() {
       </main>
 
       {/* Footer */}
-      <footer className="w-full border-t border-[#355E58] bg-[#053229] py-5 mt-10 text-xs text-[#BCDDDC]">
+      <footer className="w-full border-t border-theme-border bg-theme-bg py-5 mt-10 text-xs text-theme-secondary">
         <div className="max-w-7xl mx-auto px-4 sm:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
           <span>MorphUI • Real-Time Comparative Lens Workbench</span>
           <div className="flex items-center gap-4">
-            <Link href="/terms" className="text-[#72B0AB] hover:underline">
+            <Link href="/terms" className="text-theme-focus hover:underline">
               Terms of Service
             </Link>
             <span>•</span>
-            <Link href="/privacy" className="text-[#72B0AB] hover:underline">
+            <Link href="/privacy" className="text-theme-focus hover:underline">
               Privacy Policy
             </Link>
           </div>

@@ -99,31 +99,31 @@ export function PriorityLens({
   const leader = compositeScores[0];
 
   return (
-    <div className="w-full space-y-6 text-[#FFEDD1]">
-      {/* Live Priority Leaderboard Banner with Framer Motion Layout Reordering */}
-      <div className="p-4 sm:p-5 rounded-xl bg-[#355E58] border border-[#355E58] space-y-3">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-[#053229]/40 pb-3">
+    <div className="w-full space-y-6 text-theme-text">
+      {/* Live Priority Scoreboard Leaderboard with Framer Motion Layout Animation */}
+      <div className="p-4 sm:p-5 rounded-xl bg-theme-card border border-theme-border space-y-3 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-theme-border pb-3">
           <div className="flex items-center gap-2">
-            <SlidersIcon className="w-4 h-4 text-[#FE9179]" />
-            <h3 className="text-sm font-bold text-[#FFEDD1] uppercase tracking-wider">
-              Priority Lens Weighted Matrix
+            <SlidersIcon className="w-4 h-4 text-theme-accent" />
+            <h3 className="text-sm font-bold text-theme-text uppercase tracking-wider">
+              Live Priority Scoreboard
             </h3>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-xs text-[#BCDDDC]">
-              {leader ? `Top Ranked: ${leader.name} (${leader.score}/100)` : 'Adjust weights to evaluate trade-offs'}
+            <span className="text-xs text-theme-secondary font-medium">
+              {leader ? `Leading: ${leader.name} (${leader.score}/100)` : 'Adjust weights to evaluate real-time trade-offs'}
             </span>
             <button
               type="button"
               onClick={onResetWeights}
-              className="text-[11px] font-mono text-[#72B0AB] hover:underline"
+              className="text-[11px] font-mono text-theme-focus hover:underline"
             >
               Reset Weights
             </button>
           </div>
         </div>
 
-        {/* Live Score Bars with Layout Animation */}
+        {/* Live Score Ticker Cards with Framer Motion Layout Transitions */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-1">
           {compositeScores.map((ent, rankIdx) => {
             const isFirst = rankIdx === 0;
@@ -132,17 +132,27 @@ export function PriorityLens({
                 key={ent.name}
                 layout
                 transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                className="p-3 rounded-lg bg-[#053229] border border-[#355E58] space-y-1.5"
+                className={`p-3.5 rounded-lg border transition-all ${
+                  isFirst
+                    ? 'bg-theme-bg border-theme-accent/60 shadow-sm'
+                    : 'bg-theme-bg border-theme-border'
+                }`}
               >
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-[#FFEDD1] truncate">{ent.name}</span>
-                  <span className={`font-mono font-semibold px-2 py-0.5 rounded text-[11px] ${isFirst ? 'bg-[#FE9179]/20 text-[#FE9179]' : 'bg-[#355E58] text-[#BCDDDC]'}`}>
+                  <span className="font-bold text-theme-text truncate">{ent.name}</span>
+                  <span
+                    className={`font-mono font-semibold px-2 py-0.5 rounded text-[11px] ${
+                      isFirst
+                        ? 'bg-theme-accent/15 text-theme-accent border border-theme-accent/30'
+                        : 'bg-theme-card text-theme-secondary border border-theme-border'
+                    }`}
+                  >
                     Rank #{rankIdx + 1} • {ent.score}%
                   </span>
                 </div>
-                <div className="w-full h-1.5 rounded-full bg-[#355E58] overflow-hidden">
+                <div className="w-full h-2 rounded-full bg-theme-secondary/20 overflow-hidden mt-2">
                   <motion.div
-                    className={`h-full ${isFirst ? 'bg-[#FE9179]' : 'bg-[#72B0AB]'}`}
+                    className={`h-full ${isFirst ? 'bg-theme-accent' : 'bg-theme-focus'}`}
                     initial={false}
                     animate={{ width: `${Math.min(100, Math.max(5, ent.score))}%` }}
                     transition={{ type: 'spring', damping: 20, stiffness: 200 }}
@@ -155,9 +165,9 @@ export function PriorityLens({
       </div>
 
       {/* Weighted Rows Table with Smooth Row Transitions */}
-      <div className="rounded-xl bg-[#355E58] border border-[#355E58] overflow-hidden">
-        <div className="grid grid-cols-12 gap-3 px-4 py-3 bg-[#053229] border-b border-[#355E58] text-xs font-bold uppercase tracking-wider text-[#BCDDDC]">
-          <div className="col-span-5 sm:col-span-4">Metric Dimension & Priority Weight</div>
+      <div className="rounded-xl bg-theme-card border border-theme-border overflow-hidden shadow-sm">
+        <div className="grid grid-cols-12 gap-3 px-4 py-3 bg-theme-bg border-b border-theme-border text-xs font-bold uppercase tracking-wider text-theme-secondary">
+          <div className="col-span-5 sm:col-span-4">Metric Dimension & Priority Multiplier</div>
           {entityNames.map((name, idx) => (
             <div key={idx} className="col-span-7 sm:col-span-4 lg:col-span-3 text-right sm:text-left truncate">
               {name}
@@ -165,7 +175,7 @@ export function PriorityLens({
           ))}
         </div>
 
-        <div className="divide-y divide-[#053229]/40">
+        <div className="divide-y divide-theme-border">
           <AnimatePresence initial={false}>
             {metrics.map((m, idx) => {
               const metricName = m.metric || `Metric ${idx + 1}`;
@@ -177,7 +187,7 @@ export function PriorityLens({
                   key={metricName}
                   layout
                   transition={{ type: 'spring', damping: 28, stiffness: 350 }}
-                  className="grid grid-cols-12 gap-3 p-3.5 items-center hover:bg-[#053229]/30 transition-colors text-xs"
+                  className="grid grid-cols-12 gap-3 p-3.5 items-center hover:bg-theme-bg/50 transition-colors text-xs"
                 >
                   {/* Metric & Weight Slider Column */}
                   <div className="col-span-12 sm:col-span-4 space-y-2">
@@ -188,7 +198,7 @@ export function PriorityLens({
                             type="button"
                             disabled={idx === 0}
                             onClick={() => onMoveMetric(idx, idx - 1)}
-                            className="text-[#BCDDDC] hover:text-[#FFEDD1] disabled:opacity-20"
+                            className="text-theme-secondary hover:text-theme-text disabled:opacity-20 transition-colors"
                             title="Move priority up"
                           >
                             <ChevronUpIcon className="w-3 h-3" />
@@ -197,21 +207,21 @@ export function PriorityLens({
                             type="button"
                             disabled={idx === metrics.length - 1}
                             onClick={() => onMoveMetric(idx, idx + 1)}
-                            className="text-[#BCDDDC] hover:text-[#FFEDD1] disabled:opacity-20"
+                            className="text-theme-secondary hover:text-theme-text disabled:opacity-20 transition-colors"
                             title="Move priority down"
                           >
                             <ChevronDownIcon className="w-3 h-3" />
                           </button>
                         </div>
-                        <span className="font-bold text-[#FFEDD1] leading-tight">
+                        <span className="font-bold text-theme-text leading-tight">
                           {metricName}
                           {isSynthesized && (
-                            <span className="text-[#FE9179] font-mono ml-0.5 select-none" title="AI-synthesized estimate">*</span>
+                            <span className="text-theme-accent font-mono ml-0.5 select-none" title="AI-synthesized estimate">*</span>
                           )}
                         </span>
                       </div>
 
-                      <span className="font-mono text-[11px] text-[#FE9179] font-semibold">
+                      <span className="font-mono text-[11px] text-theme-accent font-semibold">
                         {weight.toFixed(1)}x
                       </span>
                     </div>
@@ -224,7 +234,7 @@ export function PriorityLens({
                         step="0.1"
                         value={weight}
                         onChange={(e) => onWeightChange(metricName, parseFloat(e.target.value))}
-                        className="w-full accent-[#FE9179] h-1.5 rounded-lg bg-[#053229] cursor-pointer"
+                        className="w-full accent-theme-accent h-1.5 rounded-lg bg-theme-bg cursor-pointer"
                       />
                     </div>
                   </div>
@@ -238,9 +248,9 @@ export function PriorityLens({
                     return (
                       <div
                         key={entIdx}
-                        className="col-span-6 sm:col-span-4 lg:col-span-3 text-xs text-[#FFEDD1] leading-relaxed break-words"
+                        className="col-span-6 sm:col-span-4 lg:col-span-3 text-xs text-theme-text leading-relaxed break-words"
                       >
-                        <span className="sm:hidden text-[10px] font-mono text-[#BCDDDC] block mb-0.5">
+                        <span className="sm:hidden text-[10px] font-mono text-theme-secondary block mb-0.5">
                           {entityNames[entIdx]}:
                         </span>
                         {val || 'Estimated standard'}
@@ -255,7 +265,7 @@ export function PriorityLens({
       </div>
 
       {/* Footnote */}
-      <div className="pt-2 text-[11px] font-mono text-[#BCDDDC] flex items-center gap-1">
+      <div className="pt-2 text-[11px] font-mono text-theme-secondary flex items-center gap-1">
         <span>* Metrics marked with an asterisk represent AI-synthesized consensus estimates derived from multi-source data extraction.</span>
       </div>
     </div>

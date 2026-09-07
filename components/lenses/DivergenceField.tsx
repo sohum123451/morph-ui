@@ -26,30 +26,32 @@ function EntityAnchorNode({ data }: NodeProps) {
     <motion.div
       layout
       transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-      className={`px-4 py-3 rounded-xl border font-sans min-w-[160px] shadow-lg ${
+      className={`px-4 py-3 rounded-xl border font-sans min-w-[160px] shadow-md ${
         isLeader
-          ? 'bg-[#355E58] border-[#FE9179] text-[#FFEDD1]'
-          : 'bg-[#355E58] border-[#72B0AB] text-[#FFEDD1]'
+          ? 'bg-theme-card border-theme-accent text-theme-text'
+          : 'bg-theme-card border-theme-border text-theme-text'
       }`}
     >
-      <Handle type="target" position={Position.Top} className="!bg-[#72B0AB] !w-2 !h-2" />
+      <Handle type="target" position={Position.Top} className="!bg-theme-focus !w-2 !h-2" />
       <div className="flex items-center justify-between gap-2">
-        <span className="font-bold text-xs">{data?.label as string}</span>
+        <span className="font-bold text-xs text-theme-text">{data?.label as string}</span>
         <motion.span
           key={data?.score as number}
           initial={{ scale: 1.15 }}
           animate={{ scale: 1 }}
           className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
-            isLeader ? 'bg-[#FE9179]/20 text-[#FE9179]' : 'bg-[#053229] text-[#BCDDDC]'
+            isLeader
+              ? 'bg-theme-accent/15 text-theme-accent border border-theme-accent/30 font-bold'
+              : 'bg-theme-bg text-theme-secondary border border-theme-border'
           }`}
         >
           {data?.score as number}%
         </motion.span>
       </div>
-      <div className="text-[10px] text-[#BCDDDC] mt-1">
+      <div className="text-[10px] text-theme-secondary mt-1 font-medium">
         Divergence Rank #{data?.rank as number}
       </div>
-      <Handle type="source" position={Position.Bottom} className="!bg-[#72B0AB] !w-2 !h-2" />
+      <Handle type="source" position={Position.Bottom} className="!bg-theme-focus !w-2 !h-2" />
     </motion.div>
   );
 }
@@ -63,29 +65,29 @@ function MetricDivergenceNode({ data }: NodeProps) {
     <motion.div
       layout
       transition={{ type: 'spring', damping: 22, stiffness: 180 }}
-      className={`p-3 rounded-lg border max-w-[200px] text-xs font-sans ${
+      className={`p-3 rounded-lg border max-w-[210px] text-xs font-sans shadow-sm ${
         isHighDelta
-          ? 'bg-[#053229] border-[#FE9179] text-[#FFEDD1]'
-          : 'bg-[#053229] border-[#355E58] text-[#BCDDDC]'
+          ? 'bg-theme-bg border-theme-accent text-theme-text'
+          : 'bg-theme-bg border-theme-border text-theme-secondary'
       }`}
     >
-      <Handle type="target" position={Position.Left} className="!bg-[#72B0AB] !w-1.5 !h-1.5" />
-      <div className="font-bold text-[#FFEDD1] truncate">{data?.metric as string}</div>
-      <div className="flex items-center justify-between text-[10px] font-mono mt-1 text-[#BCDDDC]">
+      <Handle type="target" position={Position.Left} className="!bg-theme-focus !w-1.5 !h-1.5" />
+      <div className="font-bold text-theme-text truncate">{data?.metric as string}</div>
+      <div className="flex items-center justify-between text-[10px] font-mono mt-1 text-theme-secondary">
         <span>Delta: {delta}</span>
         <motion.span
           key={data?.weight as number}
           initial={{ scale: 1.2 }}
           animate={{ scale: 1 }}
-          className="text-[#FE9179] font-bold"
+          className="text-theme-accent font-bold"
         >
           W: {data?.weight as number}x
         </motion.span>
       </div>
-      <div className="text-[10px] text-[#72B0AB] truncate mt-1">
+      <div className="text-[10px] text-theme-focus truncate mt-1">
         {data?.summary as string}
       </div>
-      <Handle type="source" position={Position.Right} className="!bg-[#72B0AB] !w-1.5 !h-1.5" />
+      <Handle type="source" position={Position.Right} className="!bg-theme-focus !w-1.5 !h-1.5" />
     </motion.div>
   );
 }
@@ -181,14 +183,14 @@ export function DivergenceField({
           source: 'entity-0',
           target: metricNodeId,
           animated: weight > 1.2,
-          style: { stroke: '#72B0AB', strokeWidth: Math.max(1, weight * 1.5), opacity: 0.6 },
+          style: { stroke: 'var(--accent)', strokeWidth: Math.max(1, weight * 1.5), opacity: 0.6 },
         });
         generatedEdges.push({
           id: `edge-${mIdx}-1`,
           source: 'entity-1',
           target: metricNodeId,
           animated: weight > 1.2,
-          style: { stroke: '#BCDDDC', strokeWidth: Math.max(1, weight * 1.5), opacity: 0.4 },
+          style: { stroke: 'var(--text-secondary)', strokeWidth: Math.max(1, weight * 1.5), opacity: 0.4 },
         });
       }
     });
@@ -200,10 +202,10 @@ export function DivergenceField({
   const [flowEdges, , onEdgesChange] = useEdgesState(edges);
 
   return (
-    <div className="w-full h-[650px] rounded-xl border border-[#355E58] bg-[#053229] overflow-hidden relative shadow-2xl">
-      <div className="absolute top-3 left-3 z-10 p-2.5 rounded-lg bg-[#355E58]/90 border border-[#355E58] text-xs text-[#FFEDD1] backdrop-blur-md pointer-events-none">
-        <div className="font-bold uppercase tracking-wider text-[#FE9179]">Divergence Field Topology</div>
-        <div className="text-[11px] text-[#BCDDDC]">Node distance encodes mathematical feature divergence & live weight</div>
+    <div className="w-full h-[650px] rounded-xl border border-theme-border bg-theme-bg overflow-hidden relative shadow-md">
+      <div className="absolute top-3 left-3 z-10 p-2.5 rounded-lg bg-theme-card border border-theme-border text-xs text-theme-text pointer-events-none shadow-sm">
+        <div className="font-bold uppercase tracking-wider text-theme-accent">Divergence Field Topology</div>
+        <div className="text-[11px] text-theme-secondary">Node distance encodes mathematical feature divergence & live weight</div>
       </div>
 
       <ReactFlow
@@ -217,14 +219,14 @@ export function DivergenceField({
         minZoom={0.2}
         maxZoom={2}
       >
-        <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#355E58" />
-        <Controls className="!bg-[#355E58] !border-[#053229] !fill-[#FFEDD1] !text-[#FFEDD1] rounded-lg overflow-hidden" />
+        <Background variant={BackgroundVariant.Lines} gap={32} size={1} color="var(--border)" />
+        <Controls className="!bg-theme-card !border-theme-border !fill-theme-text !text-theme-text rounded-lg overflow-hidden" />
         <MiniMap
           nodeStrokeWidth={2}
           zoomable
           pannable
-          className="!bg-[#355E58] !border-[#053229] rounded-lg overflow-hidden"
-          maskColor="rgba(5, 50, 41, 0.7)"
+          className="!bg-theme-card !border-theme-border rounded-lg overflow-hidden"
+          maskColor="var(--bg-card)"
         />
       </ReactFlow>
     </div>
