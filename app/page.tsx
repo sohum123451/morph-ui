@@ -64,6 +64,19 @@ import {
   EntityVerdict,
 } from '@/types/morphui';
 
+import dynamic from 'next/dynamic';
+import { Spatial3DNodeData } from '@/components/canvas3d/types';
+
+const SpatialCanvas3D = dynamic(() => import('@/components/canvas3d/SpatialCanvas3D'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-[65vh] min-h-[500px] bg-zinc-950 rounded-2xl border border-slate-800 flex flex-col items-center justify-center space-y-3 text-slate-400">
+      <div className="w-8 h-8 rounded-full border-2 border-sky-500 border-t-transparent animate-spin" />
+      <span className="text-xs font-mono">Initializing 3D WebGL Spatial Canvas...</span>
+    </div>
+  ),
+});
+
 type MorphTheme = 'dark' | 'light' | 'botanical' | 'pink';
 
 const THEME_STYLES: Record<MorphTheme, {
@@ -221,7 +234,7 @@ function parseNumericValue(val: string): number | null {
 }
 
 // ============================================================================
-// SPATIAL CANVAS NODES (Responsive, Auto-Sizing, Full Word-Wrap)
+// 3D SPATIAL CANVAS NODES (Minimalist, Responsive, WebGL Optimized)
 // ============================================================================
 
 const SpecMatrixNode = memo(function SpecMatrixNode({ data }: any) {
@@ -229,13 +242,7 @@ const SpecMatrixNode = memo(function SpecMatrixNode({ data }: any) {
   const entityList: string[] = entities.length > 0 ? entities.map((e: any) => typeof e === 'object' ? e.name : e) : [data.entityA || 'Option A', data.entityB || 'Option B'];
 
   return (
-    <div className="w-[340px] sm:w-[440px] min-h-min h-auto bg-slate-900/95 border border-slate-700/80 hover:border-sky-500/70 hover:shadow-sky-500/20 rounded-2xl p-4 sm:p-5 shadow-2xl text-slate-100 backdrop-blur-xl transition-all duration-300 hover:scale-[1.02] group">
-      <div className="flex items-center gap-2 mb-1">
-        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-        <span className="text-[10px] uppercase font-mono tracking-wider text-slate-400">Live Matrix Stream</span>
-      </div>
-      <FlowHandle type="target" position={Position.Left} className="!bg-sky-500 !w-3 !h-3 !border-2 !border-slate-900" />
-      <FlowHandle type="source" position={Position.Right} className="!bg-sky-500 !w-3 !h-3 !border-2 !border-slate-900" />
+    <div className="w-[340px] sm:w-[440px] min-h-min h-auto bg-slate-900/95 border border-slate-700/80 hover:border-sky-500/70 rounded-2xl p-4 sm:p-5 shadow-2xl text-slate-100 backdrop-blur-xl transition-all group">
       <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
         <div className="flex items-center gap-2">
           <div className="p-1.5 rounded-lg bg-sky-500/10 text-sky-400 border border-sky-500/20">
@@ -247,7 +254,7 @@ const SpecMatrixNode = memo(function SpecMatrixNode({ data }: any) {
           </div>
         </div>
         <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-sky-300 font-mono border border-slate-700 shrink-0">
-          Node 1
+          Station 01
         </span>
       </div>
 
@@ -258,7 +265,7 @@ const SpecMatrixNode = memo(function SpecMatrixNode({ data }: any) {
         ))}
       </div>
 
-      <div className="divide-y divide-slate-800/60 text-xs">
+      <div className="divide-y divide-slate-800/60 text-xs max-h-[300px] overflow-y-auto pr-1">
         {metrics.slice(0, 7).map((m: VerifiedMetric, idx: number) => (
           <div key={idx} className="flex items-start divide-x divide-slate-800/40 py-2">
             <div className="w-28 shrink-0 pr-2 text-slate-300 font-medium text-[11px] whitespace-normal break-words">
@@ -284,29 +291,23 @@ const SentimentBreakdownNode = memo(function SentimentBreakdownNode({ data }: an
   const entityList: string[] = entities.length > 0 ? entities.map((e: any) => typeof e === 'object' ? e.name : e) : [data.entityA || 'Option A', data.entityB || 'Option B'];
 
   return (
-    <div className="w-[340px] sm:w-[460px] min-h-min h-auto bg-slate-900/95 border border-slate-700/80 hover:border-indigo-500/70 hover:shadow-indigo-500/20 rounded-2xl p-4 sm:p-5 shadow-2xl text-slate-100 backdrop-blur-xl transition-all duration-300 hover:scale-[1.02] group">
-      <div className="flex items-center gap-2 mb-1">
-        <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse shrink-0" />
-        <span className="text-[10px] uppercase font-mono tracking-wider text-slate-400">De-Biasing Pipeline</span>
-      </div>
-      <FlowHandle type="target" position={Position.Left} className="!bg-indigo-500 !w-3 !h-3 !border-2 !border-slate-900" />
-      <FlowHandle type="source" position={Position.Right} className="!bg-indigo-500 !w-3 !h-3 !border-2 !border-slate-900" />
+    <div className="w-[340px] sm:w-[460px] min-h-min h-auto bg-slate-900/95 border border-slate-700/80 hover:border-indigo-500/70 rounded-2xl p-4 sm:p-5 shadow-2xl text-slate-100 backdrop-blur-xl transition-all group">
       <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
         <div className="flex items-center gap-2">
           <div className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
             <MessageSquare className="w-4 h-4" />
           </div>
           <div>
-            <h4 className="font-bold text-xs sm:text-sm text-white">De-Biased Reddit Sentiment</h4>
-            <span className="text-[10px] text-slate-400 font-mono">Consensus normalization</span>
+            <h4 className="font-bold text-xs sm:text-sm text-white">Community Insights & Consensus</h4>
+            <span className="text-[10px] text-slate-400 font-mono">Reddit Real-world discussions</span>
           </div>
         </div>
         <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-indigo-300 font-mono border border-slate-700 shrink-0">
-          Node 2
+          Station 02
         </span>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1">
         {sentiments.slice(0, 4).map((s: CommunitySentiment, idx: number) => (
           <div key={idx} className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800/80 space-y-1.5">
             <div className="flex items-center justify-between">
@@ -346,13 +347,7 @@ const LedgerNode = memo(function LedgerNode({ data }: any) {
   const entityList: string[] = entities.length > 0 ? entities.map((e: any) => typeof e === 'object' ? e.name : e) : [data.entityA || 'Option A', data.entityB || 'Option B'];
 
   return (
-    <div className="w-[300px] sm:w-[380px] min-h-min h-auto bg-slate-900/95 border border-slate-700/80 hover:border-purple-500/70 hover:shadow-purple-500/20 rounded-2xl p-4 sm:p-5 shadow-2xl text-slate-100 backdrop-blur-xl transition-all duration-300 hover:scale-[1.02] group">
-      <div className="flex items-center gap-2 mb-1">
-        <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse shrink-0" />
-        <span className="text-[10px] uppercase font-mono tracking-wider text-slate-400">Ledger State</span>
-      </div>
-      <FlowHandle type="target" position={Position.Left} className="!bg-purple-500 !w-3 !h-3 !border-2 !border-slate-900" />
-      <FlowHandle type="source" position={Position.Right} className="!bg-purple-500 !w-3 !h-3 !border-2 !border-slate-900" />
+    <div className="w-[300px] sm:w-[380px] min-h-min h-auto bg-slate-900/95 border border-slate-700/80 hover:border-purple-500/70 rounded-2xl p-4 sm:p-5 shadow-2xl text-slate-100 backdrop-blur-xl transition-all group">
       <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
         <div className="flex items-center gap-2">
           <div className="p-1.5 rounded-lg bg-purple-500/10 text-purple-400 border border-purple-500/20">
@@ -364,11 +359,11 @@ const LedgerNode = memo(function LedgerNode({ data }: any) {
           </div>
         </div>
         <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-purple-300 font-mono border border-slate-700 shrink-0">
-          Node 3
+          Station 03
         </span>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
         <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800/80 text-center">
           <span className="text-2xl font-black text-purple-400 font-mono block">{metrics.length}</span>
           <span className="text-[10px] text-slate-400 uppercase tracking-wider font-mono">Total Verified Fields</span>
@@ -391,12 +386,7 @@ const VerdictNode = memo(function VerdictNode({ data }: any) {
   const entityList: string[] = entities.length > 0 ? entities.map((e: any) => typeof e === 'object' ? e.name : e) : [data.entityA || 'Option A', data.entityB || 'Option B'];
 
   return (
-    <div className="w-[340px] sm:w-[480px] min-h-min h-auto bg-slate-900/95 border border-slate-700/80 hover:border-emerald-500/70 hover:shadow-emerald-500/20 rounded-2xl p-4 sm:p-5 shadow-2xl text-slate-100 backdrop-blur-xl transition-all duration-300 hover:scale-[1.02] group">
-      <div className="flex items-center gap-2 mb-1">
-        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-        <span className="text-[10px] uppercase font-mono tracking-wider text-slate-400">Synthesis Engine</span>
-      </div>
-      <FlowHandle type="target" position={Position.Left} className="!bg-emerald-500 !w-3 !h-3 !border-2 !border-slate-900" />
+    <div className="w-[340px] sm:w-[480px] min-h-min h-auto bg-slate-900/95 border border-slate-700/80 hover:border-emerald-500/70 rounded-2xl p-4 sm:p-5 shadow-2xl text-slate-100 backdrop-blur-xl transition-all group">
       <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
         <div className="flex items-center gap-2">
           <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
@@ -404,19 +394,19 @@ const VerdictNode = memo(function VerdictNode({ data }: any) {
           </div>
           <div>
             <h4 className="font-bold text-xs sm:text-sm text-white">Executive Verdict</h4>
-            <span className="text-[10px] text-slate-400 font-mono">AI Dual-Engine Synthesis</span>
+            <span className="text-[10px] text-slate-400 font-mono">Dual-Engine Synthesis</span>
           </div>
         </div>
         <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-emerald-300 font-mono border border-slate-700 shrink-0">
-          Node 4
+          Station 04
         </span>
       </div>
 
-      <p className="text-xs text-slate-200 leading-relaxed bg-slate-950/70 p-3.5 rounded-xl border border-slate-800/80 mb-3.5 whitespace-normal break-words">
+      <p className="text-xs text-slate-200 leading-relaxed bg-slate-950/70 p-3 rounded-xl border border-slate-800/80 mb-3 whitespace-normal break-words">
         {verdictSummary}
       </p>
 
-      <div className="space-y-2">
+      <div className="space-y-2 max-h-[240px] overflow-y-auto pr-1">
         {entities.map((ent: any, idx: number) => {
           const name = typeof ent === 'object' ? ent.name : entityList[idx] || `Entity ${idx + 1}`;
           const pros = Array.isArray(ent?.pros) && ent.pros.length > 0 ? ent.pros : [`Optimal domain use cases for ${name}`];
@@ -443,15 +433,8 @@ const VerdictNode = memo(function VerdictNode({ data }: any) {
   );
 });
 
-const nodeTypes = {
-  spec_matrix: SpecMatrixNode,
-  sentiment_breakdown: SentimentBreakdownNode,
-  ledger_node: LedgerNode,
-  verdict_node: VerdictNode,
-};
-
 // ============================================================================
-// SPATIAL CANVAS WORKSPACE COMPONENT
+// 3D SPATIAL CANVAS WORKSPACE (WebGL Three.js Drei Environment)
 // ============================================================================
 
 interface SpatialCanvasViewProps {
@@ -466,136 +449,89 @@ interface SpatialCanvasViewProps {
 function SpatialCanvasWorkspace({
   entities = [],
   category,
-  verifiedMetrics,
-  communitySentiment,
-  verdictSummary,
+  verifiedMetrics = [],
+  communitySentiment = [],
+  verdictSummary = '',
   theme = 'dark',
 }: SpatialCanvasViewProps) {
-  const currentTheme = THEME_STYLES[theme] || THEME_STYLES.dark;
-  const { fitView } = useReactFlow();
-
-  const generatedNodes: Node[] = useMemo(() => {
+  const spatial3DNodes: Spatial3DNodeData[] = useMemo(() => {
     return [
       {
         id: 'node-spec-matrix',
-        type: 'spec_matrix',
-        position: { x: 50, y: 140 },
-        data: {
-          entities,
-          category,
-          metrics: verifiedMetrics,
-        },
+        title: 'Spec Matrix',
+        subtitle: category,
+        nodeIndex: 0,
+        position: [-9, 2, 0],
+        accentColor: '#38bdf8',
+        content: (
+          <SpecMatrixNode
+            data={{
+              entities,
+              category,
+              metrics: verifiedMetrics,
+            }}
+          />
+        ),
       },
       {
         id: 'node-sentiment',
-        type: 'sentiment_breakdown',
-        position: { x: 520, y: 140 },
-        data: {
-          entities,
-          sentiments: communitySentiment,
-        },
+        title: 'Community Insights',
+        subtitle: 'Reddit Consensus',
+        nodeIndex: 1,
+        position: [-3, 2, -7],
+        accentColor: '#818cf8',
+        content: (
+          <SentimentBreakdownNode
+            data={{
+              entities,
+              sentiments: communitySentiment,
+            }}
+          />
+        ),
       },
       {
         id: 'node-ledger',
-        type: 'ledger_node',
-        position: { x: 1020, y: 140 },
-        data: {
-          entities,
-          metrics: verifiedMetrics,
-        },
+        title: 'Delta Ledger',
+        subtitle: 'Normalized Attributes',
+        nodeIndex: 2,
+        position: [6, 2, -6],
+        accentColor: '#a855f7',
+        content: (
+          <LedgerNode
+            data={{
+              entities,
+              metrics: verifiedMetrics,
+            }}
+          />
+        ),
       },
       {
         id: 'node-verdict',
-        type: 'verdict_node',
-        position: { x: 1460, y: 140 },
-        data: {
-          entities,
-          verdictSummary,
-        },
+        title: 'Executive Verdict',
+        subtitle: 'Synthesis Engine',
+        nodeIndex: 3,
+        position: [10, 2, 2],
+        accentColor: '#34d399',
+        content: (
+          <VerdictNode
+            data={{
+              entities,
+              verdictSummary,
+            }}
+          />
+        ),
       },
     ];
   }, [entities, category, verifiedMetrics, communitySentiment, verdictSummary]);
 
-  const generatedEdges: Edge[] = useMemo(() => {
-    return [
-      {
-        id: 'edge-1-2',
-        source: 'node-spec-matrix',
-        target: 'node-sentiment',
-        animated: true,
-        style: { stroke: '#38bdf8', strokeWidth: 2 },
-      },
-      {
-        id: 'edge-2-3',
-        source: 'node-sentiment',
-        target: 'node-ledger',
-        animated: true,
-        style: { stroke: '#818cf8', strokeWidth: 2 },
-      },
-      {
-        id: 'edge-3-4',
-        source: 'node-ledger',
-        target: 'node-verdict',
-        animated: true,
-        style: { stroke: '#34d399', strokeWidth: 2 },
-      },
-    ];
-  }, []);
-
-  const [nodes, setNodes, onNodesChange] = useNodesState(generatedNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(generatedEdges);
-
-  useEffect(() => {
-    setNodes(generatedNodes);
-    setEdges(generatedEdges);
-    setTimeout(() => {
-      fitView({ padding: 0.2, duration: 600 });
-    }, 150);
-  }, [generatedNodes, generatedEdges, setNodes, setEdges, fitView]);
-
-  const handleAutoLayout = useCallback(() => {
-    fitView({ padding: 0.2, duration: 500 });
-  }, [fitView]);
-
   return (
-    <div
-      style={{ backgroundColor: currentTheme.canvasBg }}
-      className="relative w-full h-[60vh] sm:h-[70vh] md:h-[calc(100vh-140px)] min-h-[480px] rounded-2xl border border-slate-800/90 overflow-hidden shadow-2xl transition-colors duration-300"
-    >
-      <div className={`absolute top-3 left-3 sm:top-4 sm:left-4 z-10 flex flex-wrap items-center gap-2 ${currentTheme.card} p-1.5 rounded-xl shadow-lg text-xs`}>
-        <div className={`flex items-center gap-1.5 px-2 py-1 ${currentTheme.accentText} font-semibold border-r border-slate-700/50`}>
-          <Network className="w-3.5 h-3.5" />
-          <span>Spatial Graph</span>
-        </div>
-        <button
-          type="button"
-          onClick={handleAutoLayout}
-          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg ${currentTheme.btnSecondary} transition-all font-medium active:scale-95`}
-          title="Reset Zoom & Auto-Center Graph"
-        >
-          <Maximize2 className="w-3.5 h-3.5" />
-          <span>Auto Center</span>
-        </button>
-      </div>
-
-      <Flow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        nodeTypes={nodeTypes}
-        fitView
-        proOptions={{ hideAttribution: true }}
-        minZoom={0.2}
-        maxZoom={1.8}
-      >
-        <FlowBackground variant={BackgroundVariant.Dots} gap={20} size={1} color={currentTheme.canvasDotColor} />
-        <FlowControls className="!bg-slate-900 !border-slate-800 !text-slate-100 !rounded-xl !overflow-hidden !shadow-lg" />
-      </Flow>
-    </div>
+    <SpatialCanvas3D
+      nodes={spatial3DNodes}
+      theme={theme}
+      className="relative w-full h-[65vh] sm:h-[75vh] md:h-[calc(100vh-140px)] min-h-[500px] rounded-2xl border border-slate-800/90 overflow-hidden shadow-2xl bg-zinc-950"
+    />
   );
 }
-
 // ============================================================================
 // COMPARISON SKELETON
 // ============================================================================
