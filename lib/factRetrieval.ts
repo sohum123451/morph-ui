@@ -1,8 +1,8 @@
-/**
+﻿/**
  * Parallel Fact & Reddit Retrieval Utility
  * Executes independent, parallel search queries for Entity A and Entity B:
  * 1. SerpApi / Serper / DuckDuckGo search
- * 2. Community reviews & Reddit discussions for sentiment analysis
+ * 2. Community reviews & Reddit discussions for multi-dimensional sentiment analysis
  * 3. Graceful fallback flag when search returns empty or key is absent
  */
 
@@ -90,7 +90,9 @@ export async function fetchEntityFacts(
     ? `${entity} ${contextTopic} specifications ranking tuition placement statistics 2025 2026`
     : `${entity} official overview specifications metrics ranking statistics 2025 2026`;
 
-  const redditQuery = `${entity} reddit review consensus student opinion honest pros cons`;
+  // Multi-dimensional Reddit query targeting durability, worth-it pricing, and pain points
+  const redditPrimaryQuery = `${entity} site:reddit.com OR reddit review pros cons "worth it" durability complaints`;
+  const redditLongTermQuery = `${entity} reddit "months" OR "years" durability reliability honest feedback`;
 
   let factsSnippets: string[] = [];
   let redditSnippets: string[] = [];
@@ -102,9 +104,15 @@ export async function fetchEntityFacts(
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), timeoutMs);
       const serpUrl = `https://serpapi.com/search.json?engine=google&q=${encodeURIComponent(searchQuery)}&api_key=${serpApiKey}&num=6`;
-      const res = await fetch(serpUrl, { signal: controller.signal });
+      const serpRedditUrl = `https://serpapi.com/search.json?engine=google&q=${encodeURIComponent(redditPrimaryQuery)}&api_key=${serpApiKey}&num=4`;
+
+      const [res, resReddit] = await Promise.all([
+        fetch(serpUrl, { signal: controller.signal }).catch(() => null),
+        fetch(serpRedditUrl, { signal: controller.signal }).catch(() => null),
+      ]);
       clearTimeout(timer);
-      if (res.ok) {
+
+      if (res && res.ok) {
         const data = await res.json();
         if (data.knowledge_graph?.description) {
           factsSnippets.push(`Knowledge Graph: ${data.knowledge_graph.title || ''} - ${data.knowledge_graph.description}`);
@@ -118,6 +126,15 @@ export async function fetchEntityFacts(
           }
         }
         if (factsSnippets.length > 0) source = 'serp_api';
+      }
+
+      if (resReddit && resReddit.ok) {
+        const redditData = await resReddit.json();
+        if (Array.isArray(redditData.organic_results)) {
+          for (const item of redditData.organic_results.slice(0, 4)) {
+            if (item.snippet) redditSnippets.push(`[Reddit Thread] ${item.title || ''}: ${item.snippet}`);
+          }
+        }
       }
     } catch {
       // fallback
@@ -153,14 +170,20 @@ export async function fetchEntityFacts(
     }
   }
 
-  // 3. DuckDuckGo Fallback
+  // 3. DuckDuckGo Fallback for Facts
   if (factsSnippets.length === 0) {
     factsSnippets = await searchDuckDuckGo(searchQuery, timeoutMs);
     if (factsSnippets.length > 0) source = 'duckduckgo';
   }
 
-  // Fetch Reddit / community discussions
-  redditSnippets = await searchDuckDuckGo(redditQuery, timeoutMs);
+  // 4. DuckDuckGo Fallback for Reddit & Community Sentiment if empty
+  if (redditSnippets.length === 0) {
+    const [ddgReviews, ddgLongTerm] = await Promise.all([
+      searchDuckDuckGo(redditPrimaryQuery, timeoutMs),
+      searchDuckDuckGo(redditLongTermQuery, timeoutMs),
+    ]);
+    redditSnippets.push(...ddgReviews, ...ddgLongTerm);
+  }
 
   const hasLiveResults = factsSnippets.length > 0;
 

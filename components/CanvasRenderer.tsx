@@ -147,12 +147,12 @@ export function renderWidgetComponent(type: string, data: any) {
   if (type === 'BudgetTracker' || type === 'budget_tracker') {
     const res = BudgetWidgetSchema.safeParse({ type: 'BudgetTracker', ...(data?.data || data) });
     if (!res.success) {
-      validationError = res.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join(', ');
+      validationError = res.error.issues.map((i: any) => `${i.path.join('.')}: ${i.message}`).join(', ');
     }
   } else if (type === 'TimelineCalendar' || type === 'timeline_calendar') {
     const res = TimelineWidgetSchema.safeParse({ type: 'TimelineCalendar', ...(data?.data || data) });
     if (!res.success) {
-      validationError = res.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join(', ');
+      validationError = res.error.issues.map((i: any) => `${i.path.join('.')}: ${i.message}`).join(', ');
     }
   }
 

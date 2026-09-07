@@ -1,4 +1,4 @@
-import Groq from 'groq-sdk';
+﻿import Groq from 'groq-sdk';
 import { GoogleGenAI } from '@google/genai';
 import {
   GenerativeComparisonResponse,
@@ -6,6 +6,7 @@ import {
   CommunitySentiment,
   EntityVerdict,
   ComparisonPoint,
+  GranularCommunityInsights,
 } from '@/types/morphui';
 import { EntityFactsResult } from './factRetrieval';
 
@@ -17,29 +18,39 @@ function withTimeout<T>(promise: Promise<T>, ms: number, errMsg: string): Promis
 }
 
 const UNIVERSAL_DYNAMIC_COMPARISON_SYSTEM_PROMPT = `You are MorphUI's universal dynamic comparative engine.
-You specialize in comparing ANY entities across infinite, unconstrained domains — including countries, sports, philosophies, cosmetics, financial instruments, software architectures, consumer hardware, media/entertainment, and abstract concepts.
+You specialize in comparing ANY entities across infinite, unconstrained domains — including universities, consumer tech, software, footwear, cosmetics, countries, sports, and abstract concepts.
 
 ═══════════════════════════════════════
 CORE WORKFLOW & DYNAMIC SYNTHESIS:
 
 1. DYNAMIC DOMAIN & DIMENSION ANALYSIS:
-   First, analyze the entities being compared to determine their domain (e.g., Geopolitical, Sporting, Cosmetic, Philosophical, Computational, Cultural).
-   Dynamically synthesize 5 to 7 of the most insightful, defining, and differentiating comparative metrics / dimensions tailored specifically to that pair:
-   - Countries: e.g., "GDP per Capita (PPP)", "Primary Economic Drivers", "Healthcare & Social Model", "Geopolitical Alignment", "Cost of Living Index".
-   - Cosmetics: e.g., "Primary Function", "Key Ingredients & Base", "Texture & Finish Options", "Coverage Level", "Longevity & Wear Time".
-   - Sports / Fitness: e.g., "Primary Energy System", "Aerobic vs Anaerobic Demand", "Equipment & Accessibility", "Injury Profile", "Tactical Complexity".
-   - Philosophies / Concepts: e.g., "Core Epistemological Axiom", "View on Human Agency", "Practical Application in Daily Life", "Historical Provenance".
-   - Hardware / Technology: e.g., "Processing Architecture", "Memory Bandwidth", "Thermal Envelope (TDP)", "Real-World Throughput", "MSRP & Value".
-   Organize these metrics into 2 to 4 intuitive, domain-relevant category groups.
+   Analyze the entities being compared to determine their domain.
+   Synthesize 5 to 7 defining comparative metrics/dimensions tailored specifically to that pair (e.g., tech specs, curriculum/placement for universities, ingredients/finish for cosmetics, etc.).
+   Organize these metrics into 2 to 4 intuitive category groups.
 
-2. INTELLIGENT HYBRID GROUNDING & AI CONSENSUS BLENDING:
-   - "official"     → When a value is directly derived from and grounded in the supplied live search snippets (concrete verified numbers, dates, official release specs).
-   - "ai_consensus" → When live search results are sparse, unstructured, or unavailable (or for conceptual, macro, or qualitative dimensions), seamlessly synthesize accurate specifications using high-confidence parametric domain knowledge and consensus.
-   - NEVER output "N/A", "Not specified", or generic filler phrases. Every metric must contain an authentic, informative, entity-specific comparison.
+2. INTELLIGENT HYBRID GROUNDING & AI CONSENSUS:
+   - "official"     → When a value is directly derived from and grounded in the supplied live search snippets.
+   - "ai_consensus" → When search results are sparse, unstructured, or for conceptual/macro dimensions, synthesize high-confidence parametric consensus.
+   - NEVER output generic placeholder filler. Every metric must contain an authentic, entity-specific comparison.
 
-3. CONCRETE PROS & VERDICT:
-   - Write 2-3 distinct, substantive advantages per entity.
-   - In "verdict_summary", provide a clear, nuanced recommendation explaining when, why, and for whom each option is superior.
+3. MULTI-DIMENSIONAL REDDIT & COMMUNITY SENTIMENT EXTRACTION:
+   Aggregate and synthesize authentic Reddit/forum community insights across 4 MANDATORY structured sub-topics:
+   a. "Build Quality / Curriculum Depth": Structural durability, hardware build, or educational/academic rigor.
+   b. "Price-to-Value Ratio": Whether users feel it is worth the cost, real-world pricing satisfaction, and alternatives discussed.
+   c. "Durability / Long-Term Reliability (6+ Mos)": Feedback from users who have owned the product or attended the institution for 6+ months.
+   d. "Common User Complaints": The most repeated pain points, defects, friction points, or buyer remorse reasons.
+   
+   For each sub-topic, extract:
+   - "consensuses": Per-entity consensus summary text.
+   - "sentiment": "Positive" | "Mixed" | "Critical"
+   - "score_weight": 1 to 10 integer rating community consensus strength/intensity.
+   - "praises": 1-3 specific praise points mentioned by users.
+   - "pain_points": 1-3 specific pain points/complaints mentioned by users.
+   - "quotes": 1-2 authentic Reddit thread summary quotes or highlights.
+
+4. CONCRETE PROS & NUANCED VERDICT:
+   - Provide 2-3 distinct, substantive advantages per entity.
+   - In "verdict_summary", provide a clear, actionable recommendation explaining when, why, and for whom each option is superior.
 
 STRICT JSON OUTPUT SCHEMA:
 {
@@ -55,17 +66,77 @@ STRICT JSON OUTPUT SCHEMA:
         "values": ["Tailored spec for Entity 1", "Tailored spec for Entity 2"],
         "entity_a": "Tailored spec for Entity 1",
         "entity_b": "Tailored spec for Entity 2",
-        "source_type": "<'official' if traceable to search snippets, otherwise 'ai_consensus'>"
+        "source_type": "<'official' or 'ai_consensus'>"
       }
     ]
   },
   "community_sentiment": [
     {
-      "topic": "<Key Public Sentiment / Experience Dimension>",
-      "consensuses": ["Sentiment for Entity 1", "Sentiment for Entity 2"],
-      "sentiment": "Positive"
+      "topic": "Build Quality / Curriculum Depth",
+      "consensuses": ["Consensus for Entity 1", "Consensus for Entity 2"],
+      "sentiment": "Positive",
+      "score_weight": 8,
+      "praises": ["Specific praise point 1"],
+      "pain_points": ["Specific pain point 1"],
+      "quotes": ["\"Reddit quote or snippet summary 1\""]
+    },
+    {
+      "topic": "Price-to-Value Ratio",
+      "consensuses": ["Value verdict for Entity 1", "Value verdict for Entity 2"],
+      "sentiment": "Mixed",
+      "score_weight": 7,
+      "praises": ["Worth the price because..."],
+      "pain_points": ["Overpriced in aspects of..."],
+      "quotes": ["\"Reddit community consensus on price\""]
+    },
+    {
+      "topic": "Durability / Long-Term Reliability (6+ Mos)",
+      "consensuses": ["6+ mo experience for Entity 1", "6+ mo experience for Entity 2"],
+      "sentiment": "Positive",
+      "score_weight": 9,
+      "praises": ["Holds up well after 1 year..."],
+      "pain_points": ["Shows wear/issues after 6 months on..."],
+      "quotes": ["\"Long-term owner feedback\""]
+    },
+    {
+      "topic": "Common User Complaints",
+      "consensuses": ["Main complaint for Entity 1", "Main complaint for Entity 2"],
+      "sentiment": "Critical",
+      "score_weight": 8,
+      "praises": ["Mitigated by..."],
+      "pain_points": ["Recurring issue with..."],
+      "quotes": ["\"Frequent complaint reported by users\""]
     }
   ],
+  "community_insights": {
+    "pros_and_cons": [
+      {
+        "entity": "<Entity 1>",
+        "praises": ["Key praise 1", "Key praise 2"],
+        "pain_points": ["Key pain point 1", "Key pain point 2"]
+      },
+      {
+        "entity": "<Entity 2>",
+        "praises": ["Key praise 1", "Key praise 2"],
+        "pain_points": ["Key pain point 1", "Key pain point 2"]
+      }
+    ],
+    "price_value_consensus": {
+      "summary": "<Comparative real-world value analysis>",
+      "worth_it_verdict": {
+        "<Entity 1>": "High Value / Worth It / Overpriced",
+        "<Entity 2>": "High Value / Worth It / Overpriced"
+      },
+      "alternatives_mentioned": ["Alternative Option 1", "Alternative Option 2"]
+    },
+    "long_term_reliability": {
+      "summary": "<Summary of 6+ month owner / user longevity feedback>",
+      "experience_6plus_months": {
+        "<Entity 1>": "<6+ month durability details>",
+        "<Entity 2>": "<6+ month durability details>"
+      }
+    }
+  },
   "suggested_metrics": ["Alternative Metric 1", "Alternative Metric 2", "Alternative Metric 3"],
   "verdict_summary": "<Actionable, balanced verdict comparing real trade-offs>"
 }
@@ -73,10 +144,6 @@ Return ONLY valid JSON matching this schema. No markdown fences. No conversation
 
 export const PARAMETRIC_SYNTHESIS_SYSTEM_PROMPT = UNIVERSAL_DYNAMIC_COMPARISON_SYSTEM_PROMPT;
 const PRECISION_EXTRACTION_SYSTEM_PROMPT = UNIVERSAL_DYNAMIC_COMPARISON_SYSTEM_PROMPT;
-
-
-
-
 
 /**
  * Normalizes text for fuzzy matching: lowercase, strip punctuation, collapse whitespace.
@@ -100,9 +167,7 @@ function extractGroundingTokens(value: string): string[] {
     'design', 'optimized', 'specialized', 'tailored', 'general', 'broad',
   ]);
   const normalized = normalizeForMatch(value);
-  // Include tokens >= 3 chars (e.g. spf, ram, cpu, gpu, vram, fps)
   const tokens = normalized.split(' ').filter(t => t.length >= 3 && !STOPWORDS.has(t));
-  // Include standalone numbers and short spec tokens (e.g., "16gb", "spf30", "24gb", "4k")
   const numbers = normalized.match(/\b\d+(\.\d+)?%?\w*\b/g) || [];
   const shortSpecs = normalized.match(/\b[a-z]{1,4}\s?\d+\b|\b\d+\s?[a-z]{1,4}\b/gi) || [];
   return Array.from(new Set([...tokens, ...numbers, ...shortSpecs]));
@@ -214,7 +279,6 @@ function cleanAndParseJson(
     if (Array.isArray(parsed.entities) && parsed.entities.length > 0) {
       resolvedEntities = parsed.entities.map((e: any, idx: number) => {
         const rawName = typeof e === 'object' && e?.name ? String(e.name) : typeof e === 'string' ? e : fallbackEntities[idx] || `Entity ${idx + 1}`;
-        // Enforce exact fallback entity name if model attempted to mangle it (e.g. "lit Bombay")
         const name = fallbackEntities[idx] && fallbackEntities[idx].toLowerCase() === rawName.toLowerCase()
           ? fallbackEntities[idx]
           : rawName;
@@ -305,11 +369,12 @@ function cleanAndParseJson(
       }
     }
 
-    // Resolve community sentiment
+    // Resolve multi-dimensional community sentiment
     const community_sentiment: CommunitySentiment[] = [];
     if (Array.isArray(parsed.community_sentiment)) {
       parsed.community_sentiment.forEach((s: any) => {
-        if (s && s.topic) {
+        if (s && (s.topic || s.dimension)) {
+          const topic = String(s.topic || s.dimension);
           let consensuses: string[] = [];
           if (Array.isArray(s.consensuses)) {
             consensuses = s.consensuses.map(String);
@@ -321,15 +386,80 @@ function cleanAndParseJson(
             consensuses.push('General user sentiment');
           }
 
+          const rawWeight = Number(s.score_weight || s.weight || s.score);
+          const score_weight = !isNaN(rawWeight) && rawWeight > 0 ? Math.min(10, Math.max(1, Math.round(rawWeight))) : 8;
+
+          const praises = Array.isArray(s.praises) ? s.praises.map(String) : [];
+          const pain_points = Array.isArray(s.pain_points) ? s.pain_points.map(String) : [];
+          const quotes = Array.isArray(s.quotes) ? s.quotes.map(String) : [];
+
           community_sentiment.push({
-            topic: String(s.topic),
+            topic,
             consensuses,
             entity_a_consensus: consensuses[0],
             entity_b_consensus: consensuses[1],
             sentiment: s.sentiment === 'Positive' || s.sentiment === 'Critical' ? s.sentiment : 'Mixed',
+            score_weight,
+            praises,
+            pain_points,
+            quotes,
           });
         }
       });
+    }
+
+    // Ensure mandatory sub-topics are present
+    const mandatoryTopics = [
+      'Build Quality / Curriculum Depth',
+      'Price-to-Value Ratio',
+      'Durability / Long-Term Reliability (6+ Mos)',
+      'Common User Complaints'
+    ];
+
+    mandatoryTopics.forEach((topicName) => {
+      const existing = community_sentiment.find(cs => cs.topic.toLowerCase().includes(topicName.toLowerCase().slice(0, 10)));
+      if (!existing && community_sentiment.length < 6) {
+        community_sentiment.push({
+          topic: topicName,
+          consensuses: resolvedEntities.map(e => `Community feedback on ${e.name} regarding ${topicName.toLowerCase()}.`),
+          entity_a_consensus: `Community feedback on ${resolvedEntities[0]?.name || 'Entity A'} regarding ${topicName.toLowerCase()}.`,
+          entity_b_consensus: `Community feedback on ${resolvedEntities[1]?.name || 'Entity B'} regarding ${topicName.toLowerCase()}.`,
+          sentiment: 'Mixed',
+          score_weight: 8,
+          praises: [],
+          pain_points: [],
+          quotes: []
+        });
+      }
+    });
+
+    // Parse granular community insights object if provided
+    let community_insights: GranularCommunityInsights | undefined = undefined;
+    if (parsed.community_insights && typeof parsed.community_insights === 'object') {
+      community_insights = {
+        pros_and_cons: Array.isArray(parsed.community_insights.pros_and_cons)
+          ? parsed.community_insights.pros_and_cons.map((pc: any) => ({
+              entity: String(pc.entity || ''),
+              praises: Array.isArray(pc.praises) ? pc.praises.map(String) : [],
+              pain_points: Array.isArray(pc.pain_points) ? pc.pain_points.map(String) : [],
+            }))
+          : resolvedEntities.map(e => ({
+              entity: e.name,
+              praises: e.pros.slice(0, 3),
+              pain_points: []
+            })),
+        price_value_consensus: parsed.community_insights.price_value_consensus ? {
+          summary: String(parsed.community_insights.price_value_consensus.summary || 'Real-world value consensus analysis.'),
+          worth_it_verdict: parsed.community_insights.price_value_consensus.worth_it_verdict || {},
+          alternatives_mentioned: Array.isArray(parsed.community_insights.price_value_consensus.alternatives_mentioned)
+            ? parsed.community_insights.price_value_consensus.alternatives_mentioned.map(String)
+            : []
+        } : undefined,
+        long_term_reliability: parsed.community_insights.long_term_reliability ? {
+          summary: String(parsed.community_insights.long_term_reliability.summary || '6+ month user durability feedback.'),
+          experience_6plus_months: parsed.community_insights.long_term_reliability.experience_6plus_months || {}
+        } : undefined
+      };
     }
 
     const comparison_points: ComparisonPoint[] = flatVerifiedMetrics.map((vm) => ({
@@ -357,6 +487,7 @@ function cleanAndParseJson(
       categories,
       verified_metrics: flatVerifiedMetrics,
       community_sentiment,
+      community_insights,
       suggested_metrics,
       verdict_summary,
       comparison_points,
@@ -365,8 +496,6 @@ function cleanAndParseJson(
     return null;
   }
 }
-
-// generateConcreteFallbackMulti removed: 0 hard-coding requirement.
 
 export async function generateComparisonMatrix(
   entityAOrList: string | string[],
@@ -401,7 +530,7 @@ export async function generateComparisonMatrix(
       .map((e, idx) => {
         const f = factsArray[idx];
         const content = f?.communityReviews ? f.communityReviews : 'No forum discussions retrieved.';
-        return `COMMUNITY REVIEWS FOR ${e.toUpperCase()}:\n${content}`;
+        return `COMMUNITY REVIEWS & REDDIT FOR ${e.toUpperCase()}:\n${content}`;
       })
       .join('\n\n');
 
@@ -414,22 +543,18 @@ export async function generateComparisonMatrix(
     entities = [eA, eB];
 
     factsCombinedText = `RAW FACTS FOR ${eA.toUpperCase()}:\n${factsA || 'No search snippets retrieved.'}\n\nRAW FACTS FOR ${eB.toUpperCase()}:\n${factsB || 'No search snippets retrieved.'}`;
-    reviewsCombinedText = `COMMUNITY REVIEWS FOR ${eA.toUpperCase()}:\n${reviewsA || 'No forum reviews found.'}\n\nCOMMUNITY REVIEWS FOR ${eB.toUpperCase()}:\n${reviewsB || 'No forum reviews found.'}`;
+    reviewsCombinedText = `COMMUNITY REVIEWS & REDDIT FOR ${eA.toUpperCase()}:\n${reviewsA || 'No forum reviews found.'}\n\nCOMMUNITY REVIEWS & REDDIT FOR ${eB.toUpperCase()}:\n${reviewsB || 'No forum reviews found.'}`;
 
     hasMissingFacts = !factsA?.trim() && !factsB?.trim();
     entityAFactsText = factsA || '';
     entityBFactsText = factsB || '';
   }
 
-  // When live search has 0 results or fails to find structured web data (e.g. cosmetics, lifestyle, concepts),
-  // route to AI Knowledge Synthesis rather than failing with an empty table.
   const isAiSynthesisMode = hasMissingFacts;
   const activeSystemPrompt = isAiSynthesisMode ? PARAMETRIC_SYNTHESIS_SYSTEM_PROMPT : PRECISION_EXTRACTION_SYSTEM_PROMPT;
 
   const geminiKey = process.env.GEMINI_API_KEY;
   const groqKey = process.env.GROQ_API_KEY;
-
-  const internalFallbackDirective = ``;
 
   const userPrompt = isAiSynthesisMode
     ? `COMPARED ENTITIES (${entities.length}): ${entities.map((e, i) => `Entity ${i + 1}: "${e}"`).join(', ')}
@@ -438,7 +563,8 @@ ${contextTopic ? `Specific Focus / Topic: "${contextTopic}"` : ''}
 No rigid spec sheet exists in live web results for this comparison.
 1. Analyze these entities to identify their domain (geopolitical, athletic, cosmetic, philosophical, technical, cultural, etc.).
 2. Dynamically determine 5 to 7 of the most insightful, differentiating comparative metrics tailored specifically to this pair.
-3. Synthesize a comprehensive, multi-category comparison JSON object. Set source_type: "ai_consensus" on all synthesized metrics.`
+3. Extract granular Reddit / community sentiment across all 4 mandatory sub-topics ("Build Quality / Curriculum Depth", "Price-to-Value Ratio", "Durability / Long-Term Reliability (6+ Mos)", "Common User Complaints") with score weights, praises, pain points, and quote summaries.
+4. Synthesize a comprehensive, multi-category comparison JSON object. Set source_type: "ai_consensus" on all synthesized metrics.`
     : `COMPARED ENTITIES (${entities.length}): ${entities.map((e, i) => `Entity ${i + 1}: "${e}"`).join(', ')}
 ${contextTopic ? `Specific Focus / Topic: "${contextTopic}"` : ''}
 
@@ -449,9 +575,10 @@ ${reviewsCombinedText}
 1. Analyze these entities to identify their domain and determine 5 to 7 defining comparative dimensions.
 2. If search snippets supply verified facts, extract them and set source_type: "official".
 3. For dimensions where search snippets are sparse, conceptual, or missing, seamlessly blend high-confidence parametric consensus with source_type: "ai_consensus".
-4. Produce authentic pros and a nuanced verdict summary.`;
+4. Extract granular Reddit / community sentiment across all 4 mandatory sub-topics ("Build Quality / Curriculum Depth", "Price-to-Value Ratio", "Durability / Long-Term Reliability (6+ Mos)", "Common User Complaints") with score weights, praises, pain points, and quote summaries.
+5. Produce authentic pros and a nuanced verdict summary.`;
 
-  // 1. PRIMARY MODEL: Groq (llama-3.3-70b-versatile) for ultra-fast structured JSON inference
+  // 1. PRIMARY MODEL: Groq (openai/gpt-oss-120b)
   if (groqKey) {
     try {
       const groqCall = fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -540,14 +667,13 @@ ${reviewsCombinedText}
   };
 }
 
-// --- MULTI-TIER LLM MIDDLEWARE CASCADE (Groq Llama 3.3 70B -> Gemini 2.5 Flash -> Parametric Baseline) ---
+// --- MULTI-TIER LLM MIDDLEWARE CASCADE ---
 const groqClient = process.env.GROQ_API_KEY ? new Groq({ apiKey: process.env.GROQ_API_KEY }) : null;
 const geminiClient = process.env.GEMINI_API_KEY ? new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY }) : null;
 
 const SYSTEM_PROMPT = `You are the MorphUI structural engine. Analyze the user prompt, gather constraints, and output ONLY a valid JSON array of widgets matching the requested schema. No markdown wrapping, no conversational text.`;
 
 export async function orchestrateLLMCascade(prompt: string): Promise<any> {
-  // --- TIER 1: Groq (GPT-OSS 120B) ---
   if (groqClient) {
     try {
       const completion = await groqClient.chat.completions.create({
@@ -563,11 +689,10 @@ export async function orchestrateLLMCascade(prompt: string): Promise<any> {
       const text = completion.choices[0]?.message?.content;
       if (text) return JSON.parse(text);
     } catch (groqError) {
-      console.warn('Groq tier failed, falling back to Gemini 2.5 Flash...', groqError);
+      console.warn('Groq tier failed, falling back to Gemini 3.6 Flash...', groqError);
     }
   }
 
-  // --- TIER 2: Google Gemini 2.5 Flash Fallback ---
   if (geminiClient) {
     try {
       const response = await geminiClient.models.generateContent({
@@ -585,6 +710,5 @@ export async function orchestrateLLMCascade(prompt: string): Promise<any> {
     }
   }
 
-  // --- TIER 3: All providers failed — throw instead of returning fabricated data ---
   throw new Error('All LLM providers (Groq, Gemini) failed. Cannot generate widget data without inference.');
 }

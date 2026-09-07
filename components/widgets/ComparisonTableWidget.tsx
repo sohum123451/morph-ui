@@ -17,8 +17,13 @@ import {
   CheckCircle2,
   HelpCircle,
   Footprints,
+  MessageSquare,
+  ThumbsUp,
+  AlertTriangle,
+  ShieldCheck,
+  Star,
 } from 'lucide-react';
-import { ComparisonPoint, WidgetImage, VerifiedMetric, EntityVerdict } from '@/types/morphui';
+import { ComparisonPoint, WidgetImage, VerifiedMetric, EntityVerdict, CommunitySentiment } from '@/types/morphui';
 
 interface ComparisonTableWidgetProps {
   data: {
@@ -29,6 +34,7 @@ interface ComparisonTableWidgetProps {
     categories?: Record<string, VerifiedMetric[]>;
     comparison_points?: ComparisonPoint[];
     verified_metrics?: VerifiedMetric[];
+    community_sentiment?: CommunitySentiment[];
     verdict_summary?: string;
     headers?: string[];
     rows?: Record<string, string>[];
@@ -155,7 +161,7 @@ function getCategoryMeta(categoryName = '') {
 export const ComparisonTableWidget = memo(function ComparisonTableWidget({
   data,
 }: ComparisonTableWidgetProps) {
-  const [viewMode, setViewMode] = useState<'table' | 'bars'>('table');
+  const [viewMode, setViewMode] = useState<'table' | 'bars' | 'community'>('table');
   const [searchTerm, setSearchTerm] = useState('');
 
   const entityNames: string[] = useMemo(() => {
@@ -180,6 +186,7 @@ export const ComparisonTableWidget = memo(function ComparisonTableWidget({
   const verdictSummary = data?.verdict_summary || data?.summary;
   const title = data?.title || `${entityAName} vs ${entityBName}`;
   const images = Array.isArray(data?.images) ? data.images : [];
+  const communitySentiment: CommunitySentiment[] = Array.isArray(data?.community_sentiment) ? data.community_sentiment : [];
 
   const categoriesMap: Record<string, VerifiedMetric[]> = useMemo(() => {
     if (data?.categories && Object.keys(data.categories).length > 0) {
@@ -244,6 +251,17 @@ export const ComparisonTableWidget = memo(function ComparisonTableWidget({
     return result;
   }, [categoriesMap, searchTerm]);
 
+  const filteredSentiment = useMemo(() => {
+    if (!searchTerm.trim()) return communitySentiment;
+    const term = searchTerm.toLowerCase();
+    return communitySentiment.filter(
+      (s) =>
+        s.topic.toLowerCase().includes(term) ||
+        (s.entity_a_consensus || '').toLowerCase().includes(term) ||
+        (s.entity_b_consensus || '').toLowerCase().includes(term)
+    );
+  }, [communitySentiment, searchTerm]);
+
   const categoryMeta = useMemo(() => getCategoryMeta(category), [category]);
   const CategoryIcon = categoryMeta.icon;
 
@@ -303,6 +321,20 @@ export const ComparisonTableWidget = memo(function ComparisonTableWidget({
           >
             <BarChart3 className="w-3.5 h-3.5" />
           </button>
+          {communitySentiment.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setViewMode('community')}
+              className={`p-1.5 rounded-md text-xs font-medium transition-all ${
+                viewMode === 'community'
+                  ? 'bg-slate-800 text-sky-400 shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+              title="Reddit & Community Sentiment"
+            >
+              <MessageSquare className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
       </div>
 
@@ -345,7 +377,9 @@ export const ComparisonTableWidget = memo(function ComparisonTableWidget({
 
       {/* Entity Columns Subheader */}
       <div className="relative z-10 flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-950/80 border border-slate-800/90 text-xs font-semibold uppercase tracking-wider mb-2 overflow-x-auto">
-        <div className="w-1/3 min-w-[130px] text-slate-400 shrink-0">Metric / Dimension</div>
+        <div className="w-1/3 min-w-[130px] text-slate-400 shrink-0">
+          {viewMode === 'community' ? 'Community Sub-Topic' : 'Metric / Dimension'}
+        </div>
         {entityNames.map((name, idx) => (
           <div key={idx} className="flex-1 min-w-[120px] flex items-center gap-1 whitespace-normal break-words">
             <span className={`w-2 h-2 rounded-full ${idx === 0 ? 'bg-sky-400' : idx === 1 ? 'bg-indigo-400' : 'bg-purple-400'} shrink-0`} />
@@ -354,9 +388,52 @@ export const ComparisonTableWidget = memo(function ComparisonTableWidget({
         ))}
       </div>
 
-      {/* Main Dynamic Table Loop with Full Word Wrapping */}
+      {/* Main Dynamic View Loop */}
       <div className="relative z-10 flex-1 space-y-2 rounded-xl border border-slate-800/80 bg-slate-950/50 p-1">
-        {Object.keys(filteredCategories).length === 0 ? (
+        {viewMode === 'community' ? (
+          /* Granular Community & Reddit Sentiment View */
+          <div className="rounded-lg bg-slate-900/60 border border-slate-800/60 overflow-hidden divide-y divide-slate-800/40">
+            {filteredSentiment.length === 0 ? (
+              <div className="p-8 text-center text-slate-500 text-xs flex flex-col items-center justify-center gap-2">
+                <HelpCircle className="w-6 h-6 text-slate-600" />
+                <span>No community sentiments available</span>
+              </div>
+            ) : (
+              filteredSentiment.map((s, idx) => (
+                <div key={idx} className="flex items-start gap-2 p-3 text-xs hover:bg-slate-800/40 transition-colors">
+                  <div className="w-1/3 min-w-[130px] font-medium text-slate-200 pr-1 flex flex-col gap-1.5 whitespace-normal break-words shrink-0">
+                    <span className="font-semibold text-white">{s.topic}</span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className={`text-[9px] uppercase font-mono px-1.5 py-0.5 rounded border ${
+                        s.sentiment === 'Positive'
+                          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                          : s.sentiment === 'Critical'
+                          ? 'bg-rose-500/10 border-rose-500/30 text-rose-400'
+                          : 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+                      }`}>
+                        {s.sentiment || 'Consensus'}
+                      </span>
+                      {s.score_weight && (
+                        <span className="text-[9px] font-mono px-1 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                          Score: {s.score_weight}/10
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {entityNames.map((_, entIdx) => {
+                    const con = s.consensuses?.[entIdx] !== undefined ? s.consensuses[entIdx] : (entIdx === 0 ? s.entity_a_consensus : s.entity_b_consensus);
+                    return (
+                      <div key={entIdx} className="flex-1 min-w-[120px] text-slate-300 font-medium leading-relaxed whitespace-normal break-words p-2 rounded-lg bg-slate-900/50 border border-slate-800/40">
+                        {renderValueWithFallback(con)}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))
+            )}
+          </div>
+        ) : Object.keys(filteredCategories).length === 0 ? (
           <div className="p-8 text-center text-slate-500 text-xs flex flex-col items-center justify-center gap-2">
             <HelpCircle className="w-6 h-6 text-slate-600" />
             <span>No matching comparison points found</span>

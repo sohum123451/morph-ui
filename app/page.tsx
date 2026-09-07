@@ -2640,7 +2640,7 @@ function MorphUIContent() {
                         >
                           <div className="w-1/3 min-w-[180px] shrink-0 pr-2 space-y-1.5 align-top whitespace-normal break-words">
                             <div className={`font-semibold ${t.title} leading-snug whitespace-normal break-words`}>{s.topic}</div>
-                            <div>
+                            <div className="flex items-center gap-1.5 flex-wrap">
                               <span
                                 className={`inline-flex items-center gap-1 text-[10px] uppercase font-mono px-2 py-0.5 rounded border ${
                                   s.sentiment === 'Positive'
@@ -2653,7 +2653,17 @@ function MorphUIContent() {
                                 {s.sentiment === 'Positive' ? <ThumbsUp className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}
                                 <span>{s.sentiment || 'Consensus'}</span>
                               </span>
+                              {s.score_weight && (
+                                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                                  Weight: {s.score_weight}/10
+                                </span>
+                              )}
                             </div>
+                            {Array.isArray(s.quotes) && s.quotes.length > 0 && (
+                              <div className="p-2 rounded-lg bg-slate-900/60 border border-slate-800/60 text-[11px] italic text-slate-400 leading-relaxed">
+                                {s.quotes[0]}
+                              </div>
+                            )}
                           </div>
 
                           {displayEntities.map((_, entIdx) => {
