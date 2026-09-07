@@ -3,59 +3,53 @@
 @tailwind utilities;
 
 :root {
-  --background: #020617;
-  --foreground: #f8fafc;
+  --background: #053229;
+  --foreground: #FFEDD1;
 }
 
 html {
   scroll-behavior: smooth;
+  background-color: #053229;
+  color: #FFEDD1;
 }
 
 body {
   min-height: 100vh;
   margin: 0;
   padding: 0;
-  background-color: #020617;
-  color: #f8fafc;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background-color: #053229;
+  color: #FFEDD1;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   overflow-x: hidden;
 }
 
-/* Custom crisp scrollbars */
+/* Custom crisp scrollbars in locked palette */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #090d16;
+  background: #053229;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
-  border-radius: 4px;
+  background: #355E58;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: #72B0AB;
 }
 
-/* Print Styles for Export / PDF */
+/* Print Styles */
 @media print {
   body {
     background-color: #ffffff !important;
-    color: #0f172a !important;
+    color: #053229 !important;
   }
 
   header,
   .no-print {
     display: none !important;
-  }
-
-  .print-clean {
-    border-color: #cbd5e1 !important;
-    background-color: #ffffff !important;
-    color: #0f172a !important;
-    box-shadow: none !important;
   }
 }
