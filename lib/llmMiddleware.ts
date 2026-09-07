@@ -17,30 +17,124 @@ function withTimeout<T>(promise: Promise<T>, ms: number, errMsg: string): Promis
 }
 
 const PRECISION_EXTRACTION_SYSTEM_PROMPT = `You are MorphUI's precision generative comparison runtime.
-You specialize in 2-way and N-way multi-entity comparisons across any domain (footwear, universities, electronics, fruits, software, regional colleges, etc.).
+You specialize in 2-way and N-way multi-entity comparisons across any domain.
 
-ENTITY INTEGRITY & ZERO-TEMPLATE MANDATORY RULES:
-1. NEVER ALTER OR MISSPELL ENTITY NAMES: Keep the user's exact entity names intact (e.g., "IIT Bombay" must stay "IIT Bombay", "JNTU" must stay "JNTU", "CBIT" must stay "CBIT").
-2. STRICT BAN ON GENERIC FALLBACK TEMPLATES & BOILERPLATE: NEVER output boilerplate phrases such as:
-   - "Engineered design and specialized functionality"
-   - "High-efficiency operational delivery"
-   - "Long-term operational resilience and user satisfaction"
-   - "Premier engineering standing for [Entity]"
-   - "Industry benchmark specification for [Entity]"
-   - "Verified operational performance rating"
-   - "Established core specifications for [Entity]"
-   - "Proven domain track record and reliability"
-   - "Distinct domain tradeoffs across performance, architectural footprint, and ecosystem maturity"
-   - NEVER return identical boilerplate text for Option A and Option B.
-3. NO FABRICATION: If search snippets do not contain a fact for a metric, you MUST set source_type: "unverified" and entity_a_value/entity_b_value to "No verified data found" — NEVER invent specifications, numbers, or claims not present in the provided snippets.
-4. CONCRETE PROS & VERDICT:
-   - In "entities", write 2-3 genuine, distinct, highly specific strengths for each entity.
-   - In "verdict_summary", provide a crisp, insightful human-like synthesis contrasting their real-world trade-offs.
-5. STRICT JSON OUTPUT: Return only valid JSON with keys: "category", "entities", "categories" (which MUST include "source_type"), "community_sentiment", "suggested_metrics", "verdict_summary".`;
+You will be given:
+- entity names to compare
+- raw search snippets (facts) for each entity, if any were retrieved
+- raw Reddit/community snippets, if any were retrieved
+
+═══════════════════════════════════════
+RULE 1 — ENTITY INTEGRITY
+Never alter, correct, or misspell the user's exact entity names. Use them verbatim.
+
+═══════════════════════════════════════
+RULE 2 — GROUNDING IS MANDATORY, NOT OPTIONAL
+For EVERY comparison_point / metric you output, you MUST set "source_type" to exactly one of:
+  - "official"   → ONLY if the entity_a_value / entity_b_value text is a specific, concrete fact
+                    that is directly present in the provided search snippets (a number, a named
+                    ingredient/spec, a dated event, a directly attributable claim). If you use
+                    "official", the value must be specific enough that removing the entity name
+                    would make it obviously false if swapped with the other entity's value.
+  - "unverified" → If no search snippets were provided, snippets did not contain relevant data
+                    for this specific metric, or you are relying on general/parametric knowledge
+                    rather than the supplied snippets.
+"source_type" is a REQUIRED key on every comparison_point. Do not omit it. Do not guess "official"
+to make the response look more authoritative — mislabeling fabricated content as "official" is a
+critical failure of this system.
+
+═══════════════════════════════════════
+RULE 3 — ZERO GENERIC BOILERPLATE (BANNED PATTERNS)
+Never output template-shaped sentences where only the entity name changes. These exact patterns
+and anything structurally identical to them are BANNED, even if grammatically different:
+  ✗ "Specialized architecture optimized for direct efficiency and core performance in {entity}"
+  ✗ "Modular design philosophy emphasizing flexibility, scalability, and broad compatibility in {entity}"
+  ✗ "Distinguishing functional design and specialized execution profile for {entity}"
+  ✗ "Proven domain adoption with optimized efficiency tailored for {entity}"
+  ✗ Any sentence that is just "[generic corporate adjective phrase] in/for {entity}"
+If you cannot produce a genuinely specific, differentiated fact for a metric — pulled from the
+snippets — set source_type: "unverified" and entity_a_value/entity_b_value to
+"No verified data found" instead of writing filler prose.
+
+═══════════════════════════════════════
+RULE 4 — NO FABRICATION WHEN SNIPPETS ARE THIN OR ABSENT
+If the search snippets for an entity are empty, irrelevant, or too sparse to support a metric:
+  - Do NOT invent realistic-sounding specifications from general/parametric knowledge.
+  - Set source_type: "unverified" for that metric.
+  - Set the value to "No verified data found" rather than a plausible-sounding guess.
+This applies even for well-known entities — if the snippet content provided to you doesn't
+actually contain the fact, mark it unverified rather than filling from memory.
+
+═══════════════════════════════════════
+RULE 5 — CONCRETE PROS & VERDICT
+In "entities", write 2-3 genuinely distinct strengths per entity, each grounded in something
+specific from the snippets (not generic praise). In "verdict_summary", synthesize real
+trade-offs — if snippet data was too thin to support a confident verdict, say so explicitly
+instead of writing a generic diplomatic summary.
+
+═══════════════════════════════════════
+OUTPUT FORMAT
+Return ONLY valid JSON with keys: "category", "entities", "categories", "community_sentiment",
+"suggested_metrics", "verdict_summary".
+Every object inside "categories" (and any flattened comparison_points) MUST include:
+  metric, values, entity_a, entity_b, source_type ("official" | "unverified")
+No prose outside the JSON. No markdown fences.`;
+
+
+const BANNED_BOILERPLATE_PATTERNS = [
+  /distinguishing functional design/i,
+  /specialized architecture/i,
+  /modular design philosophy/i,
+  /streamlined operational overhead/i,
+  /turnkey configuration/i,
+  /proven domain adoption/i,
+  /high initial ease of adoption/i,
+  /no verified data found/i,
+  /not specified/i,
+  /established core specifications/i,
+  /industry benchmark specification/i,
+  /premier engineering standing/i,
+];
+
+function validateSourceTypeGrounding(
+  metricName: string,
+  values: string[],
+  claimedSourceType?: string,
+  retrievedFactsText?: string
+): 'official' | 'unverified' {
+  if (claimedSourceType !== 'official') return 'unverified';
+
+  const combinedValueText = `${metricName} ${values.join(' ')}`;
+
+  // 1. Reject banned boilerplate patterns
+  for (const pattern of BANNED_BOILERPLATE_PATTERNS) {
+    if (pattern.test(combinedValueText)) {
+      return 'unverified';
+    }
+  }
+
+  // 2. Reject if no search snippets retrieved
+  if (!retrievedFactsText || !retrievedFactsText.trim() || retrievedFactsText.includes('No search snippets retrieved.')) {
+    return 'unverified';
+  }
+
+  // 3. Extract tokens (>3 chars) and verify presence in retrieved facts
+  const tokens = combinedValueText
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter(t => t.length > 3 && !['with', 'from', 'that', 'this', 'have', 'for', 'than', 'more', 'less', 'user', 'users', 'which', 'their', 'entity', 'primary', 'secondary'].includes(t));
+
+  const lowerSnippet = retrievedFactsText.toLowerCase();
+  const isGrounded = tokens.some(token => lowerSnippet.includes(token));
+
+  return isGrounded ? 'official' : 'unverified';
+}
 
 function cleanAndParseJson(
   raw: string,
-  fallbackEntities: string[]
+  fallbackEntities: string[],
+  retrievedFactsText?: string
 ): GenerativeComparisonResponse | null {
   if (!raw) return null;
   let cleaned = raw.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
@@ -129,7 +223,7 @@ function cleanAndParseJson(
               values,
               entity_a: values[0] || 'Not specified',
               entity_b: values[1] || 'Not specified',
-              source_type: m.source_type || 'unverified',
+              source_type: validateSourceTypeGrounding(String(m.metric || m.metric_name || 'Metric'), values, m.source_type, retrievedFactsText),
             };
           });
 
@@ -338,7 +432,7 @@ export function generateConcreteFallbackMulti(
         }),
         entity_a: 'State / National Accredited Institution',
         entity_b: 'State / National Accredited Institution',
-        source_type: 'official',
+        source_type: 'unverified',
       },
       {
         metric: 'Entrance Examination & Opening/Closing Ranks',
@@ -361,7 +455,7 @@ export function generateConcreteFallbackMulti(
         }),
         entity_a: 'Entrance Exam Cutoff',
         entity_b: 'Entrance Exam Cutoff',
-        source_type: 'official',
+        source_type: 'unverified',
       },
     ];
 
@@ -385,7 +479,7 @@ export function generateConcreteFallbackMulti(
         }),
         entity_a: 'Placement Package Median',
         entity_b: 'Placement Package Median',
-        source_type: 'official',
+        source_type: 'unverified',
       },
       {
         metric: 'Campus Acreage & Annual Tuition Fee Bracket',
@@ -406,7 +500,7 @@ export function generateConcreteFallbackMulti(
         }),
         entity_a: 'Campus Footprint & Tuition',
         entity_b: 'Campus Footprint & Tuition',
-        source_type: 'official',
+        source_type: 'unverified',
       },
     ];
 
@@ -475,7 +569,7 @@ export function generateConcreteFallbackMulti(
         ],
         entity_a: 'Nike ReactX foam + Dual Air Zoom units',
         entity_b: 'Light BOOST midsole technology',
-        source_type: 'official',
+        source_type: 'unverified',
       },
       {
         metric: 'Stack Height & Heel-to-Toe Drop',
@@ -486,7 +580,7 @@ export function generateConcreteFallbackMulti(
         ],
         entity_a: '10mm drop (37mm / 27mm)',
         entity_b: '10mm drop (30mm / 20mm)',
-        source_type: 'official',
+        source_type: 'unverified',
       },
       {
         metric: 'Approximate Weight (Men\'s US 9 / 10)',
@@ -497,7 +591,7 @@ export function generateConcreteFallbackMulti(
         ],
         entity_a: '~297g (10.4 oz)',
         entity_b: '~299g (10.5 oz)',
-        source_type: 'official',
+        source_type: 'unverified',
       },
     ];
 
@@ -511,7 +605,7 @@ export function generateConcreteFallbackMulti(
         ],
         entity_a: 'Engineered mesh with Dynamic Fit band',
         entity_b: 'Primeknit+ textile with LEP system',
-        source_type: 'official',
+        source_type: 'unverified',
       },
       {
         metric: 'Outsole Rubber & Road Durability',
@@ -522,7 +616,7 @@ export function generateConcreteFallbackMulti(
         ],
         entity_a: 'Signature waffle-inspired rubber',
         entity_b: 'Continental™ Better Rubber',
-        source_type: 'official',
+        source_type: 'unverified',
       },
       {
         metric: 'Primary Running Application',
@@ -533,7 +627,7 @@ export function generateConcreteFallbackMulti(
         ],
         entity_a: 'Daily training & tempo runs',
         entity_b: 'Recovery miles & all-day walking',
-        source_type: 'official',
+        source_type: 'unverified',
       },
     ];
 
@@ -585,7 +679,7 @@ export function generateConcreteFallbackMulti(
         ],
         entity_a: /apple/i.test(e1) ? '~10.4g sugar / 52 kcal' : '~13.7g sugar / 60 kcal',
         entity_b: /apple/i.test(e2) ? '~10.4g sugar / 52 kcal' : '~13.7g sugar / 60 kcal',
-        source_type: 'official',
+        source_type: 'unverified',
       },
       {
         metric: 'Key Vitamins & Micronutrients',
@@ -596,7 +690,7 @@ export function generateConcreteFallbackMulti(
         ],
         entity_a: /apple/i.test(e1) ? 'Vitamin C (8% DV), Potassium' : 'Vitamin C (67% DV), Vitamin A (10% DV)',
         entity_b: /apple/i.test(e2) ? 'Vitamin C (8% DV), Potassium' : 'Vitamin C (67% DV), Vitamin A (10% DV)',
-        source_type: 'official',
+        source_type: 'unverified',
       },
     ];
 
@@ -610,7 +704,7 @@ export function generateConcreteFallbackMulti(
         ],
         entity_a: /apple/i.test(e1) ? 'Malus domestica (Temperate)' : 'Mangifera indica (Tropical)',
         entity_b: /apple/i.test(e2) ? 'Malus domestica (Temperate)' : 'Mangifera indica (Tropical)',
-        source_type: 'official',
+        source_type: 'unverified',
       },
     ];
 
@@ -662,7 +756,7 @@ export function generateConcreteFallbackMulti(
         ],
         entity_a: 'Dual QN1 + V1 processors with 8 mics',
         entity_b: 'CustomTune calibration with active filters',
-        source_type: 'official',
+        source_type: 'unverified',
       },
       {
         metric: 'Bluetooth Codecs & Hi-Res Support',
@@ -673,7 +767,7 @@ export function generateConcreteFallbackMulti(
         ],
         entity_a: 'LDAC, AAC, SBC (Hi-Res Audio)',
         entity_b: 'Snapdragon Sound, aptX Adaptive, AAC',
-        source_type: 'official',
+        source_type: 'unverified',
       },
       {
         metric: 'Battery Runtime (ANC On)',
@@ -684,7 +778,7 @@ export function generateConcreteFallbackMulti(
         ],
         entity_a: 'Up to 30 hours (ANC On)',
         entity_b: 'Up to 24 hours (ANC On)',
-        source_type: 'official',
+        source_type: 'unverified',
       },
     ];
 
@@ -734,7 +828,7 @@ export function generateConcreteFallbackMulti(
         ],
         entity_a: 'Virtual DOM & Fiber Reconciler',
         entity_b: 'Fine-grained proxy reactivity / Compiler',
-        source_type: 'official',
+        source_type: 'unverified',
       },
       {
         metric: 'TypeScript Support & DX',
@@ -745,7 +839,7 @@ export function generateConcreteFallbackMulti(
         ],
         entity_a: 'First-class TSX ecosystem',
         entity_b: 'Native TypeScript in Single-File Components',
-        source_type: 'official',
+        source_type: 'unverified',
       },
     ];
 
@@ -786,7 +880,7 @@ export function generateConcreteFallbackMulti(
         ),
         entity_a: `Specialized direct architecture of ${entities[0]}`,
         entity_b: `Modular scalable architecture of ${entities[1]}`,
-        source_type: 'official',
+        source_type: 'unverified',
       },
       {
         metric: 'Operational Footprint & Resource Efficiency',
@@ -797,7 +891,7 @@ export function generateConcreteFallbackMulti(
         ),
         entity_a: `Streamlined resource footprint for ${entities[0]}`,
         entity_b: `Dynamic adaptable footprint for ${entities[1]}`,
-        source_type: 'official',
+        source_type: 'unverified',
       },
     ];
 
@@ -811,7 +905,7 @@ export function generateConcreteFallbackMulti(
         ),
         entity_a: `Turnkey configuration and rapid adoption for ${entities[0]}`,
         entity_b: `Deep configurability and extensibility for ${entities[1]}`,
-        source_type: 'official',
+        source_type: 'unverified',
       },
     ];
 
@@ -970,7 +1064,7 @@ Generate a comprehensive comparison JSON object for all ${entities.length} entit
       if (groqRes.ok) {
         const groqData = await groqRes.json();
         const content = groqData.choices?.[0]?.message?.content || '';
-        const parsed = cleanAndParseJson(content, entities);
+        const parsed = cleanAndParseJson(content, entities, factsCombinedText);
         if (parsed) {
           parsed.model_used = 'Groq (llama-3.3-70b)';
           return parsed;
@@ -997,7 +1091,7 @@ Generate a comprehensive comparison JSON object for all ${entities.length} entit
         });
 
         const response = await withTimeout(geminiCall, 7000, `Gemini (${modelName}) precision extraction timeout`);
-        const parsed = cleanAndParseJson(response.text || '', entities);
+        const parsed = cleanAndParseJson(response.text || '', entities, factsCombinedText);
         if (parsed) {
           parsed.model_used = `Gemini (${modelName})`;
           return parsed;
