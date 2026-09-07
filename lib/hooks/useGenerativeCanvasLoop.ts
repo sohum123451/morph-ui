@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { WIDGET_REGISTRY, synthesizeLocalHeuristicTile } from '@/lib/widgets/registry';
+import { WIDGET_REGISTRY } from '@/lib/widgets/registry';
 
 export interface DynamicCanvasTile {
   id: string;
@@ -158,39 +158,9 @@ export function useGenerativeCanvasLoop({
         }
       } catch (err: any) {
         if (err.name !== 'AbortError') {
-          console.warn('[useGenerativeCanvasLoop] Streaming fetch failed, falling back to heuristic:', err.message);
+          console.warn('[useGenerativeCanvasLoop] Streaming fetch error:', err.message);
           setLoopStatus('offline');
-
-          // Deterministic Offline / Fallback Synthesizer
-          const heuristic = synthesizeLocalHeuristicTile('DivergenceLedger', {
-            entities: normalizedEntities,
-            category,
-            metrics,
-            weights,
-          });
-
-          if (heuristic) {
-            const fallbackTile: DynamicCanvasTile = {
-              id: `dyn-heur-${Date.now()}`,
-              component: heuristic.component,
-              title: heuristic.title,
-              rationale: heuristic.rationale,
-              props: heuristic.props,
-              createdAt: Date.now(),
-              lastAffirmedAt: Date.now(),
-            };
-
-            setDynamicTiles((prev) => {
-              const existingIdx = prev.findIndex((t) => t.component === fallbackTile.component);
-              if (existingIdx >= 0) {
-                const updated = [...prev];
-                updated[existingIdx] = { ...updated[existingIdx], ...fallbackTile };
-                return updated;
-              }
-              const list = [...prev, fallbackTile];
-              return list.length > maxDynamicTiles ? list.slice(list.length - maxDynamicTiles) : list;
-            });
-          }
+          // No synthetic dummy tile injection: preserve 100% real-time data integrity
         }
       } finally {
         setIsEvaluating(false);

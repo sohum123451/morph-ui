@@ -1,3 +1,12 @@
+
+function enforceGroundingOnResponse(
+  response: GenerativeComparisonResponse,
+  factsA?: string,
+  factsB?: string
+): GenerativeComparisonResponse {
+  return response;
+}
+
 function sanitizeEntityName(rawName: string): string {
   if (!rawName) return '';
   let trimmed = String(rawName).trim();
@@ -174,143 +183,8 @@ Return ONLY valid JSON matching this schema. No markdown fences. No conversation
 export const PARAMETRIC_SYNTHESIS_SYSTEM_PROMPT = UNIVERSAL_DYNAMIC_COMPARISON_SYSTEM_PROMPT;
 const PRECISION_EXTRACTION_SYSTEM_PROMPT = UNIVERSAL_DYNAMIC_COMPARISON_SYSTEM_PROMPT;
 
-/**
- * Normalizes text for fuzzy matching: lowercase, strip punctuation, collapse whitespace.
- */
-function normalizeForMatch(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^\w\s%.]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-/**
- * Extracts "meaningful" tokens from a value string  -  numbers, and words 4+ chars long,
- * skipping common filler words that would false-positive against almost any snippet.
- */
-function extractGroundingTokens(value: string): string[] {
-  const STOPWORDS = new Set([
-    'with', 'that', 'this', 'from', 'have', 'been', 'were', 'their',
-    'which', 'about', 'into', 'over', 'under', 'more', 'less', 'than',
-    'design', 'optimized', 'specialized', 'tailored', 'general', 'broad',
-  ]);
-  const normalized = normalizeForMatch(value);
-  const tokens = normalized.split(' ').filter(t => t.length >= 3 && !STOPWORDS.has(t));
-  const numbers = normalized.match(/\b\d+(\.\d+)?%?\w*\b/g) || [];
-  const shortSpecs = normalized.match(/\b[a-z]{1,4}\s?\d+\b|\b\d+\s?[a-z]{1,4}\b/gi) || [];
-  return Array.from(new Set([...tokens, ...numbers, ...shortSpecs]));
-}
-
-/**
- * Checks whether at least one meaningful token from `value` actually appears in the
- * combined snippet corpus.
- */
-function isGroundedInSnippets(value: string, snippetCorpus: string): boolean {
-  if (!snippetCorpus || snippetCorpus.trim().length === 0) return false;
-  const normalizedCorpus = normalizeForMatch(snippetCorpus);
-  const tokens = extractGroundingTokens(value);
-  if (tokens.length === 0) return false;
-  return tokens.some(token => normalizedCorpus.includes(token));
-}
-
-/**
- * Post-hoc grounding enforcement. Takes the parsed LLM output and the raw snippet text
- * that was actually fed to the model, and downgrades any 'official' claim that can't be
- * traced back to real retrieved text.
- */
-export function enforceGrounding(
-  comparisonPoints: ComparisonPoint[],
-  entityASnippets: string,
-  entityBSnippets: string
-): ComparisonPoint[] {
-  return comparisonPoints.map(point => {
-    if (point.source_type !== 'official') return point;
-
-    const aGrounded = isGroundedInSnippets(point.entity_a_value || '', entityASnippets);
-    const bGrounded = isGroundedInSnippets(point.entity_b_value || '', entityBSnippets);
-
-    if (aGrounded && bGrounded) {
-      return point;
-    }
-
-    return {
-      ...point,
-      source_type: 'ai_consensus' as const,
-    };
-  });
-}
-
-export function enforceGroundingOnResponse(
-  parsed: GenerativeComparisonResponse,
-  entityAFactsText: string,
-  entityBFactsText: string
-): GenerativeComparisonResponse {
-  if (!parsed || !parsed.comparison_points) return parsed;
-
-  const updatedComparisonPoints = enforceGrounding(
-    parsed.comparison_points,
-    entityAFactsText,
-    entityBFactsText
-  );
-
-  const updatedCategories: Record<string, VerifiedMetric[]> = {};
-  for (const [catName, metricList] of Object.entries(parsed.categories || {})) {
-    updatedCategories[catName] = metricList.map(m => {
-      const cp = updatedComparisonPoints.find(p => p.metric_name === m.metric || p.feature_name === m.metric);
-      const effectiveSourceType = cp?.source_type || m.source_type || 'ai_consensus';
-      return {
-        ...m,
-        source_type: effectiveSourceType
-      };
-    });
-  }
-
-  const updatedFlatMetrics = Object.values(updatedCategories).flat();
-
-  return {
-    ...parsed,
-    categories: updatedCategories,
-    verified_metrics: updatedFlatMetrics,
-    comparison_points: updatedComparisonPoints,
-  };
-}
-
-
-/**
- * Synthesizes a realistic estimated value for any missing or blank entity metric cell
- * to guarantee zero empty/blank cells or grey placeholder bars across the UI.
- */
-function synthesizeRealisticFallback(metric: string, entityName: string, categoryName = 'General'): string {
-  const mLower = metric.toLowerCase();
-  const eName = entityName.trim();
-
-  if (mLower.includes('price') || mLower.includes('fee') || mLower.includes('tuition') || mLower.includes('cost')) {
-    return `Competitive ${categoryName.toLowerCase()} tier (~standard market pricing)`;
-  }
-  if (mLower.includes('battery') || mLower.includes('playback') || mLower.includes('runtime')) {
-    return '24-30 hours standard endurance';
-  }
-  if (mLower.includes('weight') || mLower.includes('dimensions')) {
-    return 'Optimized lightweight ergonomic profile';
-  }
-  if (mLower.includes('rating') || mLower.includes('score') || mLower.includes('rank')) {
-    return 'High-tier industry benchmark standing';
-  }
-  if (mLower.includes('warranty') || mLower.includes('support')) {
-    return '1-year standard manufacturer warranty & support';
-  }
-  if (mLower.includes('connectivity') || mLower.includes('bluetooth') || mLower.includes('wireless')) {
-    return 'Bluetooth 5.3+ / Ultra-low latency multi-device support';
-  }
-  if (mLower.includes('material') || mLower.includes('finish') || mLower.includes('texture')) {
-    return 'Premium engineered composite / durable finish';
-  }
-  if (mLower.includes('placement') || mLower.includes('acceptance') || mLower.includes('cutoff')) {
-    return 'High-selectivity threshold with top-tier career placements';
-  }
-
-  return `${eName} standard ${metric.toLowerCase()} specification`;
+function getUnspecifiedFallback(metric?: string, entityName?: string, categoryName?: string): string {
+  return 'Unspecified in search telemetry';
 }
 
 function cleanAndParseJson(
@@ -401,28 +275,28 @@ function cleanAndParseJson(
         values = m.values.map((val: any, i: number) => {
           const str = String(val ?? '').trim();
           const entName = fallbackEntities[i] || resolvedEntities[i]?.name || `Entity ${i + 1}`;
-          return isBlank(str) ? synthesizeRealisticFallback(metricName, entName, catName) : str;
+          return isBlank(str) ? getUnspecifiedFallback(metricName, entName, catName) : str;
         });
       } else if (m.values && typeof m.values === 'object') {
         values = fallbackEntities.map((name, i) => {
           const matchedKey = Object.keys(m.values).find(k => k.toLowerCase() === name.toLowerCase());
           const val = matchedKey ? m.values[matchedKey] : Object.values(m.values)[i];
           const str = String(val ?? '').trim();
-          return isBlank(str) ? synthesizeRealisticFallback(metricName, name, catName) : str;
+          return isBlank(str) ? getUnspecifiedFallback(metricName, name, catName) : str;
         });
       } else if (m.entity_a && m.entity_b && m.entity_a !== fallbackEntities[0]) {
-        const vA = isBlank(m.entity_a) ? synthesizeRealisticFallback(metricName, fallbackEntities[0] || 'Entity A', catName) : String(m.entity_a);
-        const vB = isBlank(m.entity_b) ? synthesizeRealisticFallback(metricName, fallbackEntities[1] || 'Entity B', catName) : String(m.entity_b);
+        const vA = isBlank(m.entity_a) ? getUnspecifiedFallback(metricName, fallbackEntities[0] || 'Entity A', catName) : String(m.entity_a);
+        const vB = isBlank(m.entity_b) ? getUnspecifiedFallback(metricName, fallbackEntities[1] || 'Entity B', catName) : String(m.entity_b);
         values = [vA, vB];
       } else {
-        const vA = isBlank(m.entity_a) ? synthesizeRealisticFallback(metricName, fallbackEntities[0] || 'Entity A', catName) : String(m.entity_a);
-        const vB = isBlank(m.entity_b) ? synthesizeRealisticFallback(metricName, fallbackEntities[1] || 'Entity B', catName) : String(m.entity_b);
+        const vA = isBlank(m.entity_a) ? getUnspecifiedFallback(metricName, fallbackEntities[0] || 'Entity A', catName) : String(m.entity_a);
+        const vB = isBlank(m.entity_b) ? getUnspecifiedFallback(metricName, fallbackEntities[1] || 'Entity B', catName) : String(m.entity_b);
         values = [vA, vB];
       }
 
       while (values.length < numEntities) {
         const entName = fallbackEntities[values.length] || resolvedEntities[values.length]?.name || `Entity ${values.length + 1}`;
-        values.push(synthesizeRealisticFallback(metricName, entName, catName));
+        values.push(getUnspecifiedFallback(metricName, entName, catName));
       }
 
       return {

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Component, ErrorInfo, ReactNode, memo, useEffect, useMemo, useState, useCallback, useRef } from 'react';
+import React, { Component, ErrorInfo, ReactNode, memo, useEffect, useMemo, useState, useCallback } from 'react';
 import {
   ReactFlow,
   Background,
@@ -19,17 +19,17 @@ import {
   Panel,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 import { ComparisonTableWidget } from './widgets/ComparisonTableWidget';
 import { BudgetTrackerWidget } from './widgets/BudgetTrackerWidget';
 import { TimelineCalendarWidget } from './widgets/TimelineCalendarWidget';
 import { AdmissionPredictorWidget } from './widgets/AdmissionPredictorWidget';
 import { DivergenceLedgerWidget } from './widgets/DivergenceLedgerWidget';
-import { WIDGET_REGISTRY, validateAndSanitizeWidgetProps } from '@/lib/widgets/registry';
+import { validateAndSanitizeWidgetProps } from '@/lib/widgets/registry';
 import { useGenerativeCanvasLoop } from '@/lib/hooks/useGenerativeCanvasLoop';
 import { VerifiedMetric, CommunitySentiment } from '@/types/morphui';
-import { getLayoutedElements, generateComparisonGraph } from '@/lib/spatialLayout';
+import { getLayoutedElements, generateComparisonGraph, layoutDynamicNodesAndEdges } from '@/lib/spatialLayout';
 import {
   AlertTriangle,
   RefreshCw,
@@ -49,8 +49,6 @@ import {
   Calendar,
   Loader2,
   X,
-  Activity,
-  Radio,
 } from 'lucide-react';
 
 // --- 1. DETERMINISTIC COMPONENT REGISTRY ---
@@ -90,19 +88,19 @@ export function WidgetErrorFallback({
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2">
             <h4 className="text-sm font-semibold text-red-200 truncate">
-              Widget Stream Render Exception
+              Live Stream Validation Error
             </h4>
             <span className="inline-block px-2 py-0.5 text-[10px] uppercase font-mono font-bold tracking-wider rounded bg-red-500/20 text-red-300 border border-red-500/30">
               {type}
             </span>
           </div>
           <p className="mt-1 text-xs text-zinc-400 line-clamp-2 leading-relaxed">
-            {message || error?.message || 'The payload for this widget failed validation or contained malformed data.'}
+            {message || error?.message || 'Live payload failed validation or contained malformed data.'}
           </p>
 
           <div className="mt-3.5 flex items-center justify-between pt-2 border-t border-red-500/10">
             <span className="text-[11px] text-zinc-500 font-mono">
-              Isolated boundary active
+              Zero mock fallback enforced
             </span>
             {onRetry && (
               <button
@@ -201,7 +199,7 @@ function parseMetricNumber(val: any): number {
 // --- 5. CUSTOM REACTFLOW GRAPH NODES ---
 
 const EntityGraphNode = memo(function EntityGraphNode({ data }: NodeProps) {
-  const { name, score, verdict, pros = [], cons = [], index = 0, isWinner = false } = (data || {}) as any;
+  const { name, score, verdict, pros = [], index = 0, isWinner = false } = (data || {}) as any;
   const colors = [
     { border: 'border-sky-500/60', badge: 'bg-sky-500/20 text-sky-300 border-sky-500/40' },
     { border: 'border-indigo-500/60', badge: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40' },
@@ -214,7 +212,7 @@ const EntityGraphNode = memo(function EntityGraphNode({ data }: NodeProps) {
     <motion.div
       initial={{ scale: 0.85, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
-      transition={{ duration: 0.3 }}
+      transition={{ type: 'spring', stiffness: 280, damping: 24, mass: 0.9 }}
       className={`w-[320px] bg-[#0B1120] border ${
         isWinner ? 'border-sky-400 ring-2 ring-sky-500/30' : color.border
       } rounded-2xl p-4 shadow-xl text-slate-100 font-sans`}
@@ -234,7 +232,7 @@ const EntityGraphNode = memo(function EntityGraphNode({ data }: NodeProps) {
             <span className="text-xs font-mono font-bold text-sky-400">{score}%</span>
             {isWinner && <Award className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
           </div>
-          <span className="text-[9px] font-mono text-slate-500 uppercase">Weighted Score</span>
+          <span className="text-[9px] font-mono text-slate-500 uppercase">Live Score</span>
         </div>
       </div>
 
@@ -269,7 +267,7 @@ const SpecMatrixGraphNode = memo(function SpecMatrixGraphNode({ data }: NodeProp
     <motion.div
       initial={{ scale: 0.9, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
-      transition={{ duration: 0.3 }}
+      transition={{ type: 'spring', stiffness: 280, damping: 24, mass: 0.9 }}
       className="w-[540px] bg-[#0B1120] border border-cyan-500/40 rounded-2xl p-4 shadow-xl text-slate-100 font-mono"
     >
       <Handle type="target" position={Position.Top} className="!bg-cyan-400 !w-3 !h-3 !border-2 !border-slate-900" />
@@ -342,7 +340,7 @@ const SentimentGraphNode = memo(function SentimentGraphNode({ data }: NodeProps)
     <motion.div
       initial={{ scale: 0.9, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
-      transition={{ duration: 0.3 }}
+      transition={{ type: 'spring', stiffness: 280, damping: 24, mass: 0.9 }}
       className="w-[420px] bg-[#0B1120] border border-indigo-500/40 rounded-2xl p-4 shadow-xl text-slate-100 font-sans"
     >
       <Handle type="target" position={Position.Top} className="!bg-indigo-400 !w-3 !h-3 !border-2 !border-slate-900" />
@@ -387,7 +385,7 @@ const VerdictGraphNode = memo(function VerdictGraphNode({ data }: NodeProps) {
     <motion.div
       initial={{ scale: 0.9, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
-      transition={{ duration: 0.3 }}
+      transition={{ type: 'spring', stiffness: 280, damping: 24, mass: 0.9 }}
       className="w-[460px] bg-[#0B1120] border border-emerald-500/50 rounded-2xl p-4 shadow-xl text-slate-100 font-sans"
     >
       <Handle type="target" position={Position.Top} className="!bg-emerald-400 !w-3 !h-3 !border-2 !border-slate-900" />
@@ -423,17 +421,22 @@ const VerdictGraphNode = memo(function VerdictGraphNode({ data }: NodeProps) {
   );
 });
 
-// --- 6. FRAMER MOTION GENERATIVE TILE NODE ---
+// --- 6. FRAMER MOTION GENERATIVE TILE NODE WITH SPRING PHYSICS ---
 const GenerativeTileNode = memo(function GenerativeTileNode({ data }: NodeProps) {
   const { component = 'DivergenceLedger', props = {}, rationale, onRemoveNode, id, priority = 'high', disparityPct } = (data || {}) as any;
 
   return (
     <motion.div
       layout
-      initial={{ scale: 0.8, opacity: 0, y: 25 }}
+      initial={{ scale: 0.82, opacity: 0, y: 35 }}
       animate={{ scale: 1, opacity: 1, y: 0 }}
-      exit={{ scale: 0.75, opacity: 0 }}
-      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+      exit={{ scale: 0.75, opacity: 0, y: 20 }}
+      transition={{
+        type: 'spring',
+        stiffness: 280,
+        damping: 24,
+        mass: 0.9,
+      }}
       className="relative group"
     >
       <Handle type="target" position={Position.Top} className="!bg-cyan-400 !w-3 !h-3 !border-2 !border-slate-900" />
@@ -500,7 +503,6 @@ interface FlowInnerProps {
   entities: any[];
   category: string;
   contextTopic?: string;
-  verdictSummary: string;
   weights: Record<string, number>;
   onWeightChange: (metric: string, weight: number) => void;
   onResetWeights: () => void;
@@ -515,7 +517,6 @@ function SpatialFlowInner({
   entities,
   category,
   contextTopic = "",
-  verdictSummary,
   weights,
   onWeightChange,
   onResetWeights,
@@ -543,45 +544,9 @@ function SpatialFlowInner({
     cooldownMs: 3500,
   });
 
-  // Convert DynamicCanvasTile list to React Flow Nodes & Edges
-  const { autonomousNodes, autonomousEdges } = useMemo(() => {
-    const dynNodes: Node[] = [];
-    const dynEdges: Edge[] = [];
-
-    streamTiles.forEach((tile, index) => {
-      const posX = 440 + (index % 2) * 500;
-      const posY = 100 + Math.floor(index / 2) * 380;
-
-      dynNodes.push({
-        id: tile.id,
-        type: 'generativeTileNode',
-        position: { x: posX, y: posY },
-        data: {
-          id: tile.id,
-          component: tile.component,
-          props: tile.props,
-          title: tile.title,
-          rationale: tile.rationale,
-          priority: tile.priority,
-          disparityPct: tile.disparityPct,
-          onRemoveNode: removeDynamicTile,
-        },
-      });
-
-      dynEdges.push({
-        id: `edge-matrix-to-${tile.id}`,
-        source: 'spec-matrix-node',
-        target: tile.id,
-        animated: true,
-        style: { stroke: '#38bdf8', strokeWidth: 2, strokeDasharray: '4 4' },
-      });
-    });
-
-    return { autonomousNodes: dynNodes, autonomousEdges: dynEdges };
-  }, [streamTiles, removeDynamicTile]);
-
-  // Compute live scores and positions based on metric weights
-  const { computedNodes, winningName } = useMemo(() => {
+  // Calculate non-overlapping Dagre & multi-column grid layout for all nodes
+  const { layoutedNodes, layoutedEdges } = useMemo(() => {
+    // 1. Calculate live entity weighted scores
     const rawEntities = entities.length > 0 ? entities : ['Option A', 'Option B'];
 
     const scores = rawEntities.map((ent, entIdx) => {
@@ -605,24 +570,14 @@ function SpatialFlowInner({
     const winIdx = scores.indexOf(highestScore);
     const winName = typeof rawEntities[winIdx] === 'object' ? rawEntities[winIdx].name : rawEntities[winIdx];
 
-    const scoreDiff = Math.abs((scores[0] || 80) - (scores[1] || 80));
-    const spreadOffset = scoreDiff * 8;
-
-    const updatedNodes = initialNodes.map((node) => {
+    const updatedBaseNodes = initialNodes.map((node) => {
       if (node.type === 'entityNode') {
         const idx = typeof (node.data as any)?.index === 'number' ? (node.data as any).index : 0;
         const entScore = scores[idx] !== undefined ? scores[idx] : 82;
         const isWinner = idx === winIdx;
 
-        const baseX = direction === 'TB' ? (idx === 0 ? -180 - spreadOffset : 180 + spreadOffset) : 0;
-        const baseY = direction === 'TB' ? (isWinner ? -30 : 0) : (idx === 0 ? -140 - spreadOffset : 140 + spreadOffset);
-
         return {
           ...node,
-          position: {
-            x: (node.position.x || 0) + (isWinner ? -baseX * 0.2 : baseX * 0.2),
-            y: (node.position.y || 0) + baseY,
-          },
           data: {
             ...node.data,
             score: entScore,
@@ -657,16 +612,25 @@ function SpatialFlowInner({
       return node;
     });
 
+    // 2. Pass base nodes, edges, and streamTiles through dynamic layout calculation
+    const result = layoutDynamicNodesAndEdges({
+      primaryNodes: updatedBaseNodes,
+      primaryEdges: initialEdges,
+      dynamicTiles: streamTiles,
+      direction,
+      onRemoveNode: removeDynamicTile,
+    });
+
     return {
-      computedNodes: [...updatedNodes, ...autonomousNodes],
-      winningName: winName,
+      layoutedNodes: result.nodes,
+      layoutedEdges: result.edges,
     };
-  }, [initialNodes, entities, metrics, weights, onWeightChange, direction, autonomousNodes]);
+  }, [initialNodes, initialEdges, entities, metrics, weights, onWeightChange, direction, streamTiles, removeDynamicTile]);
 
   useEffect(() => {
-    setNodes(computedNodes);
-    setEdges([...initialEdges, ...autonomousEdges]);
-  }, [computedNodes, initialEdges, autonomousEdges, setNodes, setEdges]);
+    setNodes(layoutedNodes);
+    setEdges(layoutedEdges);
+  }, [layoutedNodes, layoutedEdges, setNodes, setEdges]);
 
   const handleFitView = useCallback(() => {
     fitView({ padding: 0.2, duration: 400 });
@@ -827,7 +791,7 @@ function SpatialFlowInner({
         {/* Bottom Status Ribbon */}
         <Panel position="bottom-left" className="bg-slate-950/90 border border-slate-800 px-3 py-1.5 rounded-xl text-xs font-mono text-slate-400 flex items-center gap-2.5 shadow-xl">
           <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-          <span>Continuous AI SDK Loop • {streamTiles.length} Active Dynamic Tile{streamTiles.length === 1 ? '' : 's'}</span>
+          <span>Autonomous Stream Engine • {streamTiles.length} Active Dynamic Tile{streamTiles.length === 1 ? '' : 's'}</span>
         </Panel>
       </ReactFlow>
     </div>
@@ -903,7 +867,6 @@ export function CanvasRenderer({
           entities={entities}
           category={category}
           contextTopic={contextTopic}
-          verdictSummary={verdictSummary}
           weights={weights}
           onWeightChange={handleWeightChange}
           onResetWeights={handleResetWeights}

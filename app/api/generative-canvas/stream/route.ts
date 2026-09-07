@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
-import { WIDGET_REGISTRY, validateAndSanitizeWidgetProps, synthesizeLocalHeuristicTile } from '@/lib/widgets/registry';
+import { WIDGET_REGISTRY, validateAndSanitizeWidgetProps } from '@/lib/widgets/registry';
 
 export const dynamic = 'force-dynamic';
 
@@ -212,25 +212,11 @@ Return valid JSON in this exact shape:
           }
         }
 
-        // --- TIER 3: DETERMINISTIC HEURISTIC SAFETY NET ---
+        // --- LIVE INFERENCE VERIFICATION ---
         if (!synthesizedTile) {
-          const fallbackType = candidateTypes[0] || 'DivergenceLedger';
-          const heuristic = synthesizeLocalHeuristicTile(fallbackType, {
-            entities,
-            category,
-            metrics,
-            weights,
+          sendEvent('error', {
+            message: 'Live inference stream failed to generate a validated telemetry tile from active search and LLM tools.',
           });
-
-          if (heuristic) {
-            synthesizedTile = {
-              action: 'spawn',
-              component: heuristic.component,
-              title: heuristic.title,
-              rationale: heuristic.rationale,
-              props: heuristic.props,
-            };
-          }
         }
 
         // --- SERVER-SIDE STRICT SCHEMAS & SANITIZER GATE ---

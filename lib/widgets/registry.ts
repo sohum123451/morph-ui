@@ -167,9 +167,12 @@ export const WIDGET_REGISTRY: Record<string, WidgetManifest> = {
   },
 };
 
+
+
+
 /**
- * Strict server & client schema validator and sanitizer.
- * If safeParse fails, attempts default filling; if that fails, returns null so the tile is dropped.
+ * Strict server & client schema validator.
+ * Validates props against the widget's Zod schema.
  */
 export function validateAndSanitizeWidgetProps<T = any>(
   widgetType: string,
@@ -185,93 +188,8 @@ export function validateAndSanitizeWidgetProps<T = any>(
     return { success: true, data: result.data as T };
   }
 
-  // Attempt partial repair with empty object fallback to populate Zod defaults
-  const fallbackResult = manifest.schema.safeParse({});
-  if (fallbackResult.success) {
-    return { success: true, data: { ...fallbackResult.data, ...(rawProps || {}) } as T };
-  }
-
   return {
     success: false,
     error: 'Schema validation failed for ' + widgetType + ': ' + result.error.issues.map((i) => i.message).join(', '),
   };
-}
-
-/**
- * Fast-path Deterministic Heuristic Synthesizer (Edge / Offline Safety Net).
- * Produces schema-valid widget payloads with 0ms latency without invoking external LLMs.
- */
-export function synthesizeLocalHeuristicTile(
-  widgetType: string,
-  params: {
-    entities: string[];
-    category: string;
-    metrics: Array<{ metric: string; entity_a?: string; entity_b?: string; values?: string[] }>;
-    weights: Record<string, number>;
-  }
-): { component: string; title: string; rationale: string; props: any } | null {
-  const { entities, category, metrics, weights } = params;
-  const entityA = entities[0] || 'Option A';
-  const entityB = entities[1] || 'Option B';
-
-  if (widgetType === 'DivergenceLedger') {
-    const deltas = metrics.slice(0, 4).map((m, idx) => {
-      const weight = weights[m.metric] !== undefined ? weights[m.metric] : 100;
-      const disparity = Math.min(95, Math.max(25, 30 + (idx * 15) + Math.round(weight * 0.2)));
-      return {
-        metric: m.metric || ('Metric ' + (idx + 1)),
-        disparity_pct: disparity,
-        entity_a_val: m.entity_a || m.values?.[0] || 'Standard Spec',
-        entity_b_val: m.entity_b || m.values?.[1] || 'Enhanced Spec',
-        critical_driver: 'High weighted priority (' + weight + '%) creates decisive separation.',
-      };
-    });
-
-    return {
-      component: 'DivergenceLedger',
-      title: 'Real-time Disparity Ledger',
-      rationale: 'Computed from active metric weight variance across ' + entityA + ' and ' + entityB + '.',
-      props: {
-        category,
-        deltas,
-        summary: 'Active weighting indicates critical operational variance between ' + entityA + ' and ' + entityB + '.',
-      },
-    };
-  }
-
-  if (widgetType === 'BudgetTracker') {
-    return {
-      component: 'BudgetTracker',
-      title: 'Estimated Cost Profile: ' + entityA + ' vs ' + entityB,
-      rationale: 'Financial allocation model derived from category telemetry.',
-      props: {
-        title: 'Cost Comparison (' + category + ')',
-        currency: '$',
-        total: 3200,
-        items: [
-          { category: 'Initial Acquisition', name: 'Primary Unit (' + entityA + ')', cost: 1400 },
-          { category: 'Maintenance & Support', name: 'Annual Service & Upgrades', cost: 650 },
-          { category: 'Operational Overhead', name: 'Licensing & Integration', cost: 1150 },
-        ],
-      },
-    };
-  }
-
-  if (widgetType === 'TimelineCalendar') {
-    return {
-      component: 'TimelineCalendar',
-      title: 'Implementation & Rollout Schedule',
-      rationale: 'Projected deployment phases and key integration milestones.',
-      props: {
-        title: category + ' Deployment Path',
-        events: [
-          { date: 'Phase 1', title: 'Initial Provisioning & Setup', category: 'Milestone', description: 'Baseline environment preparation for ' + entityA },
-          { date: 'Phase 2', title: 'Telemetry Calibration & Testing', category: 'Testing', description: 'Real-time integration testing' },
-          { date: 'Phase 3', title: 'Full Operational Go-Live', category: 'Deployment', description: 'Production cutover and live monitoring' },
-        ],
-      },
-    };
-  }
-
-  return null;
 }
