@@ -110,6 +110,10 @@ export function validateComparisonSchema(obj: any): obj is GenerativeComparisonR
   if (!hasEntities && !hasEntityAB) return false;
   if (typeof obj.verdict_summary !== 'string' || !obj.verdict_summary.trim()) return false;
 
+  // Reject defeatist fallback verdicts or legacy model strings
+  if (/insufficient data/i.test(obj.verdict_summary)) return false;
+  if (obj.model_used && /gpt-oss|gemini-3.6/i.test(obj.model_used)) return false;
+
   const hasCategories =
     obj.categories &&
     typeof obj.categories === 'object' &&
