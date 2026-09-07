@@ -131,6 +131,108 @@ function validateSourceTypeGrounding(
   return isGrounded ? 'official' : 'unverified';
 }
 
+
+/**
+ * Normalizes text for fuzzy matching: lowercase, strip punctuation, collapse whitespace.
+ */
+function normalizeForMatch(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^\w\s%.]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Extracts "meaningful" tokens from a value string — numbers, and words 4+ chars long,
+ * skipping common filler words that would false-positive against almost any snippet.
+ */
+function extractGroundingTokens(value: string): string[] {
+  const STOPWORDS = new Set([
+    'with', 'that', 'this', 'from', 'have', 'been', 'were', 'their',
+    'which', 'about', 'into', 'over', 'under', 'more', 'less', 'than',
+    'design', 'optimized', 'specialized', 'tailored', 'general', 'broad',
+  ]);
+  const normalized = normalizeForMatch(value);
+  const tokens = normalized.split(' ').filter(t => t.length >= 4 && !STOPWORDS.has(t));
+  const numbers = normalized.match(/\b\d+(\.\d+)?%?\w*\b/g) || [];
+  return Array.from(new Set([...tokens, ...numbers]));
+}
+
+/**
+ * Checks whether at least one meaningful token from `value` actually appears in the
+ * combined snippet corpus.
+ */
+function isGroundedInSnippets(value: string, snippetCorpus: string): boolean {
+  if (!snippetCorpus || snippetCorpus.trim().length === 0) return false;
+  const normalizedCorpus = normalizeForMatch(snippetCorpus);
+  const tokens = extractGroundingTokens(value);
+  if (tokens.length === 0) return false;
+  return tokens.some(token => normalizedCorpus.includes(token));
+}
+
+/**
+ * Post-hoc grounding enforcement. Takes the parsed LLM output and the raw snippet text
+ * that was actually fed to the model, and downgrades any 'official' claim that can't be
+ * traced back to real retrieved text.
+ */
+export function enforceGrounding(
+  comparisonPoints: ComparisonPoint[],
+  entityASnippets: string,
+  entityBSnippets: string
+): ComparisonPoint[] {
+  return comparisonPoints.map(point => {
+    if (point.source_type !== 'official') return point;
+
+    const aGrounded = isGroundedInSnippets(point.entity_a_value || '', entityASnippets);
+    const bGrounded = isGroundedInSnippets(point.entity_b_value || '', entityBSnippets);
+
+    if (aGrounded && bGrounded) {
+      return point;
+    }
+
+    return {
+      ...point,
+      source_type: 'unverified' as const,
+    };
+  });
+}
+
+export function enforceGroundingOnResponse(
+  parsed: GenerativeComparisonResponse,
+  entityAFactsText: string,
+  entityBFactsText: string
+): GenerativeComparisonResponse {
+  if (!parsed || !parsed.comparison_points) return parsed;
+
+  const updatedComparisonPoints = enforceGrounding(
+    parsed.comparison_points,
+    entityAFactsText,
+    entityBFactsText
+  );
+
+  const updatedCategories: Record<string, VerifiedMetric[]> = {};
+  for (const [catName, metricList] of Object.entries(parsed.categories || {})) {
+    updatedCategories[catName] = metricList.map(m => {
+      const cp = updatedComparisonPoints.find(p => p.metric_name === m.metric || p.feature_name === m.metric);
+      const isOfficial = cp ? cp.source_type === 'official' : m.source_type === 'official';
+      return {
+        ...m,
+        source_type: isOfficial ? 'official' : 'unverified'
+      };
+    });
+  }
+
+  const updatedFlatMetrics = Object.values(updatedCategories).flat();
+
+  return {
+    ...parsed,
+    categories: updatedCategories,
+    verified_metrics: updatedFlatMetrics,
+    comparison_points: updatedComparisonPoints,
+  };
+}
+
 function cleanAndParseJson(
   raw: string,
   fallbackEntities: string[],
@@ -962,6 +1064,8 @@ export async function generateComparisonMatrix(
   let factsCombinedText = '';
   let reviewsCombinedText = '';
   let hasMissingFacts = false;
+  let entityAFactsText = '';
+  let entityBFactsText = '';
 
   if (Array.isArray(entityAOrList)) {
     entities = entityAOrList;
@@ -984,6 +1088,8 @@ export async function generateComparisonMatrix(
       .join('\n\n');
 
     hasMissingFacts = factsArray.every((f) => !f?.facts?.trim());
+    entityAFactsText = factsArray[0]?.facts || '';
+    entityBFactsText = factsArray[1]?.facts || '';
   } else {
     const eA = entityAOrList;
     const eB = typeof entityBOrFactsList === 'string' ? entityBOrFactsList : 'Option B';
@@ -993,6 +1099,8 @@ export async function generateComparisonMatrix(
     reviewsCombinedText = `COMMUNITY REVIEWS FOR ${eA.toUpperCase()}:\n${reviewsA || 'No forum reviews found.'}\n\nCOMMUNITY REVIEWS FOR ${eB.toUpperCase()}:\n${reviewsB || 'No forum reviews found.'}`;
 
     hasMissingFacts = !factsA?.trim() && !factsB?.trim();
+    entityAFactsText = factsA || '';
+    entityBFactsText = factsB || '';
   }
 
   if (hasMissingFacts) {
@@ -1067,7 +1175,7 @@ Generate a comprehensive comparison JSON object for all ${entities.length} entit
         const parsed = cleanAndParseJson(content, entities, factsCombinedText);
         if (parsed) {
           parsed.model_used = 'Groq (llama-3.3-70b)';
-          return parsed;
+          return enforceGroundingOnResponse(parsed, entityAFactsText, entityBFactsText);
         }
       }
     } catch (err: any) {
@@ -1094,7 +1202,7 @@ Generate a comprehensive comparison JSON object for all ${entities.length} entit
         const parsed = cleanAndParseJson(response.text || '', entities, factsCombinedText);
         if (parsed) {
           parsed.model_used = `Gemini (${modelName})`;
-          return parsed;
+          return enforceGroundingOnResponse(parsed, entityAFactsText, entityBFactsText);
         }
       } catch (err: any) {
         console.warn(`Gemini (${modelName}) error:`, err?.message || err);
