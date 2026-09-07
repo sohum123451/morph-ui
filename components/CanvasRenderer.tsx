@@ -1,26 +1,29 @@
 'use client';
 
-import React, { Component, ErrorInfo, ReactNode, useMemo } from 'react';
-import dynamic from 'next/dynamic';
+import React, { Component, ErrorInfo, ReactNode, memo } from 'react';
+import {
+  ReactFlow,
+  Background,
+  Controls,
+  MiniMap,
+  Node,
+  Edge,
+  NodeProps,
+  Handle,
+  Position,
+  BackgroundVariant,
+} from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
+
 import { ComparisonTableWidget } from './widgets/ComparisonTableWidget';
 import { BudgetTrackerWidget } from './widgets/BudgetTrackerWidget';
 import { TimelineCalendarWidget } from './widgets/TimelineCalendarWidget';
 import { AdmissionPredictorWidget } from './widgets/AdmissionPredictorWidget';
-import { BudgetWidgetSchema, TimelineWidgetSchema } from '@/types/morphui';
+import {
+  BudgetWidgetSchema,
+  TimelineWidgetSchema,
+} from '@/types/morphui';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
-import { Spatial3DNodeData } from './canvas3d/types';
-import { calculate3DNodePositions } from '@/lib/spatialLayout';
-
-// Dynamically import SpatialCanvas3D with SSR disabled for clean WebGL initialization
-const SpatialCanvas3D = dynamic(() => import('./canvas3d/SpatialCanvas3D'), {
-  ssr: false,
-  loading: () => (
-    <div className="w-full h-[650px] rounded-2xl border border-slate-800/80 bg-zinc-950 flex flex-col items-center justify-center space-y-3 text-slate-400">
-      <div className="w-8 h-8 rounded-full border-2 border-sky-500 border-t-transparent animate-spin" />
-      <span className="text-xs font-mono">Initializing 3D WebGL Spatial Canvas...</span>
-    </div>
-  ),
-});
 
 // --- 1. DETERMINISTIC COMPONENT REGISTRY ---
 export const COMPONENT_REGISTRY = {
@@ -157,6 +160,7 @@ export function renderWidgetComponent(type: string, data: any) {
     return <WidgetErrorFallback type={type} message={`Schema validation error: ${validationError}`} />;
   }
 
+  // Handle data payload variations ({ data: ... } vs flat payload)
   const widgetProps = data && data.data !== undefined ? data : { data };
 
   return (
@@ -166,48 +170,69 @@ export function renderWidgetComponent(type: string, data: any) {
   );
 }
 
-// --- 5. 3D WEBGL CANVAS RENDERER FOR WIDGETS ---
+// --- 5. REACT FLOW CUSTOM NODE WRAPPER ---
+export const CanvasWidgetNode = memo(function CanvasWidgetNode({ data }: NodeProps) {
+  const widgetType = (data?.type as string) || (data?.widget_type as string) || 'ComparisonTable';
+
+  return (
+    <div className="group relative">
+      <Handle type="target" position={Position.Top} className="!bg-blue-500/80 !w-2.5 !h-2.5 !border-2 !border-zinc-950" />
+      <div className="shadow-2xl transition-transform duration-200 group-hover:scale-[1.005]">
+        {renderWidgetComponent(widgetType, data)}
+      </div>
+      <Handle type="source" position={Position.Bottom} className="!bg-blue-500/80 !w-2.5 !h-2.5 !border-2 !border-zinc-950" />
+    </div>
+  );
+});
+
+export const nodeTypes = {
+  widgetNode: CanvasWidgetNode,
+  ComparisonTable: CanvasWidgetNode,
+  BudgetTracker: CanvasWidgetNode,
+  TimelineCalendar: CanvasWidgetNode,
+  AdmissionPredictor: CanvasWidgetNode,
+};
+
+// --- 6. STANDALONE INTERACTIVE CANVAS RENDERER ---
 export interface CanvasRendererProps {
-  nodes?: any[];
-  edges?: any[];
-  widgets?: any[];
+  nodes: Node[];
+  edges: Edge[];
   onNodesChange?: (changes: any) => void;
   onEdgesChange?: (changes: any) => void;
   className?: string;
-  theme?: 'dark' | 'light' | 'botanical' | 'pink';
 }
 
 export function CanvasRenderer({
-  nodes = [],
-  widgets = [],
+  nodes,
+  edges,
+  onNodesChange,
+  onEdgesChange,
   className = 'h-[750px] w-full rounded-2xl border border-zinc-800/80 bg-zinc-950/90 overflow-hidden',
-  theme = 'dark',
 }: CanvasRendererProps) {
-  // Combine nodes and widgets into 3D world elements
-  const inputList = nodes.length > 0 ? nodes : widgets;
-  const positions = useMemo(() => calculate3DNodePositions(inputList.length), [inputList.length]);
-
-  const spatial3DNodes: Spatial3DNodeData[] = useMemo(() => {
-    return inputList.map((item, idx) => {
-      const data = item.data || item;
-      const type = (data?.type as string) || (data?.widget_type as string) || (item.type as string) || 'ComparisonTable';
-      const id = item.id || `node-${idx}`;
-      const title = data.title || type;
-      const pos = positions[idx] || [idx * 8 - 8, 2, 0];
-
-      return {
-        id,
-        title,
-        nodeIndex: idx,
-        type,
-        position: pos,
-        content: renderWidgetComponent(type, data),
-        accentColor: idx === 0 ? '#38bdf8' : idx === 1 ? '#818cf8' : idx === 2 ? '#34d399' : '#f43f5e',
-      };
-    });
-  }, [inputList, positions]);
-
-  return <SpatialCanvas3D nodes={spatial3DNodes} className={className} theme={theme} />;
+  return (
+    <div className={className}>
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        nodeTypes={nodeTypes}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        fitView
+        fitViewOptions={{ padding: 0.2 }}
+        minZoom={0.2}
+        maxZoom={2}
+      >
+        <Background variant={BackgroundVariant.Dots} gap={24} size={1.5} color="#3f3f46" />
+        <Controls className="!bg-zinc-900/90 !border-zinc-800 !fill-zinc-300 !text-zinc-300" />
+        <MiniMap
+          nodeStrokeWidth={3}
+          zoomable
+          pannable
+          className="!bg-zinc-900/90 !border-zinc-800 rounded-xl overflow-hidden"
+        />
+      </ReactFlow>
+    </div>
+  );
 }
 
 export default CanvasRenderer;

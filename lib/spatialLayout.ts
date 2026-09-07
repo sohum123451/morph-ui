@@ -6,9 +6,10 @@ const DEFAULT_NODE_HEIGHT = 250;
 
 /**
  * Calculates dynamic bounding box dimensions based on node measurements,
- * widget type, and content size to prevent spatial collisions.
+ * widget type, and content size to prevent spatial collisions on the canvas.
  */
 export function calculateNodeDimensions(node: Node): { width: number; height: number } {
+  // 1. Check measured dimensions from React Flow runtime
   if (node.measured?.width && node.measured?.height) {
     return {
       width: Math.max(node.measured.width, 300),
@@ -21,6 +22,7 @@ export function calculateNodeDimensions(node: Node): { width: number; height: nu
     return { width: data.width, height: data.height };
   }
 
+  // 2. Dynamic estimation based on widget type and content complexity
   const type = data.type || node.type || '';
   switch (type) {
     case 'ComparisonTable':
@@ -61,7 +63,8 @@ export function calculateNodeDimensions(node: Node): { width: number; height: nu
 }
 
 /**
- * Executes 2D Dagre layout calculation
+ * Executes Dagre directed-graph spatial layout calculation with collision prevention
+ * and variable content dimension support.
  */
 export function getLayoutedElements(
   nodes: Node[],
@@ -72,8 +75,8 @@ export function getLayoutedElements(
   dagreGraph.setDefaultEdgeLabel(() => ({}));
   dagreGraph.setGraph({
     rankdir: direction,
-    nodesep: 70,
-    ranksep: 90,
+    nodesep: 70, // Horizontal separation between adjacent nodes
+    ranksep: 90, // Vertical separation between ranks/tiers
     marginx: 50,
     marginy: 50,
   });
@@ -109,25 +112,4 @@ export function getLayoutedElements(
   });
 
   return { nodes: layoutedNodes, edges };
-}
-
-/**
- * Calculates 3D World Spatial Coordinates [X, Y, Z] for WebGL Drei scene placement.
- */
-export function calculate3DNodePositions(count: number): Array<[number, number, number]> {
-  if (count <= 1) return [[0, 2, 0]];
-  if (count === 2) return [[-7, 2, 0], [7, 2, 0]];
-  if (count === 3) return [[-8, 2, 2], [0, 2, -6], [8, 2, 2]];
-  if (count === 4) return [[-9, 2, 0], [-3, 2, -7], [6, 2, -6], [10, 2, 2]];
-
-  // Circular / Radial layout for 5+ nodes
-  const radius = Math.max(10, count * 2.5);
-  return Array.from({ length: count }, (_, i) => {
-    const angle = (i / count) * Math.PI * 2 - Math.PI / 2;
-    return [
-      Math.cos(angle) * radius,
-      2,
-      Math.sin(angle) * radius,
-    ] as [number, number, number];
-  });
 }
