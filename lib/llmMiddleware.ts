@@ -1,4 +1,5 @@
 import { validateCanvasPayload } from './schemas';
+import { getEnv } from './envHelper';
 import Groq from 'groq-sdk';
 import { GoogleGenAI } from '@google/genai';
 import {
@@ -591,8 +592,8 @@ export async function generateComparisonMatrix(
   const isAiSynthesisMode = hasMissingFacts;
   const activeSystemPrompt = isAiSynthesisMode ? PARAMETRIC_SYNTHESIS_SYSTEM_PROMPT : PRECISION_EXTRACTION_SYSTEM_PROMPT;
 
-  const geminiKey = process.env.GEMINI_API_KEY;
-  const nvidiaKey2 = process.env.NVIDIA_API_KEY;
+  const geminiKey = getEnv('GEMINI_API_KEY', false);
+  const nvidiaKey2 = getEnv('NVIDIA_API_KEY', false);
   if (nvidiaKey2) {
     try {
       const nvidiaCall = fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
@@ -625,7 +626,7 @@ export async function generateComparisonMatrix(
     }
   }
 
-  const groqKey = process.env.GROQ_API_KEY;
+  const groqKey = getEnv('GROQ_API_KEY', false);
 
   const userPrompt = isAiSynthesisMode
     ? `COMPARED ENTITIES (${entities.length}): ${entities.map((e, i) => `Entity ${i + 1}: "${e}"`).join(', ')}
@@ -649,7 +650,7 @@ ${reviewsCombinedText}
 5. Produce authentic pros and a decisive, non-defeatist executive verdict summary.`;
 
   // 0. TIER 0 ULTRA-HIGH-PERFORMANCE MODEL: NVIDIA NIM Nemotron-3 Ultra (550B)
-  const nvidiaKey = process.env.NVIDIA_API_KEY;
+  const nvidiaKey = getEnv('NVIDIA_API_KEY', false);
   if (nvidiaKey) {
     try {
       const nvidiaCall = fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
@@ -754,7 +755,7 @@ ${reviewsCombinedText}
   }
 
   // All live LLM providers failed - throw explicit runtime error
-  throw new Error('Live LLM comparison inference pipeline failed: All inference providers (Groq, Gemini) failed or timed out.');
+  throw new Error('Live LLM comparison inference pipeline failed: All inference providers (NVIDIA, Groq, Gemini) failed or timed out.');
 }
 
 export async function validateEntityCompatibility(
@@ -789,8 +790,8 @@ If incompatible:
   "message": "These items appear to be from completely different categories."
 }`;
 
-  const groqKey = process.env.GROQ_API_KEY;
-  const geminiKey = process.env.GEMINI_API_KEY;
+  const groqKey = getEnv('GROQ_API_KEY', false);
+  const geminiKey = getEnv('GEMINI_API_KEY', false);
 
   if (groqKey) {
     try {
