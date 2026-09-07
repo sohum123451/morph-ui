@@ -7,14 +7,8 @@ import {
   PolarGrid,
   PolarAngleAxis,
   ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  Cell,
 } from 'recharts';
-import { Sliders, Activity, Sparkles, Filter, ChevronRight, BarChart3 } from 'lucide-react';
+import { Sliders, Activity, Sparkles, Filter, ChevronRight, BarChart3, CheckCircle2 } from 'lucide-react';
 import { VerifiedMetric, CommunitySentiment, EntityVerdict } from '@/types/morphui';
 
 // --- 1. PLAYABLE RADAR & METRIC MATRIX CHART ---
@@ -26,19 +20,27 @@ export function PlayableMetricMatrix({
   entities: (EntityVerdict | string)[];
 }) {
   const [activeFilter, setActiveFilter] = useState<string>('all');
+
   const entityNames = useMemo(() => {
     return entities.length > 0
       ? entities.map((e) => (typeof e === 'object' ? e.name : e))
       : ['Option A', 'Option B'];
   }, [entities]);
 
+  // Filter metrics based on category filter
+  const filteredMetrics = useMemo(() => {
+    if (activeFilter === 'all') return metrics.slice(0, 6);
+    if (activeFilter === 'core') return metrics.slice(0, 4);
+    if (activeFilter === 'efficiency') return metrics.slice(2, 6);
+    return metrics.slice(0, 6);
+  }, [metrics, activeFilter]);
+
   // Transform metrics into numerical scoring for dynamic radar visualization
   const radarData = useMemo(() => {
-    return metrics.slice(0, 6).map((m, idx) => {
+    return filteredMetrics.map((m, idx) => {
       const valA = String(m.values?.[0] !== undefined ? m.values[0] : m.entity_a || '');
       const valB = String(m.values?.[1] !== undefined ? m.values[1] : m.entity_b || '');
 
-      // Normalized synthetic metric strength scores for radar visualization
       const scoreA = 50 + (valA.length % 40) + ((idx * 11) % 15);
       const scoreB = 50 + (valB.length % 40) + (((idx + 2) * 13) % 15);
 
@@ -49,31 +51,49 @@ export function PlayableMetricMatrix({
         scoreB: Math.min(98, scoreB),
       };
     });
-  }, [metrics]);
+  }, [filteredMetrics]);
 
   return (
-    <div className="space-y-3 font-mono text-xs">
+    <div className="space-y-2.5 font-mono text-xs">
       {/* Metric Visualizer Radar Header */}
       <div className="flex items-center justify-between pb-2 border-b border-slate-800 text-[11px] text-slate-400">
-        <div className="flex items-center gap-1.5 text-cyan-400 font-bold">
+        <div className="flex items-center gap-1.5 text-sky-400 font-bold">
           <Activity className="w-3.5 h-3.5" />
-          <span>MULTI-AXIS METRIC BENCHMARK</span>
+          <span>MULTI-AXIS BENCHMARK</span>
         </div>
         <div className="flex items-center gap-2 text-[10px]">
-          <span className="flex items-center gap-1 text-cyan-400">
-            <span className="w-2 h-2 rounded-full bg-cyan-400" />
+          <span className="flex items-center gap-1 text-sky-400 font-semibold">
+            <span className="w-2 h-2 rounded-full bg-sky-400" />
             {entityNames[0] || 'A'}
           </span>
-          <span className="flex items-center gap-1 text-indigo-400">
+          <span className="flex items-center gap-1 text-indigo-400 font-semibold">
             <span className="w-2 h-2 rounded-full bg-indigo-400" />
             {entityNames[1] || 'B'}
           </span>
         </div>
       </div>
 
+      {/* Filter Tabs */}
+      <div className="flex items-center gap-1 text-[10px]">
+        {['all', 'core', 'efficiency'].map((f) => (
+          <button
+            key={f}
+            type="button"
+            onClick={() => setActiveFilter(f)}
+            className={`px-2 py-0.5 rounded capitalize transition-colors ${
+              activeFilter === f
+                ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40 font-bold'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+            }`}
+          >
+            {f}
+          </button>
+        ))}
+      </div>
+
       {/* Recharts Radar Graph */}
       {radarData.length > 2 ? (
-        <div className="h-44 w-full bg-slate-950/60 rounded-xl border border-slate-800/80 p-1">
+        <div className="h-40 w-full bg-slate-950/80 rounded-xl border border-slate-800/80 p-1">
           <ResponsiveContainer width="100%" height="100%">
             <RadarChart cx="50%" cy="50%" outerRadius="70%" data={radarData}>
               <PolarGrid stroke="#1e293b" />
@@ -81,8 +101,8 @@ export function PlayableMetricMatrix({
               <Radar
                 name={entityNames[0]}
                 dataKey="scoreA"
-                stroke="#00f0ff"
-                fill="#00f0ff"
+                stroke="#38bdf8"
+                fill="#38bdf8"
                 fillOpacity={0.25}
               />
               <Radar
@@ -106,7 +126,7 @@ export function PlayableSentimentSpectrum({
 }: {
   sentiments: CommunitySentiment[];
 }) {
-  const [selectedTopic, setSelectedTopic] = useState<number | null>(null);
+  const [selectedFilter, setSelectedFilter] = useState<'all' | 'positive' | 'critical'>('all');
 
   const sentimentStats = useMemo(() => {
     let pos = 0,
@@ -127,9 +147,9 @@ export function PlayableSentimentSpectrum({
   }, [sentiments]);
 
   return (
-    <div className="space-y-3 font-mono text-xs">
+    <div className="space-y-2.5 font-mono text-xs">
       {/* Sentiment Gauge Bar */}
-      <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800/80 space-y-2">
+      <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800/80 space-y-2">
         <div className="flex items-center justify-between text-[10px] text-slate-400">
           <span>COMMUNITY CONSENSUS SPECTRUM</span>
           <span className="text-emerald-400 font-bold">{sentimentStats.posPct}% Positive</span>
@@ -167,7 +187,6 @@ export function PlayableDecisionWeights({
       : ['Option A', 'Option B'];
   }, [entities]);
 
-  // Recalculate dynamic win score based on user weights
   const scores = useMemo(() => {
     const rawA = weights.performance * 0.45 + weights.value * 0.35 + weights.longevity * 0.2;
     const rawB = weights.performance * 0.35 + weights.value * 0.45 + weights.longevity * 0.2;
@@ -185,7 +204,7 @@ export function PlayableDecisionWeights({
           <Sliders className="w-3.5 h-3.5" />
           <span>DYNAMIC CRITERIA WEIGHTING</span>
         </div>
-        <span className="text-[10px] text-slate-400">Real-time Recalculation</span>
+        <span className="text-[10px] text-slate-400">Live Recalculation</span>
       </div>
 
       {/* Sliders */}
@@ -193,7 +212,7 @@ export function PlayableDecisionWeights({
         <div>
           <div className="flex justify-between text-slate-400 mb-1">
             <span>Performance & Raw Specs</span>
-            <span className="text-cyan-300 font-bold">{weights.performance}%</span>
+            <span className="text-sky-300 font-bold">{weights.performance}%</span>
           </div>
           <input
             type="range"
@@ -201,7 +220,7 @@ export function PlayableDecisionWeights({
             max="100"
             value={weights.performance}
             onChange={(e) => setWeights({ ...weights, performance: Number(e.target.value) })}
-            className="w-full h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400"
+            className="w-full h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-sky-400"
           />
         </div>
 
@@ -238,7 +257,7 @@ export function PlayableDecisionWeights({
 
       {/* Live Computed Match Rating */}
       <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs">
-        <div className="flex items-center gap-1.5 text-cyan-300 font-bold">
+        <div className="flex items-center gap-1.5 text-sky-300 font-bold">
           <span>{entityList[0]}:</span>
           <span className="text-sm">{scores.scoreA}%</span>
         </div>
