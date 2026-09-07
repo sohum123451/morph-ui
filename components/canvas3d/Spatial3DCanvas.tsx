@@ -30,22 +30,22 @@ export function Spatial3DCanvas({
   const { targetCamPos, targetLookAt } = useMemo(() => {
     if (activeStationId === 'overview' || !activeStationId) {
       return {
-        targetCamPos: [0, 16, 20] as Vector3Tuple,
-        targetLookAt: [0, 1.5, 0] as Vector3Tuple,
+        targetCamPos: [0, 4, 12] as Vector3Tuple,
+        targetLookAt: [0, 0.5, 0] as Vector3Tuple,
       };
     }
 
     const node = nodes.find((n) => n.id === activeStationId);
     if (node) {
       return {
-        targetCamPos: [node.position[0], node.position[1] + 1.6, node.position[2] + 7.8] as Vector3Tuple,
-        targetLookAt: [node.position[0], node.position[1] + 1.4, node.position[2]] as Vector3Tuple,
+        targetCamPos: [node.position[0], node.position[1] + 1.2, node.position[2] + 6.5] as Vector3Tuple,
+        targetLookAt: [node.position[0], node.position[1] + 1.0, node.position[2]] as Vector3Tuple,
       };
     }
 
     return {
-      targetCamPos: [0, 16, 20] as Vector3Tuple,
-      targetLookAt: [0, 1.5, 0] as Vector3Tuple,
+      targetCamPos: [0, 4, 12] as Vector3Tuple,
+      targetLookAt: [0, 0.5, 0] as Vector3Tuple,
     };
   }, [activeStationId, nodes]);
 
@@ -84,27 +84,27 @@ export function Spatial3DCanvas({
       <Canvas
         shadows
         dpr={[1, 2]}
-        gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
-        camera={{ position: [0, 16, 20], fov: 45 }}
+        gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
+        camera={{ position: [0, 4, 12], fov: 50 }}
         onDoubleClick={handleToggleFullScale}
       >
-        <color attach="background" args={['#03060f']} />
+        <color attach="background" args={['#030712']} />
 
         {/* Ambient & High-contrast Sci-Fi Directional Lighting */}
-        <ambientLight intensity={0.5} />
+        <ambientLight intensity={0.6} />
         <directionalLight
-          position={[15, 25, 20]}
-          intensity={1.5}
+          position={[12, 20, 16]}
+          intensity={1.4}
           castShadow
           shadow-mapSize-width={2048}
           shadow-mapSize-height={2048}
-          shadow-camera-far={60}
-          shadow-camera-left={-30}
-          shadow-camera-right={30}
-          shadow-camera-top={30}
-          shadow-camera-bottom={-30}
+          shadow-camera-far={50}
+          shadow-camera-left={-25}
+          shadow-camera-right={25}
+          shadow-camera-top={25}
+          shadow-camera-bottom={-25}
         />
-        <pointLight position={[0, 8, 0]} intensity={1.2} color="#00f0ff" distance={25} />
+        <pointLight position={[0, 6, 0]} intensity={1.0} color="#00f0ff" distance={25} />
 
         {/* Cinematic Interpolating Camera */}
         <CinematicFlightCamera
@@ -113,19 +113,22 @@ export function Spatial3DCanvas({
           flightTriggerKey={activeStationId}
         />
 
-        {/* Orbit Controls with Smooth Damping */}
+        {/* Smooth Orbit Controls with exact Zoom/Pan requested */}
         <OrbitControls
           makeDefault
+          enableZoom={true}
           minDistance={3}
-          maxDistance={45}
-          minPolarAngle={0.1}
-          maxPolarAngle={Math.PI / 2.15}
-          enableDamping
+          maxDistance={25}
+          zoomSpeed={0.8}
+          panSpeed={0.8}
           dampingFactor={0.05}
+          enableDamping={true}
+          minPolarAngle={0.1}
+          maxPolarAngle={Math.PI / 2.1}
         />
 
         {/* Floating Cosmic Particle Dust Field */}
-        <ParticleDustField count={300} />
+        <ParticleDustField count={250} />
 
         {/* Dark Tactical Matrix Floor Grid */}
         <mesh
@@ -135,11 +138,11 @@ export function Spatial3DCanvas({
           onClick={handleResetOverview}
         >
           <planeGeometry args={[120, 120]} />
-          <meshStandardMaterial color="#020409" roughness={0.9} metalness={0.2} />
+          <meshStandardMaterial color="#030712" roughness={0.9} metalness={0.1} />
         </mesh>
 
         <gridHelper
-          args={[100, 50, new THREE.Color('#00f0ff'), new THREE.Color('#0f172a')]}
+          args={[100, 50, new THREE.Color('#0284c7'), new THREE.Color('#1e293b')]}
           position={[0, 0.01, 0]}
         />
 

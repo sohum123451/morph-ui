@@ -240,7 +240,7 @@ function parseNumericValue(val: string): number | null {
 }
 
 // ============================================================================
-// 3D SPATIAL WORKSTATION PANELS (Dynamic, Playable & Tactical Aesthetic)
+// 3D SPATIAL WORKSTATION PANELS (Transparent Dark Telemetry Aesthetic)
 // ============================================================================
 
 const SpecMatrixWorkstation = memo(function SpecMatrixWorkstation({ data }: any) {
@@ -248,8 +248,8 @@ const SpecMatrixWorkstation = memo(function SpecMatrixWorkstation({ data }: any)
   const entityList: string[] = entities.length > 0 ? entities.map((e: any) => typeof e === 'object' ? e.name : e) : [data.entityA || 'Option A', data.entityB || 'Option B'];
 
   return (
-    <div className="w-[360px] sm:w-[500px] bg-[#080d1a]/95 border border-cyan-500/30 rounded-2xl p-5 shadow-2xl text-slate-100 backdrop-blur-2xl transition-all font-mono space-y-3.5">
-      <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+    <div className="w-[360px] sm:w-[480px] bg-slate-950/80 border border-slate-800 text-slate-100 backdrop-blur-md rounded-2xl p-5 shadow-2xl transition-all font-mono space-y-3.5">
+      <div className="flex items-center justify-between pb-3 border-b border-slate-800/80">
         <div className="flex items-center gap-2.5">
           <div className="p-1.5 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
             <FileSpreadsheet className="w-4 h-4" />
@@ -259,7 +259,7 @@ const SpecMatrixWorkstation = memo(function SpecMatrixWorkstation({ data }: any)
             <span className="text-[10px] text-slate-400 whitespace-normal break-words">{category}</span>
           </div>
         </div>
-        <span className="text-[10px] px-2 py-0.5 rounded bg-cyan-950/60 text-cyan-300 border border-cyan-500/40">
+        <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-cyan-950/70 text-cyan-300 border border-cyan-500/30">
           STATION 01
         </span>
       </div>
@@ -267,7 +267,7 @@ const SpecMatrixWorkstation = memo(function SpecMatrixWorkstation({ data }: any)
       {/* Playable Multi-Axis Radar Benchmark Chart */}
       <PlayableMetricMatrix metrics={metrics} entities={entities} />
 
-      <div className="flex items-center divide-x divide-slate-800 text-[10px] uppercase text-slate-400 pb-1.5 border-b border-slate-800 pt-1">
+      <div className="flex items-center divide-x divide-slate-800 text-[10px] uppercase text-slate-400 pb-1.5 border-b border-slate-800/80 pt-1">
         <div className="w-32 shrink-0 pr-2 font-bold text-slate-300">Metric</div>
         {entityList.map((name, i) => (
           <div key={i} className="flex-1 px-2 truncate text-cyan-300 font-bold">{name}</div>
@@ -300,8 +300,8 @@ const SentimentWorkstation = memo(function SentimentWorkstation({ data }: any) {
   const entityList: string[] = entities.length > 0 ? entities.map((e: any) => typeof e === 'object' ? e.name : e) : [data.entityA || 'Option A', data.entityB || 'Option B'];
 
   return (
-    <div className="w-[360px] sm:w-[500px] bg-[#080d1a]/95 border border-indigo-500/30 rounded-2xl p-5 shadow-2xl text-slate-100 backdrop-blur-2xl transition-all font-mono space-y-3.5">
-      <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+    <div className="w-[360px] sm:w-[480px] bg-slate-950/80 border border-slate-800 text-slate-100 backdrop-blur-md rounded-2xl p-5 shadow-2xl transition-all font-mono space-y-3.5">
+      <div className="flex items-center justify-between pb-3 border-b border-slate-800/80">
         <div className="flex items-center gap-2.5">
           <div className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
             <MessageSquare className="w-4 h-4" />
@@ -311,7 +311,7 @@ const SentimentWorkstation = memo(function SentimentWorkstation({ data }: any) {
             <span className="text-[10px] text-slate-400">Reddit Sentiment Telemetry</span>
           </div>
         </div>
-        <span className="text-[10px] px-2 py-0.5 rounded bg-indigo-950/60 text-indigo-300 border border-indigo-500/40">
+        <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-indigo-950/70 text-indigo-300 border border-indigo-500/30">
           STATION 02
         </span>
       </div>
@@ -321,7 +321,7 @@ const SentimentWorkstation = memo(function SentimentWorkstation({ data }: any) {
 
       <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
         {sentiments.slice(0, 4).map((s: CommunitySentiment, idx: number) => (
-          <div key={idx} className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/80 space-y-1">
+          <div key={idx} className="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800/80 space-y-1">
             <div className="flex items-center justify-between">
               <span className="font-bold text-xs text-slate-200 whitespace-normal break-words">{s.topic}</span>
               <span
@@ -340,7 +340,7 @@ const SentimentWorkstation = memo(function SentimentWorkstation({ data }: any) {
               {entityList.map((name, i) => {
                 const con = s.consensuses?.[i] !== undefined ? s.consensuses[i] : (i === 0 ? s.entity_a_consensus : s.entity_b_consensus);
                 return (
-                  <div key={i} className="p-2 rounded bg-slate-900/70 border border-slate-800/70 whitespace-normal break-words">
+                  <div key={i} className="p-2 rounded bg-slate-950/60 border border-slate-800/60 whitespace-normal break-words">
                     <span className="text-[10px] font-mono text-indigo-400 font-bold block mb-0.5">{name}:</span>
                     {renderValueWithFallback(con)}
                   </div>
@@ -359,8 +359,8 @@ const LedgerWorkstation = memo(function LedgerWorkstation({ data }: any) {
   const entityList: string[] = entities.length > 0 ? entities.map((e: any) => typeof e === 'object' ? e.name : e) : [data.entityA || 'Option A', data.entityB || 'Option B'];
 
   return (
-    <div className="w-[320px] sm:w-[420px] bg-[#080d1a]/95 border border-purple-500/30 rounded-2xl p-5 shadow-2xl text-slate-100 backdrop-blur-2xl transition-all font-mono space-y-3">
-      <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+    <div className="w-[320px] sm:w-[420px] bg-slate-950/80 border border-slate-800 text-slate-100 backdrop-blur-md rounded-2xl p-5 shadow-2xl transition-all font-mono space-y-3">
+      <div className="flex items-center justify-between pb-3 border-b border-slate-800/80">
         <div className="flex items-center gap-2.5">
           <div className="p-1.5 rounded-lg bg-purple-500/10 text-purple-400 border border-purple-500/20">
             <Layers className="w-4 h-4" />
@@ -370,12 +370,12 @@ const LedgerWorkstation = memo(function LedgerWorkstation({ data }: any) {
             <span className="text-[10px] text-slate-400">Normalized Attribute Vectors</span>
           </div>
         </div>
-        <span className="text-[10px] px-2 py-0.5 rounded bg-purple-950/60 text-purple-300 border border-purple-500/40">
+        <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-purple-950/70 text-purple-300 border border-purple-500/30">
           STATION 03
         </span>
       </div>
 
-      <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 text-center">
+      <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 text-center">
         <span className="text-3xl font-black text-purple-400 block">{metrics.length}</span>
         <span className="text-[10px] text-slate-400 uppercase tracking-widest">Verified Dimension Fields</span>
       </div>
@@ -397,8 +397,8 @@ const VerdictWorkstation = memo(function VerdictWorkstation({ data }: any) {
   const entityList: string[] = entities.length > 0 ? entities.map((e: any) => typeof e === 'object' ? e.name : e) : [data.entityA || 'Option A', data.entityB || 'Option B'];
 
   return (
-    <div className="w-[360px] sm:w-[500px] bg-[#080d1a]/95 border border-emerald-500/30 rounded-2xl p-5 shadow-2xl text-slate-100 backdrop-blur-2xl transition-all font-mono space-y-3.5">
-      <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+    <div className="w-[360px] sm:w-[480px] bg-slate-950/80 border border-slate-800 text-slate-100 backdrop-blur-md rounded-2xl p-5 shadow-2xl transition-all font-mono space-y-3.5">
+      <div className="flex items-center justify-between pb-3 border-b border-slate-800/80">
         <div className="flex items-center gap-2.5">
           <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
             <Award className="w-4 h-4" />
@@ -408,7 +408,7 @@ const VerdictWorkstation = memo(function VerdictWorkstation({ data }: any) {
             <span className="text-[10px] text-slate-400">Dual-Engine Decision Engine</span>
           </div>
         </div>
-        <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-950/60 text-emerald-300 border border-emerald-500/40">
+        <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-emerald-950/70 text-emerald-300 border border-emerald-500/30">
           STATION 04
         </span>
       </div>
@@ -416,7 +416,7 @@ const VerdictWorkstation = memo(function VerdictWorkstation({ data }: any) {
       {/* Playable Real-Time Criteria Weighting Sliders */}
       <PlayableDecisionWeights entities={entities} />
 
-      <p className="text-xs text-slate-200 leading-relaxed bg-slate-950/80 p-3 rounded-xl border border-slate-800 font-sans whitespace-normal break-words">
+      <p className="text-xs text-slate-200 leading-relaxed bg-slate-900/60 p-3 rounded-xl border border-slate-800 font-sans whitespace-normal break-words">
         {verdictSummary}
       </p>
 
@@ -427,7 +427,7 @@ const VerdictWorkstation = memo(function VerdictWorkstation({ data }: any) {
           const badge = ENTITY_BADGES[idx % ENTITY_BADGES.length];
 
           return (
-            <div key={idx} className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 space-y-1">
+            <div key={idx} className="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1">
               <span className={`text-[10px] font-bold uppercase ${badge.text} block tracking-wider`}>
                 RECOMMENDED FOR {name}:
               </span>
@@ -446,6 +446,7 @@ const VerdictWorkstation = memo(function VerdictWorkstation({ data }: any) {
     </div>
   );
 });
+
 // ============================================================================
 // 3D SPATIAL CANVAS WORKSPACE
 // ============================================================================
@@ -475,7 +476,7 @@ function SpatialCanvasWorkspace({
         title: 'Spec Matrix',
         tag: 'SPEC-01',
         status: 'synced',
-        position: [-9, 2, 0],
+        position: [-10, 0, 0],
         accentColor: '#00f0ff',
         content: (
           <SpecMatrixWorkstation
@@ -492,7 +493,7 @@ function SpatialCanvasWorkspace({
         title: 'Community Insights',
         tag: 'SENTIMENT-02',
         status: isStreaming ? 'streaming' : 'synced',
-        position: [-3, 2, -7],
+        position: [-3.5, 0, -6],
         accentColor: '#818cf8',
         content: (
           <SentimentWorkstation
@@ -508,7 +509,7 @@ function SpatialCanvasWorkspace({
         title: 'Delta Ledger',
         tag: 'LEDGER-03',
         status: 'synced',
-        position: [6, 2, -6],
+        position: [3.5, 0, -6],
         accentColor: '#a855f7',
         content: (
           <LedgerWorkstation
@@ -524,7 +525,7 @@ function SpatialCanvasWorkspace({
         title: 'Executive Verdict',
         tag: 'VERDICT-04',
         status: 'active',
-        position: [10, 2, 2],
+        position: [10, 0, 0],
         accentColor: '#10b981',
         content: (
           <VerdictWorkstation
@@ -542,7 +543,7 @@ function SpatialCanvasWorkspace({
     <Spatial3DCanvas
       nodes={spatial3DNodes}
       isStreaming={isStreaming}
-      className="relative w-full h-[65vh] sm:h-[75vh] md:h-[calc(100vh-140px)] min-h-[500px] rounded-2xl border border-slate-800 overflow-hidden shadow-2xl bg-[#03060f]"
+      className="relative w-full h-[65vh] sm:h-[75vh] md:h-[calc(100vh-140px)] min-h-[500px] rounded-2xl border border-slate-800 overflow-hidden shadow-2xl bg-[#030712]"
     />
   );
 }

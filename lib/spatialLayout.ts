@@ -118,18 +118,15 @@ export function getLayoutedElements(
  * Calculates 3D World Spatial Coordinates [X, Y, Z] for WebGL Drei scene placement.
  */
 export function calculate3DNodePositions(count: number): Array<[number, number, number]> {
-  if (count <= 1) return [[0, 2, 0]];
-  if (count === 2) return [[-7, 2, 0], [7, 2, 0]];
-  if (count === 3) return [[-8, 2, 2], [0, 2, -6], [8, 2, 2]];
-  if (count === 4) return [[-9, 2, 0], [-3, 2, -7], [6, 2, -6], [10, 2, 2]];
+  if (count <= 1) return [[0, 0, 0]];
+  if (count === 2) return [[-4.5, 0, 0], [4.5, 0, 0]];
+  if (count === 3) return [[-7.5, 0, 1], [0, 0, -4.5], [7.5, 0, 1]];
+  if (count === 4) return [[-10, 0, 0], [-3.5, 0, -6], [3.5, 0, -6], [10, 0, 0]];
 
-  const radius = Math.max(10, count * 2.5);
+  // Linear / Staggered spacing by at least 6 to 8 units
   return Array.from({ length: count }, (_, i) => {
-    const angle = (i / count) * Math.PI * 2 - Math.PI / 2;
-    return [
-      Math.cos(angle) * radius,
-      2,
-      Math.sin(angle) * radius,
-    ] as [number, number, number];
+    const x = (i - (count - 1) / 2) * 7.5;
+    const z = (i % 2 === 1) ? -4.5 : 0;
+    return [x, 0, z] as [number, number, number];
   });
 }
